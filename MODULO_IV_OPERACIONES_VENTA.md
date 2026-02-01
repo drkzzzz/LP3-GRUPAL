@@ -1660,7 +1660,7 @@ El sistema debe proporcionar seguimiento en tiempo real del estado de cada pedid
 
 ---
 
-### **RF-VTA-022: Gestionar Zonas y Costos de Delivery**
+### **RF-VTA-022: Configurar Zonas y Costos de Delivery**
 
 **Descripción:**  
 El sistema debe permitir configurar zonas geográficas de cobertura para delivery, asignando costos diferenciados por distancia o zona, tiempos estimados de entrega, y validando que las direcciones de pedidos estén dentro del área de servicio.

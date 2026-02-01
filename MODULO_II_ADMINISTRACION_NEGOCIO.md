@@ -18,6 +18,8 @@ Este módulo gestiona las funcionalidades de administración interna de cada neg
 
 ### RF-ADM-001: Configurar Información del Negocio
 
+**Prioridad:** Alta
+
 **Descripción:**  
 El sistema debe permitir al administrador del negocio actualizar y mantener la información corporativa completa, incluyendo datos fiscales, de contacto, identidad visual, y configuraciones operativas que se aplicarán a todas las sedes del negocio.
 
@@ -82,10 +84,12 @@ El sistema debe permitir al administrador del negocio actualizar y mantener la i
 
 ---
 
-### RF-ADM-002: Gestionar Sedes/Sucursales
+### RF-ADM-002: Crear Sede/Sucursal
+
+**Prioridad:** Alta
 
 **Descripción:**  
-El sistema debe permitir al negocio crear y administrar múltiples sedes o sucursales, cada una con su propia configuración operativa, dirección, horarios, y equipo de trabajo, facilitando la operación de negocios multi-sede.
+El sistema debe permitir al negocio crear nuevas sedes o sucursales, configurando su información básica, ubicación, contacto y horarios de atención.
 
 **Criterios de Aceptación:**
 1. El formulario de creación de sede incluye:
@@ -93,7 +97,7 @@ El sistema debe permitir al negocio crear y administrar múltiples sedes o sucur
      - Nombre de la sede (ej: "Sede Centro", "Sucursal Norte")
      - Código interno (opcional, alfanumérico)
      - Tipo: Tienda física, Solo delivery, Almacén central
-     - Estado: Activa, Inactiva, En construcción
+     - Estado inicial: Activa, En construcción
    - **Ubicación**:
      - Dirección completa
      - Distrito/Provincia/Departamento
@@ -110,23 +114,15 @@ El sistema debe permitir al negocio crear y administrar múltiples sedes o sucur
      - Horario de venta de alcohol (específico por legislación)
 2. El sistema valida:
    - Nombre de sede único dentro del negocio
-   - Coordenadas GPS válidas
+   - Coordenadas GPS válidas (si se proporcionan)
    - Horarios coherentes (hora apertura < hora cierre)
-   - Al menos una sede debe estar activa en el negocio
-3. Al crear la sede:
+   - Límite de sedes según plan de suscripción
+3. Al confirmar la creación:
    - Se genera un registro en `sede`
    - Se crea automáticamente un almacén principal para esa sede
    - Se configura la zona de delivery por defecto (si aplica)
    - Se envía notificación al gerente asignado
-4. Gestión de sedes:
-   - Lista de sedes con información resumida
-   - Filtros por estado, tipo
-   - Búsqueda por nombre
-   - Acciones: Ver detalle, Editar, Desactivar, Eliminar (solo si no tiene transacciones)
-5. Vista de mapa:
-   - Mapa mostrando todas las sedes del negocio con pins
-   - Click en pin muestra información de la sede
-   - Útil para planificar expansión o analizar cobertura
+   - Se registra en auditoría
 
 **Consideraciones Multi-tenant:**
 - Las sedes pertenecen exclusivamente al negocio que las crea
@@ -145,13 +141,165 @@ El sistema debe permitir al negocio crear y administrar múltiples sedes o sucur
 
 **Reglas de Negocio:**
 - Un negocio en plan Basic puede tener máximo 2 sedes (según límites del plan)
-- La sede principal no puede desactivarse mientras haya otras activas
 - Los horarios de venta de alcohol deben cumplir legislación local
+- Se recomienda configurar coordenadas GPS para habilitar delivery
+- La primera sede creada se marca como sede principal automáticamente
+
+---
+
+### RF-ADM-002A: Editar Sede/Sucursal
+
+**Prioridad:** Media
+
+**Descripción:**  
+El sistema debe permitir modificar la información de sedes existentes, incluyendo datos básicos, ubicación, contacto y horarios.
+
+**Criterios de Aceptación:**
+1. El sistema permite editar:
+   - Información básica (nombre, código, tipo)
+   - Ubicación (dirección, GPS, zona de cobertura)
+   - Contacto (teléfono, email, encargado)
+   - Horarios de atención y venta de alcohol
+   - Estado (Activa, Inactiva, En construcción)
+2. Campos NO editables:
+   - ID de la sede (inmutable)
+   - Fecha de creación
+3. El sistema valida:
+   - Nombre único si se cambia
+   - Horarios coherentes
+   - Al menos una sede debe permanecer activa
+4. Al guardar cambios:
+   - Se actualizan los datos en `sede`
+   - Se registra en auditoría (usuario, fecha, cambios)
+   - Se notifica al encargado si fue reasignado
+
+**Consideraciones Multi-tenant:**
+- Solo se pueden editar sedes del mismo negocio
+
+**Seguridad:**
+- Requiere permiso: `sedes_gestionar`
+- Los cambios se auditan completamente
+
+**UX:**
+- Formulario con datos precargados
+- Indicador de cambios no guardados
+- Confirmación antes de cambiar estado a Inactiva
+
+**Reglas de Negocio:**
+- La sede principal no puede desactivarse mientras haya otras activas
+- Los cambios en horarios se aplican inmediatamente
 - Las sedes inactivas no aparecen en la web/app de clientes
 
 ---
 
+### RF-ADM-002B: Listar y Visualizar Sedes
+
+**Prioridad:** Alta
+
+**Descripción:**  
+El sistema debe proporcionar vistas para listar todas las sedes del negocio y visualizarlas en un mapa para facilitar la gestión y planificación.
+
+**Criterios de Aceptación:**
+1. Lista de sedes:
+   - Información mostrada: Nombre, Tipo, Estado, Encargado, Teléfono
+   - Filtros por: Estado (activa/inactiva), Tipo (tienda/delivery/almacén)
+   - Búsqueda por nombre o dirección
+   - Ordenamiento por: Nombre, Fecha de creación, Estado
+   - Acciones por sede: Ver detalle, Editar, Desactivar, Eliminar
+2. Vista de mapa:
+   - Mapa mostrando todas las sedes con pins geolocalizados
+   - Código de colores: Verde (activa), Amarillo (construcción), Gris (inactiva)
+   - Click en pin muestra información resumida de la sede
+   - Opción de obtener direcciones entre sedes
+3. Restricciones de eliminación:
+   - Solo se pueden eliminar sedes sin transacciones registradas
+   - Confirmación requerida: "¿Eliminar sede [Nombre]? Esta acción no se puede deshacer"
+
+**Consideraciones Multi-tenant:**
+- Solo se muestran sedes del negocio correspondiente
+
+**Seguridad:**
+- Requiere permiso: `sedes_ver`
+- Eliminación requiere permiso adicional: `sedes_eliminar`
+
+**UX:**
+- Tarjetas visuales tipo "card" para cada sede
+- Indicadores de estado con iconos y colores
+- Vista de mapa integrada con Google Maps
+- Exportación de lista a Excel/PDF
+
+**Reglas de Negocio:**
+- Las sedes con transacciones no pueden eliminarse (solo desactivarse)
+- La vista de mapa requiere que las sedes tengan coordenadas GPS configuradas
+- Las sedes inactivas se muestran en gris para diferenciación clara
+
+---
+
+### RF-ADM-002C: Desactivar/Eliminar Sede
+
+**Prioridad:** Media
+
+**Descripción:**  
+El sistema debe permitir desactivar temporalmente o eliminar permanentemente sedes que ya no están en operación, manteniendo la integridad de los datos históricos.
+
+**Criterios de Aceptación:**
+1. **Desactivación de sede**:
+   - El administrador selecciona una sede activa
+   - Selecciona opción "Desactivar sede"
+   - El sistema valida:
+     - No es la única sede activa del negocio
+     - Si es sede principal, hay otra sede marcada como principal
+   - Al confirmar:
+     - Estado cambia a `'inactiva'`
+     - La sede desaparece de selecciones en formularios
+     - No aparece en web/app para clientes
+     - Los datos históricos se mantienen intactos
+     - Se registra fecha de desactivación y motivo
+2. **Eliminación de sede**:
+   - Solo disponible si la sede NO tiene:
+     - Transacciones de venta registradas
+     - Inventario actual (stock > 0)
+     - Usuarios asignados actualmente
+   - El sistema solicita confirmación especial:
+     - Escribir nombre de la sede para confirmar
+     - Advertencia: "Esta acción es irreversible"
+   - Al confirmar:
+     - Se elimina el registro de `sede`
+     - Se eliminan almacenes asociados (si están vacíos)
+     - Se eliminan cajas asociadas (si no tienen sesiones)
+     - Se registra en auditoría
+3. **Reactivación de sede**:
+   - Las sedes desactivadas pueden reactivarse en cualquier momento
+   - Al reactivar, vuelve a estar disponible para operaciones
+   - Se restauran configuraciones anteriores
+
+**Consideraciones Multi-tenant:**
+- Solo se pueden desactivar/eliminar sedes del mismo negocio
+- La validación de "única sede" es por negocio
+
+**Seguridad:**
+- Requiere permiso: `sedes_desactivar` (para desactivar)
+- Requiere permiso: `sedes_eliminar` (para eliminar)
+- La eliminación requiere rol de Administrador
+- Auditoría completa de desactivaciones y eliminaciones
+
+**UX:**
+- Modal de confirmación con advertencias claras
+- Indicador de bloqueo si no se puede eliminar (mostrar razones)
+- Opción de "Desactivar en su lugar" si no se puede eliminar
+- Lista de dependencias que impiden la eliminación
+
+**Reglas de Negocio:**
+- Al menos una sede debe estar activa en el negocio
+- La sede principal solo puede desactivarse si hay otra sede activa y se marca otra como principal
+- Las sedes con historial de transacciones nunca pueden eliminarse (solo desactivarse)
+- Las sedes inactivas no cuentan para el límite del plan de suscripción
+
+---
+
 ### RF-ADM-003: Configurar Almacenes por Sede
+
+**Prioridad:** Alta
 
 **Descripción:**  
 El sistema debe permitir crear y gestionar múltiples almacenes dentro de cada sede, definiendo su ubicación física, tipo de almacenamiento, capacidad, y responsable, para organizar el inventario de manera eficiente.
@@ -217,6 +365,8 @@ El sistema debe permitir crear y gestionar múltiples almacenes dentro de cada s
 ---
 
 ### RF-ADM-004: Configurar Horarios y Días Laborables
+
+**Prioridad:** Alta
 
 **Descripción:**  
 El sistema debe permitir configurar los horarios de operación de cada sede, incluyendo horarios generales, horarios especiales para venta de alcohol, días festivos, y excepciones, asegurando cumplimiento legal y gestión operativa.
@@ -288,6 +438,8 @@ El sistema debe permitir configurar los horarios de operación de cada sede, inc
 ---
 
 ### RF-ADM-005: Configurar Cajas/Terminales de Venta
+
+**Prioridad:** Alta
 
 **Descripción:**  
 El sistema debe permitir configurar y gestionar las cajas o terminales de punto de venta (POS) de cada sede, asignando hardware, usuarios autorizados, y configuraciones específicas para la operación de ventas.
@@ -364,6 +516,8 @@ El sistema debe permitir configurar y gestionar las cajas o terminales de punto 
 ---
 
 ### RF-ADM-006: Configurar Impresoras y Dispositivos
+
+**Prioridad:** Media
 
 **Descripción:**  
 El sistema debe permitir configurar y gestionar impresoras térmicas/fiscales, lectores de código de barras, balanzas, y otros dispositivos de hardware utilizados en las operaciones de venta e inventario.
@@ -448,6 +602,8 @@ El sistema debe permitir configurar y gestionar impresoras térmicas/fiscales, l
 
 ### RF-ADM-007: Configurar Zonas de Delivery
 
+**Prioridad:** Media
+
 **Descripción:**  
 El sistema debe permitir definir zonas geográficas de cobertura para el servicio de delivery, configurando costos, tiempos estimados, y condiciones específicas por zona para optimizar las operaciones de entrega a domicilio.
 
@@ -521,6 +677,8 @@ El sistema debe permitir definir zonas geográficas de cobertura para el servici
 
 ### RF-ADM-008: Configurar Métodos de Pago Aceptados
 
+**Prioridad:** Alta
+
 **Descripción:**  
 El sistema debe permitir habilitar y configurar los diferentes métodos de pago que el negocio acepta, incluyendo efectivo, tarjetas, transferencias, billeteras digitales, y crédito, con configuraciones específicas por método.
 
@@ -588,6 +746,8 @@ El sistema debe permitir habilitar y configurar los diferentes métodos de pago 
 ---
 
 ### RF-ADM-009: Configurar Políticas Operativas
+
+**Prioridad:** Media
 
 **Descripción:**  
 El sistema debe permitir definir políticas operativas del negocio, como políticas de devolución, garantías, manejo de productos vencidos, tiempos de preparación, y otras reglas que guían la operación diaria.
@@ -660,6 +820,8 @@ El sistema debe permitir definir políticas operativas del negocio, como políti
 ---
 
 ### RF-ADM-010: Configurar Notificaciones y Alertas
+
+**Prioridad:** Media
 
 **Descripción:**  
 El sistema debe permitir configurar qué notificaciones y alertas se envían, a quién, por qué medio (email, SMS, push), y con qué frecuencia, personalizando la comunicación según las necesidades del negocio.
@@ -751,10 +913,12 @@ El sistema debe permitir configurar qué notificaciones y alertas se envían, a 
 
 ---
 
-### RF-ADM-011: Crear y Gestionar Usuarios
+### RF-ADM-011: Crear Usuario
+
+**Prioridad:** Alta
 
 **Descripción:**  
-El sistema debe permitir al administrador crear, editar, desactivar y gestionar cuentas de usuario, asignando roles, permisos, y configuraciones específicas para controlar el acceso y las capacidades de cada miembro del equipo.
+El sistema debe permitir al administrador crear nuevas cuentas de usuario, configurando información personal, laboral y de acceso para controlar quién puede usar el sistema.
 
 **Criterios de Aceptación:**
 1. El formulario de creación de usuario incluye:
@@ -770,12 +934,11 @@ El sistema debe permitir al administrador crear, editar, desactivar y gestionar 
      - Sede(s) asignada(s): Puede trabajar en una o múltiples sedes
      - Fecha de ingreso
      - Tipo de contrato: Tiempo completo, Medio tiempo, Freelance
-     - Salario base (opcional, privado)
    - **Acceso al sistema**:
      - Nombre de usuario (único, obligatorio)
      - Contraseña inicial (generada automáticamente o manual)
      - Rol(es) asignado(s): Admin, Gerente, Cajero, Almacenero, Mesero, etc.
-     - Estado: Activo, Inactivo, Suspendido
+     - Estado inicial: Activo
      - Requerir cambio de contraseña en primer login: Sí/No
 2. El sistema valida:
    - Email único en el negocio
@@ -783,32 +946,13 @@ El sistema debe permitir al administrador crear, editar, desactivar y gestionar 
    - DNI único (si se proporciona)
    - Contraseña cumple política de seguridad (min 8 caracteres, mayúsculas, números)
    - Al menos un rol debe asignarse
-3. Al crear el usuario:
+   - Límite de usuarios según plan de suscripción
+3. Al confirmar la creación:
    - Se genera registro en `usuario`
    - Se hashea la contraseña con bcrypt
    - Se envía email de bienvenida con credenciales (si contraseña es auto-generada)
    - Se asignan permisos según el rol
    - Se registra en auditoría
-4. Gestión de usuarios:
-   - Lista de usuarios con información resumida:
-     - Nombre, Rol, Sede, Estado
-     - Última conexión
-     - Acciones: Ver perfil, Editar, Desactivar, Resetear contraseña
-   - Filtros:
-     - Por rol
-     - Por sede
-     - Por estado
-     - Búsqueda por nombre o email
-5. Edición de usuario:
-   - Se pueden modificar datos personales, laborales, rol, sede
-   - No se puede cambiar email/username (identificadores únicos)
-   - Los cambios se registran en auditoría
-6. Desactivación de usuario:
-   - Motivo: Renuncia, Despido, Suspensión temporal
-   - Estado cambia a `'inactivo'`
-   - El usuario no puede loguearse
-   - Sus datos históricos se mantienen (ventas, movimientos)
-   - Puede reactivarse posteriormente
 
 **Consideraciones Multi-tenant:**
 - Los usuarios pertenecen a un negocio específico
@@ -828,80 +972,331 @@ El sistema debe permitir al administrador crear, editar, desactivar y gestionar 
 
 **Reglas de Negocio:**
 - El número de usuarios está limitado por el plan de suscripción
-- Al menos un usuario con rol Admin debe estar activo
-- Los usuarios inactivos no cuentan para el límite del plan
-- Los datos de usuarios despedidos se retienen por 5 años (requisitos laborales)
+- El email y username no pueden modificarse después de la creación
+- Los usuarios nuevos deben cambiar su contraseña en el primer login (recomendado)
+- Se recomienda asignar un solo rol principal por usuario (evitar confusión)
 
 ---
 
-### RF-ADM-012: Asignar y Gestionar Roles
+### RF-ADM-011A: Editar Usuario
+
+**Prioridad:** Alta
+
+**Descripción:**  
+El sistema debe permitir modificar la información de usuarios existentes, incluyendo datos personales, laborales, roles y estado.
+
+**Criterios de Aceptación:**
+1. El sistema permite editar:
+   - Datos personales (nombre, DNI, teléfono, foto)
+   - Datos laborales (cargo, sede, tipo de contrato)
+   - Roles asignados
+   - Estado (Activo, Inactivo, Suspendido)
+2. Campos NO editables:
+   - Email (identificador único)
+   - Nombre de usuario (identificador único)
+   - Fecha de creación
+3. Al guardar cambios:
+   - Se actualizan los datos en `usuario`
+   - Se registra en auditoría (usuario editor, fecha, campos modificados)
+   - Si se cambian roles, los nuevos permisos aplican inmediatamente
+   - Si se cambia la sede, el usuario pierde acceso a la sede anterior
+
+**Consideraciones Multi-tenant:**
+- Solo se pueden editar usuarios del mismo negocio
+
+**Seguridad:**
+- Requiere permiso: `usuarios_editar`
+- Un usuario no puede editar sus propios roles (prevención de escalada de privilegios)
+- Los cambios se auditan completamente
+
+**UX:**
+- Formulario con datos precargados
+- Indicador de cambios no guardados
+- Confirmación si se cambian roles críticos
+
+**Reglas de Negocio:**
+- Los cambios en roles/permisos afectan inmediatamente al usuario
+- No se puede editar el único usuario Admin del negocio (debe haber otro Admin primero)
+- Los cambios en la sede reasignan automáticamente el almacén predeterminado
+
+---
+
+### RF-ADM-011B: Desactivar Usuario
+
+**Prioridad:** Media
+
+**Descripción:**  
+El sistema debe permitir desactivar cuentas de usuario cuando ya no trabajan en el negocio, manteniendo el historial de sus acciones.
+
+**Criterios de Aceptación:**
+1. El administrador selecciona un usuario activo para desactivar
+2. El sistema solicita motivo de desactivación:
+   - Renuncia voluntaria
+   - Despido
+   - Suspensión temporal
+   - Otro (texto libre)
+3. Al confirmar la desactivación:
+   - Estado cambia a `'inactivo'`
+   - Todas las sesiones activas del usuario se cierran inmediatamente
+   - El usuario no puede iniciar sesión
+   - Los datos históricos se mantienen intactos (ventas, movimientos, auditoría)
+   - Se registra fecha de desactivación y motivo
+4. Opciones de reactivación:
+   - El administrador puede reactivar el usuario en cualquier momento
+   - Al reactivar, se restablecen los roles y permisos anteriores
+   - Se notifica al usuario de su reactivación
+
+**Consideraciones Multi-tenant:**
+- Los usuarios desactivados no cuentan para el límite del plan de suscripción
+
+**Seguridad:**
+- Requiere permiso: `usuarios_desactivar`
+- No se puede desactivar el único usuario Admin activo
+- Las desactivaciones se auditan con detalle completo
+
+**UX:**
+- Modal de confirmación con advertencia
+- Selector de motivo con campo de texto adicional
+- Indicador visual de usuarios inactivos (gris, tachado)
+
+**Reglas de Negocio:**
+- Los usuarios inactivos no pueden realizar ninguna acción en el sistema
+- Los datos de usuarios despedidos se retienen por 5 años (requisitos laborales)
+- Los usuarios suspendidos temporalmente pueden reactivarse fácilmente
+- Al menos un usuario con rol Admin debe estar activo siempre
+
+---
+
+### RF-ADM-011C: Listar y Buscar Usuarios
+
+**Prioridad:** Alta
+
+**Descripción:**  
+El sistema debe proporcionar vistas para listar, buscar y filtrar usuarios del negocio para facilitar su gestión.
+
+**Criterios de Aceptación:**
+1. Lista de usuarios:
+   - Información mostrada: Foto, Nombre, Rol, Sede, Estado, Última conexión
+   - Filtros:
+     - Por rol (Admin, Cajero, Almacenero, etc.)
+     - Por sede
+     - Por estado (Activo, Inactivo, Suspendido)
+   - Búsqueda: Por nombre, email o username
+   - Ordenamiento: Nombre, Rol, Fecha de creación, Última conexión
+2. Acciones rápidas por usuario:
+   - Ver perfil completo
+   - Editar
+   - Desactivar/Reactivar
+   - Resetear contraseña
+   - Ver historial de actividad
+3. Indicadores visuales:
+   - 🟢 Verde: Usuario activo y conectado recientemente
+   - 🟡 Amarillo: Usuario activo pero sin conexión reciente (> 30 días)
+   - ⚪ Gris: Usuario inactivo
+   - 🔴 Rojo: Usuario suspendido
+
+**Consideraciones Multi-tenant:**
+- Solo se listan usuarios del negocio correspondiente
+
+**Seguridad:**
+- Requiere permiso: `usuarios_ver`
+- Algunos datos sensibles (salario) solo visibles para Admin
+
+**UX:**
+- Vista de tabla o tarjetas (seleccionable)
+- Exportación de lista a Excel/PDF
+- Paginación para listas grandes (20-50 usuarios por página)
+
+**Reglas de Negocio:**
+- Los usuarios inactivos se muestran al final de la lista por defecto
+- La última conexión se actualiza en cada login exitoso
+- Los usuarios sin conexión reciente pueden ser candidatos a desactivación
+
+---
+
+### RF-ADM-012: Crear Rol Personalizado
 
 **Descripción:**  
 El sistema debe proporcionar un conjunto de roles predefinidos y permitir la creación de roles personalizados, cada uno con un conjunto específico de permisos que determinan las acciones que los usuarios pueden realizar en el sistema.
 
 **Criterios de Aceptación:**
-1. Roles predefinidos en el sistema:
-   - **SuperAdmin**: Control total de la plataforma (solo para personal de DrinkGo)
+1. Roles predefinidos disponibles en el sistema:
    - **Admin**: Control total del negocio
    - **Gerente**: Gestión operativa, reportes, configuración
    - **Cajero**: Operación de POS, ventas, cobros
    - **Almacenero**: Gestión de inventario, recepción de mercancía
    - **Mesero**: Gestión de mesas, toma de pedidos
    - **Repartidor**: Gestión de entregas
-   - **Contador**: Acceso a reportes financieros y contables
-2. Cada rol tiene:
-   - Nombre del rol
-   - Descripción
-   - Lista de permisos asignados (ver RF-ADM-013)
-   - Tipo: Sistema (no editable), Personalizado (editable)
-   - Nivel de acceso: 1-5 (1=básico, 5=total)
-3. Creación de roles personalizados:
-   - El administrador puede crear nuevos roles
-   - Formulario incluye:
-     - Nombre del rol (ej: "Supervisor de Turno")
-     - Descripción (ej: "Supervisa operaciones durante su turno")
-     - Selección de permisos (checkboxes agrupados por módulo)
-     - Heredar de rol existente (opcional, para facilitar creación)
-4. Gestión de roles:
-   - Lista de roles del negocio (sistema + personalizados)
-   - Vista de permisos por rol (matriz)
-   - Acciones: Ver permisos, Editar (solo personalizados), Duplicar, Eliminar
-5. Asignación de roles a usuarios:
-   - Un usuario puede tener uno o múltiples roles
-   - Los permisos son la unión de todos los roles asignados
-   - Ejemplo: Usuario con rol "Cajero" + "Almacenero" puede vender y gestionar inventario
-6. Restricciones de eliminación:
-   - No se pueden eliminar roles del sistema
-   - No se pueden eliminar roles personalizados si hay usuarios asignados
-   - Primero se debe reasignar a los usuarios a otro rol
+   - **Contador**: Acceso a reportes financieros y contables (solo lectura)
+2. Formulario de creación de rol personalizado:
+   - Nombre del rol (ej: "Supervisor de Turno")
+   - Descripción (ej: "Supervisa operaciones durante su turno")
+   - Heredar permisos de rol existente (opcional)
+   - Selección de permisos (checkboxes agrupados por módulo)
+   - Nivel de acceso: Básico, Intermedio, Avanzado
+3. El sistema valida:
+   - Nombre del rol único en el negocio
+   - Al menos un permiso debe seleccionarse
+   - Los permisos son coherentes (ej: si puede eliminar, debe poder editar)
+4. Al crear el rol:
+   - Se genera registro en `rol`
+   - Se asignan los permisos seleccionados
+   - El rol queda disponible para asignar a usuarios
+   - Se registra en auditoría
 
 **Consideraciones Multi-tenant:**
 - Los roles personalizados son por negocio
-- Los roles del sistema son globales pero los permisos pueden variar por plan de suscripción
+- Los roles del sistema son iguales para todos los negocios
 
 **Seguridad:**
-- Requiere permiso: `roles_gestionar`
-- Solo Admin puede crear/editar roles
-- Cambios en roles afectan inmediatamente a todos los usuarios con ese rol
-- Auditoría de creación y modificación de roles
+- Requiere permiso: `roles_crear`
+- Solo Admin puede crear roles personalizados
+- Auditoría de creación de roles
 
 **UX:**
-- Vista de matriz de permisos (roles en filas, permisos en columnas)
-- Checkboxes para selección de permisos
-- Agrupación de permisos por módulo (ventas, inventario, reportes, etc.)
-- Indicador de "Rol poderoso" si tiene muchos permisos
+- Wizard en 3 pasos: Nombre → Heredar de rol → Seleccionar permisos
+- Vista de matriz de permisos con checkboxes
+- Agrupación visual por módulo
+- Vista previa de "Qué podrá hacer este rol"
 
 **Reglas de Negocio:**
-- Al menos un usuario con rol Admin debe existir siempre
-- Los roles del sistema no pueden modificarse (mantener integridad)
-- Los permisos sensibles (eliminar datos, ver finanzas) requieren roles específicos
-- Los roles personalizados facilitan la adaptación del sistema a estructuras organizacionales únicas
+- Los roles personalizados facilitan adaptación a estructuras organizacionales únicas
+- Se recomienda basarse en roles predefinidos y ajustar permisos
+- Los roles con muchos permisos requieren justificación (seguridad)
+
+---
+
+### RF-ADM-012A: Editar Rol Personalizado
+
+**Prioridad:** Baja
+
+**Descripción:**  
+El sistema debe permitir modificar roles personalizados existentes, cambiando nombre, descripción y permisos asignados.
+
+**Criterios de Aceptación:**
+1. El sistema permite editar solo roles personalizados (no roles del sistema)
+2. Se puede modificar:
+   - Nombre del rol (con validación de unicidad)
+   - Descripción
+   - Permisos asignados (agregar o quitar)
+3. Al guardar cambios:
+   - Los usuarios con este rol reciben los nuevos permisos inmediatamente
+   - Si se quitaron permisos, pierden acceso a esas funcionalidades
+   - Se registra en auditoría con detalle de cambios
+
+**Seguridad:**
+- Requiere permiso: `roles_editar`
+- Cambios en roles Admin requieren confirmación especial
+- Auditoría completa de modificaciones
+
+**UX:**
+- Formulario con datos precargados
+- Comparativa "Antes → Después" de permisos
+- Advertencia si hay usuarios asignados al rol
+
+**Reglas de Negocio:**
+- Los cambios afectan inmediatamente a todos los usuarios con ese rol
+- No se puede editar el rol "Admin" predefinido
+- Los cambios en permisos críticos requieren confirmación
+
+---
+
+### RF-ADM-012B: Listar y Comparar Roles
+
+**Prioridad:** Media
+
+**Descripción:**  
+El sistema debe proporcionar vistas para listar todos los roles (sistema y personalizados) y comparar sus permisos.
+
+**Criterios de Aceptación:**
+1. Lista de roles:
+   - Información mostrada: Nombre, Tipo (Sistema/Personalizado), Nivel de acceso, Usuarios asignados
+   - Filtros: Por tipo (Sistema/Personalizado)
+   - Acciones: Ver permisos, Editar (solo personalizados), Duplicar, Eliminar
+2. Matriz de permisos:
+   - Vista de tabla: Roles en columnas, Permisos en filas
+   - Marca visual (✓) donde el rol tiene el permiso
+   - Código de colores por módulo
+3. Asignación de roles a usuarios:
+   - Un usuario puede tener múltiples roles
+   - Los permisos son la unión de todos los roles asignados
+   - Vista previa: "Este usuario tendrá estos permisos"
+4. Restricciones de eliminación:
+   - No se pueden eliminar roles del sistema
+   - No se pueden eliminar roles personalizados con usuarios asignados
+   - Mensaje: "Reasigna los X usuarios a otro rol antes de eliminar"
+
+**Seguridad:**
+- Requiere permiso: `roles_ver`
+- Solo Admin puede eliminar roles personalizados
+
+**UX:**
+- Vista de matriz interactiva
+- Búsqueda de permisos por nombre
+- Agrupación de permisos por módulo con colores
+
+**Reglas de Negocio:**
+- Al menos un rol Admin debe existir y tener al menos un usuario asignado
+- Los roles del sistema garantizan funcionalidad base
+- Los roles personalizados permiten flexibilidad organizacional
+
+---
+
+### RF-ADM-012C: Eliminar Rol Personalizado
+
+**Prioridad:** Baja
+
+**Descripción:**  
+El sistema debe permitir eliminar roles personalizados que ya no son necesarios, siempre que no tengan usuarios asignados.
+
+**Criterios de Aceptación:**
+1. El sistema permite eliminar solo roles personalizados (no roles del sistema)
+2. Validaciones antes de eliminar:
+   - El rol no debe tener usuarios asignados
+   - Si tiene usuarios asignados:
+     - Mostrar mensaje: "Este rol tiene X usuarios asignados"
+     - Listar los usuarios
+     - Sugerencia: "Reasigna estos usuarios a otro rol primero"
+     - Opción: "Reasignar automáticamente a rol [selector]" 
+3. Al confirmar la eliminación:
+   - Modal de confirmación: "¿Eliminar rol '[Nombre]'? Esta acción no se puede deshacer"
+   - Se elimina el registro de `rol`
+   - Se eliminan todas las asignaciones de permisos del rol
+   - Se registra en auditoría (quién eliminó, cuándo, qué permisos tenía)
+4. Restricciones absolutas:
+   - NO se pueden eliminar roles del sistema (Admin, Cajero, Gerente, etc.)
+   - NO se puede eliminar el último rol Admin del negocio
+   - NO se puede eliminar si es el rol predeterminado para nuevos usuarios
+
+**Consideraciones Multi-tenant:**
+- Solo se pueden eliminar roles personalizados del mismo negocio
+- Los roles del sistema son globales e inmutables
+
+**Seguridad:**
+- Requiere permiso: `roles_eliminar`
+- Solo Administradores pueden eliminar roles
+- La eliminación se audita con detalle completo
+- No se puede recuperar un rol eliminado (crear uno nuevo si es necesario)
+
+**UX:**
+- Botón "Eliminar" deshabilitado si tiene usuarios asignados
+- Tooltip explicando por qué no se puede eliminar
+- Wizard de reasignación de usuarios antes de permitir eliminación
+- Confirmación de seguridad con checkbox "Entiendo que esta acción es irreversible"
+
+**Reglas de Negocio:**
+- Los roles del sistema son inmutables (no se pueden editar ni eliminar)
+- Se recomienda desactivar roles en lugar de eliminarlos (mantener historial)
+- Si se necesita un rol similar después, crear uno nuevo con configuración similar
+- Los roles eliminados no aparecen en reportes históricos (mostrar "Rol eliminado")
 
 ---
 
 ### RF-ADM-013: Configurar Permisos Granulares
 
-**Descripción:**  
+**Prioridad:** Alta
+
+**Descripción:****  
 El sistema debe implementar un sistema de permisos granulares que controle el acceso a cada funcionalidad específica del sistema, permitiendo asignar permisos a roles de manera precisa y flexible.
 
 **Criterios de Aceptación:**
@@ -983,10 +1378,12 @@ El sistema debe implementar un sistema de permisos granulares que controle el ac
 
 ---
 
-### RF-ADM-014: Gestionar Sesiones de Usuario
+### RF-ADM-014: Iniciar Sesión (Login)
+
+**Prioridad:** Alta
 
 **Descripción:**  
-El sistema debe controlar las sesiones activas de los usuarios, permitir login/logout, gestionar sesiones concurrentes, y proporcionar herramientas para cerrar sesiones remotamente por seguridad.
+El sistema debe proporcionar un proceso de autenticación seguro para que los usuarios accedan al sistema mediante credenciales válidas.
 
 **Criterios de Aceptación:**
 1. Proceso de login:
@@ -1066,6 +1463,10 @@ El sistema debe controlar las sesiones activas de los usuarios, permitir login/l
 - Mensaje claro al cerrar sesión: "Sesión cerrada exitosamente"
 
 **Reglas de Negocio:**
+- Las sesiones tienen duración configurable (por defecto 8 horas)
+- El sistema valida credenciales contra la base de datos
+- Los intentos fallidos se registran para seguridad
+- Las sesiones expiran por inactividad (timeout configurable)
 - Las sesiones de cajeros con caja abierta no deben cerrarse automáticamente (evitar pérdida de datos)
 - Los administradores pueden cerrar sesiones de cualquier usuario en casos de emergencia
 - Las sesiones inactivas > 24 horas se cierran automáticamente
@@ -1074,6 +1475,8 @@ El sistema debe controlar las sesiones activas de los usuarios, permitir login/l
 ---
 
 ### RF-ADM-015: Implementar Autenticación de Dos Factores (2FA)
+
+**Prioridad:** Media
 
 **Descripción:**  
 El sistema debe proporcionar autenticación de dos factores como capa adicional de seguridad, permitiendo a los usuarios y siendo obligatorio para roles críticos validar su identidad con un segundo método además de la contraseña.
@@ -1153,9 +1556,11 @@ El sistema debe proporcionar autenticación de dos factores como capa adicional 
 
 ---
 
-### RF-ADM-016: Gestionar Políticas de Contraseñas
+### RF-ADM-016: Configurar Políticas de Contraseñas
 
-**Descripción:**  
+**Prioridad:** Alta
+
+**Descripción:****  
 El sistema debe implementar y hacer cumplir políticas de contraseñas robustas, incluyendo requisitos de complejidad, expiración, historial, y herramientas para recuperación y cambio seguro de contraseñas.
 
 **Criterios de Aceptación:**
@@ -1239,6 +1644,8 @@ El sistema debe implementar y hacer cumplir políticas de contraseñas robustas,
 ---
 
 ### RF-ADM-017: Auditar Accesos y Acciones de Usuarios
+
+**Prioridad:** Alta
 
 **Descripción:**  
 El sistema debe registrar automáticamente todos los accesos y acciones significativas de los usuarios para auditoría, investigación de incidentes, y cumplimiento de normativas, proporcionando trazabilidad completa.
@@ -1326,6 +1733,8 @@ El sistema debe registrar automáticamente todos los accesos y acciones signific
 
 ### RF-ADM-018: Configurar Restricciones de Acceso por IP
 
+**Prioridad:** Media
+
 **Descripción:**  
 El sistema debe permitir configurar listas blancas (whitelist) o listas negras (blacklist) de direcciones IP para controlar desde dónde los usuarios pueden acceder al sistema, mejorando la seguridad.
 
@@ -1397,10 +1806,12 @@ El sistema debe permitir configurar listas blancas (whitelist) o listas negras (
 
 ---
 
-### RF-ADM-019: Gestionar Backups de Datos
+### RF-ADM-019: Crear Backup de Datos
+
+**Prioridad:** Alta
 
 **Descripción:**  
-El sistema debe proporcionar herramientas para realizar backups (respaldos) de los datos del negocio, programar backups automáticos, y permitir la restauración de datos en caso de pérdida o corrupción.
+El sistema debe permitir realizar backups (respaldos) manuales de los datos del negocio para protección y recuperación ante pérdidas.
 
 **Criterios de Aceptación:**
 1. Tipos de backup:
@@ -1473,6 +1884,10 @@ El sistema debe proporcionar herramientas para realizar backups (respaldos) de l
 - Descarga directa del archivo de backup
 
 **Reglas de Negocio:**
+- Los backups manuales son recomendados antes de cambios importantes
+- El proceso puede tardar según el tamaño de datos (5 min - 2 horas)
+- Los backups encriptados requieren contraseña para restaurar
+- Se recomienda hacer backups antes de actualizaciones mayores
 - Los backups automáticos son obligatorios (protección de datos)
 - Se recomienda almacenar backups en múltiples ubicaciones (redundancia)
 - Los backups deben probarse periódicamente (restaurar en ambiente de prueba)
@@ -1482,7 +1897,9 @@ El sistema debe proporcionar herramientas para realizar backups (respaldos) de l
 
 ### RF-ADM-020: Implementar Control de Acceso Basado en Horarios
 
-**Descripción:**  
+**Prioridad:** Baja
+
+**Descripción:****  
 El sistema debe permitir configurar horarios de acceso para usuarios o roles, restringiendo el login fuera de los horarios laborales asignados para mejorar la seguridad y el control operativo.
 
 **Criterios de Aceptación:**
@@ -1545,10 +1962,12 @@ El sistema debe permitir configurar horarios de acceso para usuarios o roles, re
 
 ---
 
-### RF-ADM-021: Gestionar Tokens de API y Acceso Externo
+### RF-ADM-021: Crear Token de API
+
+**Prioridad:** Media
 
 **Descripción:**  
-El sistema debe permitir generar tokens de API para integraciones externas, proporcionando acceso controlado y seguro a funcionalidades del sistema sin compartir credenciales de usuario.
+El sistema debe permitir generar tokens de API para integraciones externas, proporcionando acceso controlado sin compartir credenciales de usuario.
 
 **Criterios de Aceptación:**
 1. Generación de tokens de API:
@@ -1625,6 +2044,10 @@ El sistema debe permitir generar tokens de API para integraciones externas, prop
 - Documentación de API con ejemplos de uso
 
 **Reglas de Negocio:**
+- Los tokens se muestran UNA SOLA VEZ al crearlos (seguridad)
+- Se recomienda tokens con permisos mínimos necesarios
+- Los tokens deben tener fecha de expiración (buena práctica)
+- Rotar tokens periódicamente (cada 90-180 días)
 - Los tokens de API no reemplazan la autenticación de usuarios (son complementarios)
 - Se recomienda tokens con permisos mínimos (principio de menor privilegio)
 - Los tokens comprometidos deben revocarse inmediatamente
@@ -1637,6 +2060,8 @@ El sistema debe permitir generar tokens de API para integraciones externas, prop
 ---
 
 ### RF-ADM-022: Configurar Impuestos y Retenciones
+
+**Prioridad:** Alta
 
 **Descripción:**  
 El sistema debe permitir configurar tasas impositivas (IGV, IVA, ISR, etc.) y retenciones aplicables según la legislación del país, asegurando cálculos correctos en facturación y cumplimiento tributario.
@@ -1708,6 +2133,8 @@ El sistema debe permitir configurar tasas impositivas (IGV, IVA, ISR, etc.) y re
 
 ### RF-ADM-023: Configurar Numeración de Comprobantes
 
+**Prioridad:** Alta
+
 **Descripción:**  
 El sistema debe permitir configurar las series y numeración correlativa de comprobantes de pago (boletas, facturas, notas de crédito) según los requisitos de la autoridad tributaria de cada país.
 
@@ -1778,6 +2205,8 @@ El sistema debe permitir configurar las series y numeración correlativa de comp
 
 ### RF-ADM-024: Configurar Prefijos y Formatos de Códigos
 
+**Prioridad:** Media
+
 **Descripción:**  
 El sistema debe permitir configurar prefijos y formatos automáticos para códigos internos de entidades (productos, clientes, pedidos, etc.), facilitando la identificación y organización.
 
@@ -1845,7 +2274,9 @@ El sistema debe permitir configurar prefijos y formatos automáticos para códig
 
 ### RF-ADM-025: Configurar Monedas y Tipos de Cambio
 
-**Descripción:**  
+**Prioridad:** Media
+
+**Descripción:****  
 El sistema debe permitir configurar múltiples monedas, definir la moneda predeterminada del negocio, y actualizar tipos de cambio para transacciones multi-moneda.
 
 **Criterios de Aceptación:**

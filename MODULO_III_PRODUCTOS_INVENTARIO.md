@@ -239,25 +239,21 @@ El Administrador debe poder subir múltiples imágenes para cada producto, defin
 
 ---
 
-### **RF-INV-005: Gestionar Categorías de Productos**
+### **RF-INV-005: Crear Categoría de Productos**
 
 **Prioridad:** Media
 
 **Descripción:**
-El Administrador debe poder crear, editar y organizar categorías para clasificar productos, facilitando la navegación en el storefront, reportes segmentados, y gestión del catálogo. Las categorías son específicas del negocio y reflejan su organización de productos.
+El Administrador debe poder crear categorías para clasificar productos, facilitando la navegación en el storefront, reportes segmentados, y gestión del catálogo. Las categorías son específicas del negocio y reflejan su organización de productos.
 
 **Criterios de Aceptación:**
 1. El sistema permite crear una categoría con: código único, nombre, descripción, imagen de categoría (opcional), orden de visualización.
 2. El sistema valida que el código sea único dentro del tenant.
-3. El sistema permite editar: nombre, descripción, imagen, orden.
-4. El sistema no permite editar el código (inmutable).
-5. El sistema permite activar/desactivar categorías.
-6. El sistema valida que no se desactive una categoría con productos activos asignados (advertencia).
-7. El sistema permite ordenar categorías (campo `orden`) para definir secuencia de presentación.
-8. El sistema muestra contador de productos por categoría.
-9. El sistema permite asignar imagen representativa a la categoría (para storefront).
-10. El sistema registra creación/edición en `log_auditoria`.
-11. Las categorías se muestran ordenadas en storefront y selectores del sistema.
+3. El sistema permite asignar imagen representativa a la categoría (para storefront).
+4. El sistema establece `activa = TRUE` por defecto.
+5. El sistema registra quién creó la categoría y cuándo.
+6. El sistema genera UUID único para la categoría.
+7. Las categorías creadas quedan disponibles para asignar a productos inmediatamente.
 
 **Consideraciones Multi-tenant:**
 - Las categorías son específicas del tenant.
@@ -269,41 +265,135 @@ El Administrador debe poder crear, editar y organizar categorías para clasifica
 - Validar tipo MIME de imágenes subidas.
 
 **Consideraciones UX:**
-- Listado de categorías con tarjetas visuales mostrando imagen, nombre, y contador de productos.
-- Drag & drop para reordenar categorías.
-- Modal de creación/edición rápida.
+- Formulario simple y claro.
+- Drag & drop para subir imagen.
 - Vista previa de cómo se verá en storefront.
-- Filtro de categorías: activas, todas.
-- Indicador visual: "15 productos en esta categoría".
 - Sugerencias de categorías típicas: "Cervezas", "Vinos", "Licores", "Destilados", "Espumantes", "Complementos".
+- Validación en tiempo real de código único.
 
 **Reglas de Negocio:**
 - Los productos pueden tener una categoría asignada o ninguna (NULL).
-- Las categorías desactivadas no aparecen en storefront ni filtros.
-- El orden define la secuencia en menús y filtros (categorías más importantes primero).
+- El código de categoría es inmutable después de la creación.
 - La imagen de categoría es opcional pero mejora la experiencia en storefront.
 - Los productos sin categoría se agrupan en "Sin categoría" o "Otros".
 
 ---
 
-### **RF-INV-006: Gestionar Marcas**
+### **RF-INV-005A: Editar Categoría de Productos**
+
+**Prioridad:** Baja
+
+**Descripción:**
+El Administrador debe poder editar categorías existentes, modificando nombre, descripción, imagen y orden de visualización.
+
+**Criterios de Aceptación:**
+1. El sistema permite editar: nombre, descripción, imagen, orden.
+2. El sistema no permite editar el código (inmutable).
+3. El sistema permite activar/desactivar categorías.
+4. El sistema valida que no se desactive una categoría con productos activos asignados (advertencia).
+5. El sistema registra modificaciones en `log_auditoria`.
+
+**Consideraciones Multi-tenant:**
+- Solo se pueden editar categorías del mismo tenant.
+
+**Consideraciones de Seguridad:**
+- Solo usuarios con rol Admin o permiso `productos.gestionar_categorias` pueden editar categorías.
+- Registrar cambios en `log_auditoria`.
+
+**Consideraciones UX:**
+- Formulario con datos precargados.
+- Vista previa de impacto en storefront.
+- Advertencia si se desactiva categoría con productos activos.
+
+**Reglas de Negocio:**
+- Las categorías desactivadas no aparecen en storefront ni filtros.
+- Los cambios se aplican inmediatamente.
+
+---
+
+### **RF-INV-005B: Listar Categorías de Productos**
 
 **Prioridad:** Media
 
 **Descripción:**
-El Administrador debe poder registrar y gestionar marcas de productos (fabricantes/distribuidores), almacenando información como país de origen, logo, y descripción. Las marcas ayudan a clasificar productos y son importantes para búsquedas y filtros en el storefront.
+El sistema debe mostrar lista de todas las categorías con información resumida y opciones de filtrado.
+
+**Criterios de Aceptación:**
+1. El sistema muestra listado de categorías con: imagen, nombre, código, contador de productos, estado.
+2. El sistema permite filtrar por: activas, inactivas, todas.
+3. El sistema permite ordenar por: nombre, orden, cantidad de productos.
+4. El sistema muestra contador de productos por categoría.
+5. Las categorías se muestran ordenadas según campo `orden`.
+
+**Consideraciones Multi-tenant:**
+- Solo se listan categorías del tenant actual.
+
+**Consideraciones de Seguridad:**
+- Requiere permiso: `productos.ver` o `productos.gestionar_categorias`.
+
+**Consideraciones UX:**
+- Vista de tarjetas con imagen, nombre y contador.
+- Drag & drop para reordenar categorías.
+- Indicador visual: "15 productos en esta categoría".
+
+**Reglas de Negocio:**
+- El orden define la secuencia en menús y filtros del storefront.
+
+---
+
+### **RF-INV-005C: Desactivar Categoría**
+
+**Descripción:**  
+El sistema debe permitir desactivar categorías que ya no se utilizan, manteniendo el historial de productos que la tuvieron asignada.
+
+**Criterios de Aceptación:**
+1. El sistema permite desactivar categorías existentes.
+2. Al desactivar, la categoría no aparece en listados activos ni en storefront.
+3. Los productos que tenían esa categoría asignada mantienen la referencia histórica.
+4. Se puede reactivar la categoría en cualquier momento.
+5. El sistema registra la desactivación en auditoría.
+
+**Consideraciones Multi-tenant:**
+- Solo se pueden desactivar categorías del mismo tenant.
+- La desactivación no elimina datos (soft delete).
+
+**Consideraciones de Seguridad:**
+- Solo usuarios con rol Admin o permiso `productos.gestionar_categorias` pueden desactivar categorías.
+- Registrar desactivación en `log_auditoria` con motivo.
+- Advertencia si la categoría tiene productos activos asignados.
+
+**Consideraciones UX:**
+- Confirmación clara del impacto: "Esta categoría dejará de aparecer en filtros y storefront".
+- Advertencia si tiene productos activos: "⚠️ 15 productos tienen esta categoría asignada".
+- Campo opcional para motivo de desactivación.
+- Botón de "Reactivar" fácilmente accesible en la lista.
+- Badge de "Desactivada" en listado de categorías.
+
+**Reglas de Negocio:**
+- Las categorías desactivadas no aparecen en storefront ni filtros.
+- Los productos mantienen la referencia a la categoría desactivada (para reportes históricos).
+- Si se reactiva, vuelve a estar disponible inmediatamente.
+- Las categorías desactivadas pueden eliminarse solo si no tienen productos asociados.
+
+**Prioridad:** Baja
+
+---
+
+### **RF-INV-006: Crear Marca**
+
+**Prioridad:** Media
+
+**Descripción:**
+El Administrador debe poder registrar marcas de productos (fabricantes/distribuidores), almacenando información como país de origen, logo, y descripción. Las marcas ayudan a clasificar productos y son importantes para búsquedas y filtros en el storefront.
 
 **Criterios de Aceptación:**
 1. El sistema permite crear una marca con: nombre único, país de origen, logo (opcional), descripción.
 2. El sistema valida que el nombre sea único dentro del tenant.
 3. El sistema permite subir logo de la marca (PNG, JPG; máx 2MB).
-4. El sistema permite editar: nombre, país de origen, logo, descripción.
-5. El sistema permite activar/desactivar marcas.
-6. El sistema valida que no se desactive una marca con productos activos asignados (advertencia).
-7. El sistema muestra contador de productos por marca.
-8. El sistema permite búsqueda y autocompletado al asignar marca a producto.
-9. El sistema registra creación/edición en `log_auditoria`.
-10. Las marcas se usan como filtro en storefront y reportes.
+4. El sistema establece `activa = TRUE` por defecto.
+5. El sistema registra quién creó la marca y cuándo.
+6. El sistema genera UUID único para la marca.
+7. Las marcas creadas quedan disponibles para asignar a productos inmediatamente.
 
 **Consideraciones Multi-tenant:**
 - Las marcas son específicas del tenant.
@@ -315,20 +405,117 @@ El Administrador debe poder registrar y gestionar marcas de productos (fabricant
 - Registrar cambios en `log_auditoria`.
 
 **Consideraciones UX:**
-- Listado de marcas con tarjetas mostrando logo, nombre, país, y contador de productos.
-- Modal de creación/edición rápida.
+- Formulario simple y claro.
 - Selector de país con banderas.
 - Drag & drop para subir logo.
 - Vista previa del logo.
-- Filtro: activas, todas.
-- Búsqueda incremental de marcas.
+- Validación en tiempo real de nombre único.
 
 **Reglas de Negocio:**
 - Los productos pueden tener una marca asignada o ninguna (NULL).
-- Las marcas desactivadas no aparecen en filtros activos.
 - Las marcas importantes en licorerías: Johnnie Walker, Bacardi, Corona, Pilsen, Cusqueña, etc.
 - El logo de marca puede mostrarse junto al producto en storefront.
-- El país de origen es informativo (puede diferir del país de origen del producto).
+- El país de origen es informativo.
+
+---
+
+### **RF-INV-006A: Editar Marca**
+
+**Prioridad:** Baja
+
+**Descripción:**
+El Administrador debe poder editar marcas existentes, modificando nombre, país de origen, logo y descripción.
+
+**Criterios de Aceptación:**
+1. El sistema permite editar: nombre, país de origen, logo, descripción.
+2. El sistema valida que el nuevo nombre sea único (si se cambia).
+3. El sistema permite activar/desactivar marcas.
+4. El sistema valida que no se desactive una marca con productos activos asignados (advertencia).
+5. El sistema registra modificaciones en `log_auditoria`.
+
+**Consideraciones Multi-tenant:**
+- Solo se pueden editar marcas del mismo tenant.
+
+**Consideraciones de Seguridad:**
+- Solo usuarios con rol Admin o permiso `productos.gestionar_marcas` pueden editar marcas.
+- Registrar cambios en `log_auditoria`.
+
+**Consideraciones UX:**
+- Formulario con datos precargados.
+- Vista previa del logo actualizado.
+- Advertencia si se desactiva marca con productos activos.
+
+**Reglas de Negocio:**
+- Las marcas desactivadas no aparecen en filtros activos.
+- Los cambios se aplican inmediatamente.
+
+---
+
+### **RF-INV-006B: Listar Marcas**
+
+**Prioridad:** Media
+
+**Descripción:**
+El sistema debe mostrar lista de todas las marcas con información resumida y opciones de filtrado.
+
+**Criterios de Aceptación:**
+1. El sistema muestra listado de marcas con: logo, nombre, país, contador de productos, estado.
+2. El sistema permite filtrar por: activas, inactivas, todas.
+3. El sistema permite búsqueda incremental por nombre.
+4. El sistema muestra contador de productos por marca.
+5. El sistema permite ordenar por: nombre, país, cantidad de productos.
+
+**Consideraciones Multi-tenant:**
+- Solo se listan marcas del tenant actual.
+
+**Consideraciones de Seguridad:**
+- Requiere permiso: `productos.ver` o `productos.gestionar_marcas`.
+
+**Consideraciones UX:**
+- Vista de tarjetas con logo, nombre y país.
+- Búsqueda incremental con autocompletado.
+- Indicador: "23 productos de esta marca".
+
+**Reglas de Negocio:**
+- Las marcas se usan como filtro en storefront y reportes.
+
+---
+
+### **RF-INV-006C: Desactivar Marca**
+
+**Descripción:**  
+El sistema debe permitir desactivar marcas que ya no se comercializan, manteniendo el historial de productos asociados.
+
+**Criterios de Aceptación:**
+1. El sistema permite desactivar marcas existentes.
+2. Al desactivar, la marca no aparece en filtros activos ni en storefront.
+3. Los productos que tenían esa marca asignada mantienen la referencia histórica.
+4. Se puede reactivar la marca en cualquier momento.
+5. El sistema registra la desactivación en auditoría.
+
+**Consideraciones Multi-tenant:**
+- Solo se pueden desactivar marcas del mismo tenant.
+- La desactivación no elimina datos (soft delete).
+
+**Consideraciones de Seguridad:**
+- Solo usuarios con rol Admin o permiso `productos.gestionar_marcas` pueden desactivar marcas.
+- Registrar desactivación en `log_auditoria` con motivo.
+- Advertencia si la marca tiene productos activos asignados.
+
+**Consideraciones UX:**
+- Confirmación clara del impacto: "Esta marca dejará de aparecer en filtros y storefront".
+- Advertencia si tiene productos activos: "⚠️ 23 productos tienen esta marca asignada".
+- Campo opcional para motivo de desactivación.
+- Botón de "Reactivar" fácilmente accesible en la lista.
+- Badge de "Desactivada" en listado de marcas.
+
+**Reglas de Negocio:**
+- Las marcas desactivadas no aparecen en filtros del storefront ni en selectores.
+- Los productos mantienen la referencia a la marca desactivada (para reportes históricos).
+- Si se reactiva, vuelve a estar disponible inmediatamente.
+- Las marcas desactivadas pueden eliminarse solo si no tienen productos asociados.
+
+**Prioridad:** Baja
 
 ---
 
@@ -462,6 +649,46 @@ El Administrador debe poder agregar productos al combo, especificar cantidades d
 - Al vender el combo, se descuenta stock de cada producto individual según cantidad.
 - Si algún producto del combo no tiene stock suficiente, no se puede vender el combo completo.
 - Los productos desactivados no pueden agregarse a combos nuevos (advertencia en combos existentes).
+
+---
+
+### **RF-INV-009A: Desactivar Combo**
+
+**Descripción:**  
+El sistema debe permitir desactivar combos promocionales que ya no están vigentes o no se ofrecen.
+
+**Criterios de Aceptación:**
+1. El sistema permite desactivar combos existentes.
+2. Al desactivar, el combo no aparece en POS ni storefront.
+3. No se pueden realizar nuevas ventas del combo desactivado.
+4. Se mantiene el historial de ventas realizadas con ese combo.
+5. Se puede reactivar el combo en cualquier momento.
+6. El sistema registra la desactivación en auditoría.
+
+**Consideraciones Multi-tenant:**
+- Solo se pueden desactivar combos del mismo tenant.
+- La desactivación no elimina datos ni historial de ventas (soft delete).
+
+**Consideraciones de Seguridad:**
+- Solo usuarios con rol Admin o permiso `productos.gestionar_combos` pueden desactivar combos.
+- Registrar desactivación en `log_auditoria` con motivo.
+- No permitir desactivar si hay pedidos pendientes con ese combo.
+
+**Consideraciones UX:**
+- Confirmación clara del impacto: "Este combo dejará de estar disponible para ventas".
+- Campo opcional para motivo de desactivación (ej: "Promoción finalizada", "Productos agotados").
+- Botón de "Reactivar" fácilmente accesible en la lista.
+- Badge de "Desactivado" en listado de combos.
+- Filtro rápido para ver solo combos activos/desactivados.
+
+**Reglas de Negocio:**
+- Un combo desactivado no puede venderse ni pedirse.
+- El historial de ventas del combo permanece intacto.
+- Los combos vencidos (fuera de vigencia) pueden desactivarse automáticamente.
+- Si se reactiva, vuelve a estar disponible inmediatamente en POS y storefront.
+- Al desactivar, automáticamente se marca como `visible_storefront = FALSE`.
+
+**Prioridad:** Media
 
 ---
 
@@ -1149,10 +1376,12 @@ El sistema debe proporcionar trazabilidad completa desde el ingreso de un lote h
 
 ---
 
-### **RF-INV-023: Gestionar Productos Vencidos y Dañados**
+### **RF-INV-023: Registrar Producto Vencido o Dañado**
+
+**Prioridad:** Alta
 
 **Descripción:**  
-El sistema debe proporcionar un módulo específico para gestionar productos vencidos o dañados, facilitando su identificación, retiro del inventario disponible, documentación de la pérdida, y gestión de su disposición final (descarte, devolución a proveedor, donación).
+El sistema debe permitir registrar productos vencidos o dañados, facilitando su retiro del inventario disponible, documentación de la pérdida, y gestión de su disposición final (descarte, devolución a proveedor, donación).
 
 **Criterios de Aceptación:**
 1. El sistema identifica automáticamente lotes vencidos:
@@ -1160,33 +1389,23 @@ El sistema debe proporcionar un módulo específico para gestionar productos ven
    - Cambia estado de lote a `'vencido'` automáticamente
    - Bloquea el lote para que no pueda ser seleccionado en ventas (FIFO lo excluye)
    - Genera alerta para el almacenero responsable
-2. El módulo "Gestión de Mermas y Productos No Aptos" muestra:
-   - Lista de lotes vencidos o dañados pendientes de gestión
-   - Producto, lote, cantidad, costo, fecha de vencimiento, almacén
-   - Días transcurridos desde el vencimiento
-   - Valor total de la pérdida
-   - Estado de gestión (Pendiente, En Proceso, Resuelto)
-3. El almacenero puede registrar:
-   - **Producto dañado**: Antes del vencimiento (rotura, contaminación, daño de embalaje)
-     - Capturar fotos del daño
-     - Seleccionar causa (transporte, almacenamiento, manipulación, cliente)
-     - Determinar responsable (proveedor, transportista, personal interno, cliente)
-     - Cantidad afectada (parcial o todo el lote)
-   - **Producto vencido**: Confirmación de retiro físico
-     - Método de disposición (descarte, devolución a proveedor, donación)
-     - Documento de respaldo (acta de destrucción, guía de devolución, certificado de donación)
-     - Firma digital del responsable
-4. El sistema procesa la gestión:
+2. El almacenero puede registrar productos dañados o vencidos:
+   - Seleccionar lote afectado
+   - Tipo: Vencido, Dañado, Contaminado
+   - Cantidad afectada
+   - Fotografía del producto (opcional)
+   - Motivo/causa del daño
+3. El sistema procesa el registro:
    - Crea movimiento de inventario con `tipo = 'merma'` o `'producto_dañado'`
-   - Descuenta la cantidad del lote y actualiza `inventario_consolidado`
-   - Registra el costo de la pérdida para reportes financieros
-   - Si hay póliza de seguro, genera reporte para reclamo
-   - Si es devolución a proveedor, genera nota de crédito automática
-5. Reportes de mermas:
-   - "Reporte Mensual de Mermas" por categoría, causa, responsable
-   - "Análisis de Causas de Pérdida" para mejorar procesos
-   - "Valor Total de Mermas" vs. Ventas (indicador de eficiencia)
-   - Comparativa entre almacenes (identificar problemas localizados)
+   - Descuenta la cantidad del lote afectado
+   - Actualiza `inventario_consolidado`
+   - Calcula valor de la pérdida (cantidad × costo_unitario)
+   - Registra en `log_auditoria` con fotos y documentos adjuntos
+4. Opciones de disposición final:
+   - Descarte/Destrucción
+   - Devolución a proveedor
+   - Donación
+   - Uso interno/muestras
 
 **Consideraciones Multi-tenant:**
 - Cada negocio gestiona sus mermas independientemente.
@@ -1199,10 +1418,10 @@ El sistema debe proporcionar un módulo específico para gestionar productos ven
 - Las fotos de productos dañados se almacenan en storage seguro con marca de tiempo no modificable.
 
 **UX:**
-- App móvil para almacenero: escanear código de barras, tomar foto, registrar merma en 3 pasos.
-- Notificaciones push cuando hay productos próximos a vencer (proactivo para evitar mermas).
-- Dashboard con KPI: "% de Mermas del Mes", "Valor de Mermas", "Causas Principales".
-- Flujo guiado para gestión de devoluciones a proveedor (genera automáticamente emails, notas de crédito).
+- Formulario simple para registrar merma.
+- Cámara para capturar fotos del producto dañado.
+- Alertas automáticas de productos próximos a vencer.
+- Dashboard con resumen de mermas del mes.
 
 **Reglas de Negocio:**
 - Los productos vencidos **no pueden venderse bajo ninguna circunstancia** (regulación sanitaria).
@@ -1212,71 +1431,149 @@ El sistema debe proporcionar un módulo específico para gestionar productos ven
 
 ---
 
-## Submódulo 6.3.3: Compras y Proveedores
+### **RF-INV-024: Crear Proveedor**
+
+**Prioridad:** Alta
+
+**Descripción:**  
+El sistema debe permitir registrar proveedores en el catálogo, incluyendo información de contacto, términos comerciales, y categorías de productos que suministran.
+
+**Criterios de Aceptación:**
+1. El formulario de creación de proveedor incluye:
+   - Razón social (obligatorio)
+   - RUC/NIT (obligatorio, único)
+   - Dirección fiscal
+   - Persona de contacto (nombre, cargo)
+   - Teléfono principal
+   - Email de pedidos
+   - Email de facturación
+   - Días de crédito (ej: 30, 60, 90 días)
+   - Monto mínimo de pedido
+   - Categorías de productos que suministra
+2. El sistema valida que el RUC sea único dentro del tenant.
+3. El sistema establece `activo = TRUE` por defecto.
+4. El sistema registra quién creó el proveedor y cuándo.
+5. El sistema genera UUID único para el proveedor.
+
+**Consideraciones Multi-tenant:**
+- Cada negocio gestiona su propio catálogo de proveedores independientemente.
+- Un proveedor puede estar registrado en múltiples negocios (sin relación entre ellos).
+
+**Seguridad:**
+- Requiere permiso: `proveedores_gestionar`
+- Los datos de proveedores son confidenciales.
+- Registrar creación en `log_auditoria`.
+
+**Consideraciones UX:**
+- Formulario simple y claro.
+- Validación en tiempo real de RUC único.
+- Selección múltiple de categorías de productos.
+
+**Reglas de Negocio:**
+- El RUC es único e inmutable después de la creación.
+- Los proveedores creados quedan disponibles para órdenes de compra inmediatamente.
 
 ---
 
-### **RF-INV-024: Gestionar Catálogo de Proveedores**
+### **RF-INV-024A: Editar Proveedor**
 
-**Descripción:**  
-El sistema debe proporcionar un módulo completo para gestionar el catálogo de proveedores, incluyendo información de contacto, términos comerciales, categorías de productos que suministran, historial de compras, y evaluación de desempeño. Esto centraliza la información y facilita la toma de decisiones sobre con quién comprar.
+**Prioridad:** Media
+
+**Descripción:**
+El Administrador debe poder editar información de proveedores existentes, modificando datos de contacto y términos comerciales.
 
 **Criterios de Aceptación:**
-1. El formulario de registro de proveedor incluye:
-   - **Información básica**: Nombre comercial, razón social, RUC/NIT, país
-   - **Contacto**: Dirección, teléfono, email, sitio web, contacto principal (nombre, cargo, teléfono directo)
-   - **Información comercial**:
-     - Categorías de productos que suministra (multiselección)
-     - Términos de pago (contado, 15 días, 30 días, 60 días, consignación)
-     - Método de pago preferido (transferencia, cheque, efectivo)
-     - Moneda de operación (PEN, USD, EUR)
-     - Descuento por volumen (si aplica)
-     - Monto mínimo de pedido
-   - **Información fiscal**: Certificado de RUC, constancia de no adeudo, certificaciones (DIGESA para alimentos/bebidas)
-   - **Banco**: Nombre del banco, número de cuenta, CCI (para pagos)
-   - **Estado**: Activo, Inactivo, Suspendido, Bloqueado
-   - **Notas internas**: Observaciones sobre calidad, cumplimiento, incidencias
-2. El sistema permite:
-   - Asignar múltiples contactos por proveedor (ventas, facturación, logística)
-   - Subir documentos adjuntos (contratos, certificados, fichas técnicas)
-   - Registrar sucursales o centros de distribución del proveedor
-   - Asociar productos específicos con proveedores (tabla `producto_proveedor` con precio y tiempo de entrega)
-3. Vista de listado de proveedores con:
-   - Filtros por: estado, categoría, país, términos de pago
-   - Búsqueda por nombre, RUC, o producto que suministran
-   - Columnas: Nombre, RUC, categorías, último pedido, deuda pendiente, calificación
-   - Acciones rápidas: Ver detalle, nueva orden de compra, contactar
-4. Cada proveedor tiene una ficha completa que muestra:
-   - Resumen de compras (total histórico, promedio mensual, última compra)
-   - Productos comprados frecuentemente
-   - Órdenes de compra activas
-   - Historial de pagos y saldo pendiente
-   - Evaluación de desempeño (cumplimiento, calidad, tiempo de entrega)
-   - Timeline de interacciones (llamadas, emails, visitas)
-5. El sistema valida:
-   - RUC único por negocio (no duplicados)
-   - Email en formato válido
-   - Al menos un contacto principal obligatorio
+1. El sistema permite editar toda la información excepto el RUC (inmutable).
+2. El sistema permite cambiar: razón social, dirección, contactos, términos comerciales, categorías.
+3. El sistema permite activar/desactivar/bloquear proveedores.
+4. El sistema registra modificaciones en `log_auditoria`.
 
 **Consideraciones Multi-tenant:**
-- Cada negocio mantiene su propio catálogo de proveedores (no compartido).
-- Un mismo proveedor real puede estar registrado en múltiples negocios de forma independiente.
+- Solo se pueden editar proveedores del mismo tenant.
 
-**Seguridad:**
-- Requiere permiso: `proveedores_gestionar` (crear/editar), `proveedores_ver` (solo lectura)
-- Los datos bancarios del proveedor son sensibles: solo visibles para usuarios con permiso `proveedores_datos_financieros_ver`.
-- Auditoría de cambios en información crítica (datos bancarios, estado).
+**Consideraciones de Seguridad:**
+- Requiere permiso: `proveedores_gestionar`
+- Registrar cambios en `log_auditoria`.
 
-**UX:**
-- Importación masiva desde Excel/CSV con plantilla predefinida.
-- Autocompletado de datos mediante API de SUNAT usando RUC (Perú).
-- Vista tipo "tarjeta" para visualización rápida de proveedores principales.
-- Etiquetas/tags personalizados (ej: "Proveedor confiable", "Entrega lenta", "Buenos precios").
+**Consideraciones UX:**
+- Formulario con datos precargados.
+- Indicador de cambios no guardados.
 
 **Reglas de Negocio:**
-- Los proveedores de productos alcohólicos deben tener certificación DIGESA vigente.
-- Si un proveedor se marca como "Bloqueado", no se pueden crear nuevas órdenes de compra hasta desbloquearlo.
-- Los proveedores "Suspendidos" tienen órdenes activas pero no se permiten nuevas hasta resolver el problema.
+- Un proveedor bloqueado no puede recibir nuevas órdenes de compra.
+- Los cambios en términos comerciales solo afectan órdenes futuras.
+
+---
+
+### **RF-INV-024B: Listar Proveedores**
+
+**Prioridad:** Media
+
+**Descripción:**
+El sistema debe mostrar lista de todos los proveedores con información resumida y opciones de filtrado.
+
+**Criterios de Aceptación:**
+1. El sistema muestra listado de proveedores con: nombre, RUC, teléfono, categorías, estado.
+2. El sistema permite filtrar por: activos, inactivos, bloqueados, por categoría.
+3. El sistema permite búsqueda por nombre o RUC.
+4. El sistema permite ordenar por: nombre, fecha de registro.
+
+**Consideraciones Multi-tenant:**
+- Solo se listan proveedores del tenant actual.
+
+**Consideraciones de Seguridad:**
+- Requiere permiso: `proveedores_ver` o `proveedores_gestionar`.
+
+**Consideraciones UX:**
+- Vista de tabla con información clara.
+- Búsqueda incremental.
+- Indicador visual de estado (activo/bloqueado).
+
+**Reglas de Negocio:**
+- Los proveedores se ordenan alfabéticamente por defecto.
+
+---
+
+### **RF-INV-024C: Desactivar Proveedor**
+
+**Descripción:**  
+El sistema debe permitir desactivar proveedores con los que ya no se trabaja, manteniendo el historial de compras.
+
+**Criterios de Aceptación:**
+1. El sistema permite desactivar proveedores existentes.
+2. Al desactivar, el proveedor no aparece en listados activos para nuevas órdenes.
+3. Se mantiene el historial completo de órdenes de compra y transacciones.
+4. Se puede reactivar el proveedor en cualquier momento.
+5. El sistema registra el motivo de desactivación y quién lo realizó.
+
+**Consideraciones Multi-tenant:**
+- Solo se pueden desactivar proveedores del mismo tenant.
+- La desactivación no elimina datos (soft delete).
+- El historial de compras permanece intacto.
+
+**Consideraciones de Seguridad:**
+- Solo usuarios con rol Admin o permiso `proveedores_gestionar` pueden desactivar proveedores.
+- Registrar desactivación en `log_auditoria` con motivo detallado.
+- Advertencia si hay órdenes de compra pendientes con ese proveedor.
+- No permitir desactivar si hay cuentas por pagar pendientes (advertencia).
+
+**Consideraciones UX:**
+- Confirmación clara del impacto: "Este proveedor no estará disponible para nuevas órdenes de compra".
+- Campo obligatorio para motivo de desactivación (ej: "Mal servicio", "Cambio de proveedor", "Proveedor cerró").
+- Advertencia si hay órdenes pendientes: "⚠️ 2 órdenes de compra pendientes con este proveedor".
+- Botón de "Reactivar" fácilmente accesible en la lista.
+- Badge de "Desactivado" en listado de proveedores.
+- Historial de desactivaciones/reactivaciones del proveedor.
+
+**Reglas de Negocio:**
+- Un proveedor desactivado no puede recibir nuevas órdenes de compra.
+- El historial de órdenes de compra, facturas y pagos permanece intacto.
+- Los reportes de desempeño de proveedores incluyen proveedores desactivados (con filtro).
+- Si hay órdenes pendientes, se puede desactivar pero con advertencia destacada.
+- Si se reactiva, vuelve a estar disponible inmediatamente para nuevas órdenes.
+- Las cotizaciones activas del proveedor desactivado se marcan como "Proveedor inactivo".
+
+**Prioridad:** Baja
 
 ---
 
@@ -1509,360 +1806,329 @@ El sistema debe facilitar el proceso de recepción de mercancía desde órdenes 
 
 ---
 
-### **RF-INV-028: Gestionar Devoluciones a Proveedores**
+### **RF-INV-028: Crear Devolución a Proveedor**
 
 **Descripción:**  
-El sistema debe permitir gestionar el proceso completo de devolución de mercancía a proveedores por productos defectuosos, vencidos prematuramente, errores en el pedido, o cualquier no conformidad, incluyendo la generación de documentos de devolución y el seguimiento de notas de crédito o reemplazos.
+El sistema debe permitir crear nuevas devoluciones de productos a proveedores cuando se detectan productos defectuosos o no conformes.
 
 **Criterios de Aceptación:**
-1. El usuario puede iniciar una devolución desde:
-   - Una orden de compra recibida (devolución inmediata post-recepción)
-   - Un lote de inventario existente (devolución posterior por defecto detectado)
-   - Una recepción con productos marcados como "No conformes"
-2. El formulario de devolución incluye:
-   - **Encabezado**:
-     - Número de devolución (auto-generado: DEV-YYYYMMDD-####)
-     - Orden de compra origen (si aplica)
-     - Proveedor
-     - Fecha de devolución
-     - Motivo (dropdown): Producto defectuoso, vencimiento prematuro, error en pedido, empaque dañado, otro
-     - Tipo de resolución esperada: Reemplazo, nota de crédito, reembolso
-   - **Detalle de productos a devolver**:
-     - Producto
-     - Lote (si se identifica uno específico)
-     - Cantidad a devolver
-     - Costo unitario (para cálculo de crédito)
-     - Motivo específico del ítem
-     - Evidencia (fotos, documentos)
-   - **Documentos de respaldo**:
-     - Guía de remisión de devolución
-     - Acta de no conformidad
-     - Fotos de los productos
-   - **Observaciones para el proveedor**
-3. Estados de devolución:
-   - **Borrador**: En proceso de documentación
-   - **Registrada**: Devolución formalizada, pendiente de envío
-   - **Enviada**: Mercancía despachada de vuelta al proveedor
-   - **Recibida por Proveedor**: Proveedor confirmó recepción
-   - **Aprobada**: Proveedor acepta la devolución y emite nota de crédito/reemplazo
-   - **Rechazada**: Proveedor no acepta la devolución (requiere escalamiento)
-   - **Cerrada**: Devolución completada y compensada
-4. Al registrar la devolución, el sistema:
-   - Crea movimiento de inventario tipo `'devolucion_proveedor'`
-   - Descuenta la cantidad del lote correspondiente
-   - Actualiza `inventario_consolidado`
-   - Si el lote queda en cero, marca el lote como `'devuelto'`
-   - Genera documento de devolución (PDF) para enviar al proveedor
-   - Registra el monto de la devolución como "Crédito Pendiente" con el proveedor
-5. Seguimiento de compensación:
-   - **Nota de crédito**: Se aplica al saldo con el proveedor, se usa en futuras compras
-   - **Reembolso**: Se registra el ingreso de dinero cuando el proveedor paga
-   - **Reemplazo**: Se vincula con una nueva recepción de mercancía (orden de reposición)
-6. El sistema permite:
-   - Ver historial de devoluciones por proveedor (afecta evaluación de desempeño)
-   - Generar reporte de "Tasa de Devolución por Proveedor"
-   - Escalar devoluciones rechazadas a gerencia o legal
+1. El usuario puede crear una nota de devolución indicando:
+   - Proveedor
+   - Productos a devolver con cantidades
+   - Motivo de devolución
+   - Tipo de resolución (nota de crédito, reemplazo, reembolso)
+2. Al confirmar, el sistema reduce el inventario automáticamente.
 
 **Consideraciones Multi-tenant:**
-- Las devoluciones solo afectan el inventario del negocio que las registra.
-- Los créditos con proveedores son independientes por negocio.
+- Cada negocio gestiona sus propias devoluciones a proveedores.
+- Las notas de devolución no se comparten entre negocios.
 
-**Seguridad:**
+**Consideraciones de Seguridad:**
 - Requiere permiso: `compras_devolucion_crear`
 - Devoluciones > $500 USD requieren aprobación de gerente.
-- Auditoría completa de todo el ciclo de devolución.
+- Auditoría completa de todas las devoluciones creadas.
 
-**UX:**
-- Botón de "Iniciar Devolución" directamente desde la ficha de recepción.
-- Captura de fotos de productos defectuosos con timestamp y geolocalización.
-- Notificaciones automáticas al proveedor por email.
-- Dashboard de "Devoluciones en Proceso" con estado en tiempo real.
+**Consideraciones UX:**
+- Interfaz guiada: "¿Qué deseas devolver?" → Selección de producto → Motivo → Resolución esperada.
+- Carga de fotos de productos defectuosos (evidencia para el proveedor).
+- Plantilla de email para notificar al proveedor sobre la devolución.
+- Calculadora automática del monto a acreditar.
 
 **Reglas de Negocio:**
-- Las devoluciones deben iniciarse dentro del plazo acordado con el proveedor (típicamente 7-15 días post-recepción).
-- Si el proveedor no responde en 15 días, el sistema escala automáticamente a gerencia.
-- Las notas de crédito tienen validez de 6-12 meses (según acuerdo con proveedor).
-- Los productos devueltos no pueden venderse bajo ninguna circunstancia hasta resolver con el proveedor.
+- No se pueden devolver productos ya vendidos (el sistema valida stock real).
+- Las devoluciones de productos perecederos deben hacerse dentro de 48 horas de recepción.
+- El sistema genera automáticamente un documento de devolución con número único.
+- Al crear la devolución, el stock se descuenta inmediatamente del inventario.
+
+**Prioridad:** Media
 
 ---
 
-### **RF-INV-029: Conciliar Facturas con Órdenes de Compra**
+### **RF-INV-028A: Editar Devolución a Proveedor**
 
 **Descripción:**  
-El sistema debe facilitar el proceso de conciliación entre las órdenes de compra, las recepciones de mercancía y las facturas del proveedor (three-way matching), validando que cantidades, precios y totales coincidan antes de autorizar el pago, previniendo errores y posibles fraudes.
+El sistema debe permitir modificar devoluciones existentes mientras no hayan sido finalizadas.
 
 **Criterios de Aceptación:**
-1. El módulo "Conciliación de Facturas" muestra:
-   - Lista de órdenes de compra recibidas pendientes de conciliar
-   - Facturas del proveedor pendientes de validar
-   - Estado de conciliación de cada documento
-2. El proceso de conciliación valida automáticamente (three-way match):
-   - **Orden de Compra (OC)**: Lo que se solicitó y aprobó
-   - **Recepción de Mercancía (RM)**: Lo que realmente se recibió
-   - **Factura del Proveedor (FP)**: Lo que el proveedor está cobrando
-3. La vista de conciliación muestra tabla comparativa:
-   | Producto | Cantidad OC | Cantidad RM | Cantidad FP | Precio OC | Precio FP | Monto OC | Monto FP | Estado |
-   |----------|-------------|-------------|-------------|-----------|-----------|----------|----------|--------|
-   | Whisky X | 100         | 98          | 100         | $25.00    | $25.00    | $2,500   | $2,500   | ⚠️ Dif. Cantidad |
-4. El sistema identifica discrepancias:
-   - **Cantidad**: FP ≠ RM (facturado diferente a lo recibido)
-   - **Precio**: Precio FP ≠ Precio OC (cambio de precio no autorizado)
-   - **Total**: Suma de FP ≠ Suma de OC + impuestos
-   - **Productos**: Items en FP que no están en OC (cargos adicionales)
-5. Estados de conciliación:
-   - **Conciliada**: Todo coincide, lista para pagar
-   - **Conciliada con Diferencias Menores**: Diferencias < 2% o < $50 USD (aceptable, se aprueba)
-   - **Discrepancia Mayor**: Diferencias > 2% o > $50 USD (requiere investigación)
-   - **Rechazada**: Factura incorrecta, se devuelve al proveedor para corrección
-6. El usuario puede:
-   - Aprobar la factura si está conforme
-   - Solicitar nota de crédito por diferencias
-   - Rechazar la factura y solicitar re-emisión
-   - Agregar notas sobre las discrepancias
-   - Comunicarse con el proveedor directamente desde el sistema (envío de email)
-7. Al aprobar la conciliación:
-   - El sistema registra la factura como `'aprobada_para_pago'`
-   - Se crea el compromiso de pago según términos (fecha de vencimiento)
-   - Se notifica al departamento de finanzas para programar el pago
-   - Se vincula la factura con la orden y recepciones correspondientes
-8. Reportes de conciliación:
-   - "Facturas Pendientes de Conciliar" (aging report)
-   - "Discrepancias Frecuentes por Proveedor"
-   - "Tiempo Promedio de Conciliación"
+1. El usuario puede editar cantidades, productos y motivos de devoluciones pendientes.
+2. Los cambios recalculan automáticamente los ajustes de inventario.
 
 **Consideraciones Multi-tenant:**
-- Cada negocio concilia sus propias facturas independientemente.
-- Los límites de tolerancia de diferencias son configurables por negocio.
+- Solo se pueden editar devoluciones del mismo negocio.
+- Las devoluciones de otros tenants no son visibles ni editables.
 
-**Seguridad:**
-- Requiere permiso: `compras_factura_conciliar`
-- Las aprobaciones de facturas con discrepancias mayores requieren permiso `compras_factura_aprobar_con_diferencias`.
-- Auditoría completa de quién aprobó qué factura y con qué diferencias.
+**Consideraciones de Seguridad:**
+- Requiere permiso: `compras_devolucion_editar`
+- Solo se pueden editar devoluciones en estado "Pendiente" o "En proceso".
+- Registro completo de cambios en `log_auditoria`.
 
-**UX:**
-- Vista tipo "diff" mostrando lado a lado OC, RM y FP con colores (verde=match, amarillo=diferencia menor, rojo=discrepancia).
-- Botón de "Aprobar Automáticamente" para facturas 100% conciliadas.
-- Alertas visuales para facturas próximas a vencer (términos de pago).
-- Sugerencia automática de acciones basadas en el tipo de discrepancia.
+**Consideraciones UX:**
+- Formulario con datos precargados de la devolución.
+- Advertencia si se cambian cantidades que afectan el inventario.
+- Historial de cambios visible en panel lateral.
+- Botón de "Revertir cambios" antes de guardar.
 
 **Reglas de Negocio:**
-- No se puede aprobar pago de una factura sin conciliarla primero con la orden y recepción.
-- Si la discrepancia es en favor del negocio (se factura menos de lo recibido), se aprueba automáticamente y se notifica como "ahorro".
-- Las facturas no conciliadas en 30 días se escalan automáticamente a gerencia.
-- Los descuentos aplicados por el proveedor en la factura deben coincidir con los acordados en la orden.
+- No se pueden editar devoluciones ya finalizadas o procesadas.
+- Los cambios en cantidades ajustan automáticamente el inventario.
+- Si se aumenta la cantidad devuelta, se valida que haya stock suficiente.
+- Las devoluciones aprobadas por el proveedor no pueden editarse.
+
+**Prioridad:** Media
 
 ---
 
-### **RF-INV-030: Analizar Desempeño de Proveedores**
+### **RF-INV-028B: Listar Devoluciones a Proveedores**
 
 **Descripción:**  
-El sistema debe proporcionar herramientas de análisis para evaluar el desempeño de los proveedores basándose en múltiples métricas (cumplimiento de plazos, calidad, precios, devoluciones), facilitando decisiones informadas sobre con quién continuar trabajando y quién merece mejores términos comerciales.
+El sistema debe permitir visualizar todas las devoluciones registradas con filtros de búsqueda.
 
 **Criterios de Aceptación:**
-1. El sistema calcula automáticamente métricas de desempeño por proveedor:
-   - **Cumplimiento de Entrega**:
-     - % de órdenes entregadas a tiempo (fecha real ≤ fecha esperada)
-     - Promedio de días de retraso (para entregas tardías)
-     - % de entregas anticipadas
-   - **Calidad de Productos**:
-     - % de productos conformes vs. no conformes
-     - Tasa de devolución (cantidad devuelta / cantidad total recibida)
-     - Número de incidencias de calidad
-   - **Precisión de Pedidos**:
-     - % de órdenes recibidas completas (cantidad recibida = cantidad solicitada)
-     - % de órdenes con errores (productos incorrectos, sobrantes)
-   - **Competitividad de Precios**:
-     - Variación de precios en el tiempo (tendencia)
-     - Comparativa de precios vs. otros proveedores del mismo producto
-     - % de descuentos obtenidos
-   - **Confiabilidad Financiera**:
-     - % de facturas conciliadas sin discrepancias
-     - Tiempo promedio de resolución de problemas
-     - Monto total de notas de crédito emitidas
-2. El sistema genera una "Scorecard de Proveedor" con calificación global:
-   - Cada métrica tiene un peso configurable (ej: Cumplimiento 40%, Calidad 30%, Precio 20%, Financiero 10%)
-   - Calificación final de 0-100 o escala (A, B, C, D, F)
-   - Clasificación visual: 🟢 Excelente (90-100), 🟡 Bueno (70-89), 🟠 Regular (50-69), 🔴 Deficiente (<50)
-3. Vista de "Ranking de Proveedores":
-   - Lista ordenada por calificación
-   - Filtros por categoría de producto
-   - Comparativa de top 10 proveedores en gráficos
-4. Reportes disponibles:
-   - "Análisis de Desempeño por Proveedor" (individual, PDF)
-   - "Comparativa de Proveedores" (varios proveedores, mismo producto)
-   - "Tendencia de Desempeño" (evolución en el tiempo, gráfico)
-   - "Proveedores en Riesgo" (con calificación decreciente o baja)
-5. Acciones basadas en el desempeño:
-   - Proveedores con calificación A: Elegibles para términos preferenciales (mejores plazos, descuentos)
-   - Proveedores con calificación D-F: Alertar para evaluación de descontinuación
-   - Proveedores con tendencia negativa: Agendar reunión de mejora
-6. El sistema permite:
-   - Agregar notas cualitativas sobre el proveedor (servicio al cliente, comunicación, flexibilidad)
-   - Registrar incidencias específicas que afectan la calificación
-   - Exportar scorecards para reuniones de revisión de proveedores
-   - Configurar alertas cuando un proveedor cae por debajo de umbral mínimo
+1. Muestra listado con: número de devolución, proveedor, fecha, estado, monto.
+2. Permite filtrar por proveedor, estado y rango de fechas.
 
 **Consideraciones Multi-tenant:**
-- Cada negocio tiene su propia evaluación de proveedores (no compartida).
-- Los pesos de las métricas son configurables por negocio.
+- Solo se listan devoluciones del negocio actual.
+- Cada usuario ve devoluciones según sus permisos de sede.
 
-**Seguridad:**
-- Requiere permiso: `proveedores_analisis_ver`
-- Las calificaciones son confidenciales, solo visibles para gerencia y compras.
+**Consideraciones de Seguridad:**
+- Requiere permiso: `compras_devolucion_ver` o `compras_devolucion_listar`
+- Los usuarios con rol Almacenero solo ven devoluciones de su sede.
+- No se exponen datos sensibles en el listado público.
 
-**UX:**
-- Dashboard de "Desempeño de Proveedores" con KPIs principales.
-- Gráficos interactivos (radar chart para comparar proveedores en múltiples dimensiones).
-- Código de colores consistente en toda la interfaz.
-- Exportación a PowerPoint para presentaciones ejecutivas.
+**Consideraciones UX:**
+- Vista de tabla con información clara y ordenada.
+- Filtros rápidos por estado: Pendientes, Aprobadas, Rechazadas, Finalizadas.
+- Búsqueda por número de devolución o nombre de proveedor.
+- Indicadores visuales de estado con colores (amarillo=pendiente, verde=aprobada, rojo=rechazada).
+- Exportación a Excel para reportes.
 
 **Reglas de Negocio:**
-- Las métricas se calculan sobre los últimos 12 meses (rolling window).
-- Se requiere un mínimo de 5 órdenes de compra para que la calificación sea significativa.
-- Los proveedores nuevos (< 5 órdenes) tienen calificación "Nuevo" hasta acumular historial.
-- Las incidencias graves (productos vencidos, fraude) pueden descalificar automáticamente al proveedor independientemente de otras métricas.
+- Las devoluciones se ordenan por fecha de creación (más recientes primero).
+- El listado incluye un contador de devoluciones pendientes de resolución.
+- Se pueden ver devoluciones históricas para análisis de proveedores.
+- El monto total devuelto por proveedor es visible en la vista de resumen.
+
+**Prioridad:** Media
 
 ---
 
-### **RF-INV-031: Gestionar Cotizaciones y Comparar Precios**
+### **RF-INV-029: Consultar Cuentas por Pagar**
 
 **Descripción:**  
-El sistema debe permitir solicitar cotizaciones a múltiples proveedores para los mismos productos, compararlas lado a lado en términos de precio, calidad, plazos de entrega y condiciones comerciales, facilitando la toma de decisión de compra basada en el mejor valor global.
+El sistema debe proporcionar una vista consolidada de todas las obligaciones pendientes de pago con proveedores, mostrando facturas pendientes, plazos de vencimiento, y permitiendo la gestión eficiente del flujo de caja y relaciones con proveedores.
 
 **Criterios de Aceptación:**
-1. El usuario puede crear una "Solicitud de Cotización" (RFQ - Request for Quotation):
+1. El módulo "Cuentas por Pagar" muestra:
+   - Lista de facturas/deudas pendientes de pago
+   - Información por documento: Proveedor, Número de factura, Fecha de emisión, Fecha de vencimiento, Monto total, Saldo pendiente, Días para vencimiento/vencido
+   - Indicadores visuales:
+     - 🟢 Verde: Pago al día (> 7 días para vencer)
+     - 🟡 Amarillo: Próximo a vencer (1-7 días)
+     - 🔴 Rojo: Vencido
+2. Filtros disponibles:
+   - Por proveedor
+   - Por estado (pendiente, parcialmente pagado, vencido)
+   - Por rango de fechas de vencimiento
+   - Por rango de montos
+3. Vista de resumen:
+   - Total de cuentas por pagar (todas las deudas)
+   - Deudas vencidas (monto total)
+   - Deudas por vencer en 7 días
+   - Deudas por vencer en 30 días
+   - Aging de cuentas por pagar (0-30 días, 31-60, 61-90, >90)
+4. El sistema permite:
+   - Ver detalle de cada cuenta por pagar (factura vinculada, orden de compra origen)
+   - Registrar un pago (total o parcial)
+   - Programar recordatorios de pago
+   - Aplicar notas de crédito a cuentas por pagar
+   - Exportar reporte a Excel/PDF
+5. Al seleccionar un proveedor específico:
+   - Muestra histórico de pagos realizados
+   - Saldo pendiente total con el proveedor
+   - Promedio de días de pago histórico
+   - Términos de pago acordados vs. cumplimiento real
+
+**Consideraciones Multi-tenant:**
+- Cada negocio gestiona sus propias cuentas por pagar independientemente.
+- Los datos financieros no se comparten entre negocios.
+
+**Consideraciones de Seguridad:**
+- Requiere permiso: `finanzas_cuentas_por_pagar_ver`
+- Solo usuarios autorizados (Admin, Gerente, Contador) pueden ver montos.
+- Registro de auditoría de todas las consultas de cuentas por pagar.
+
+**Consideraciones UX:**
+- Dashboard con KPIs principales: Total a pagar, Vencido, Próximo a vencer.
+- Gráfico de barras mostrando aging de cuentas.
+- Alertas visuales para facturas vencidas.
+- Acción rápida: "Registrar pago" desde el listado.
+- Calendario mostrando vencimientos del mes.
+
+**Reglas de Negocio:**
+- Las cuentas por pagar se generan automáticamente al recibir mercancía con factura.
+- El sistema calcula automáticamente días de vencimiento.
+- Las notas de crédito por devoluciones se aplican automáticamente a las cuentas por pagar del proveedor.
+- Los pagos parciales actualizan el saldo pendiente.
+- El sistema envía notificaciones automáticas 3 días antes del vencimiento.
+
+**Prioridad:** Alta
+
+---
+
+### **RF-INV-030: Registrar Compra Directa**
+
+**Descripción:**  
+El sistema debe permitir registrar compras realizadas directamente sin orden de compra previa, típicamente para compras urgentes, de bajo monto, o a proveedores ocasionales, generando automáticamente la entrada de inventario y la cuenta por pagar correspondiente.
+
+**Criterios de Aceptación:**
+1. El formulario de compra directa incluye:
    - **Encabezado**:
-     - Número de RFQ (auto-generado: RFQ-YYYYMMDD-####)
-     - Fecha de emisión
-     - Fecha límite de respuesta
-     - Lista de proveedores invitados (multiselección)
-   - **Productos a cotizar**:
+     - Número de compra (auto-generado: CD-YYYYMMDD-####)
+     - Fecha de compra
+     - Proveedor (búsqueda o crear nuevo si es ocasional)
+     - Almacén de destino
+     - Número de factura del proveedor
+     - Método de pago (efectivo, transferencia, crédito)
+     - Términos de pago (si es crédito: días de crédito)
+   - **Detalle de productos**:
      - Producto (búsqueda)
-     - Cantidad requerida
-     - Unidad de medida
-     - Especificaciones/requisitos especiales
-     - Fecha de entrega deseada
-   - **Criterios de evaluación** (pesos):
-     - Precio (ej: 50%)
-     - Tiempo de entrega (ej: 20%)
-     - Términos de pago (ej: 15%)
-     - Calidad/certificaciones (ej: 15%)
-   - **Condiciones generales**: Lugar de entrega, forma de pago, garantías, etc.
-2. El sistema genera automáticamente un documento de RFQ (PDF) y lo envía por email a los proveedores seleccionados.
-3. Los proveedores pueden responder:
-   - **Vía portal de proveedores** (si está implementado): Ingreso directo de cotización al sistema
-   - **Vía email**: El usuario registra manualmente la cotización recibida
-   - El sistema registra: Proveedor, fecha de respuesta, precios por ítem, plazos, condiciones
-4. Vista de "Comparativa de Cotizaciones":
-   | Producto | Cantidad | Proveedor A | Proveedor B | Proveedor C | Mejor Precio |
-   |----------|----------|-------------|-------------|-------------|--------------|
-   | Whisky X | 100 un   | $25.00 / 15 días / 30 días crédito | $24.50 / 20 días / contado | $26.00 / 10 días / 60 días crédito | Proveedor B |
-   - Columnas configurables: Precio unitario, subtotal, plazo de entrega, términos de pago, garantía, marca/origen
-   - Resaltado automático del mejor precio en cada fila
-   - Cálculo de "Mejor Valor" considerando todos los criterios con pesos configurados
-5. El sistema calcula una "Calificación Global" por proveedor para cada RFQ:
-   - Normaliza cada criterio (precio, plazo, etc.) a escala 0-100
-   - Aplica los pesos configurados
-   - Muestra el proveedor recomendado
-6. El usuario puede:
-   - Negociar con proveedores (registrar contrapropuestas)
-   - Dividir la orden entre varios proveedores (split order)
-   - Convertir una cotización seleccionada en orden de compra con un clic
-   - Archivar cotizaciones para referencia futura
-   - Notificar a proveedores no seleccionados (cortesía profesional)
-7. Reportes:
-   - "Historial de Cotizaciones por Producto" (análisis de tendencia de precios)
-   - "Tiempo Promedio de Respuesta por Proveedor"
-   - "% de Cotizaciones Ganadas por Proveedor"
+     - Cantidad comprada
+     - Costo unitario
+     - Subtotal (auto-calculado)
+     - Lote del proveedor (opcional)
+     - Fecha de vencimiento (obligatorio para perecederos)
+   - **Totales**:
+     - Subtotal
+     - IGV (18%)
+     - Total
+2. El sistema valida:
+   - Monto total > 0
+   - Fecha de vencimiento > fecha actual (para productos perecederos)
+   - Factura del proveedor no duplicada
+   - Producto existe en el catálogo (o permite crear uno nuevo rápidamente)
+3. Al confirmar la compra directa, el sistema:
+   - Crea registros en `lote_inventario` por cada producto
+   - Genera movimientos de inventario tipo `'entrada_compra_directa'`
+   - Actualiza `inventario_consolidado`
+   - Recalcula costo promedio ponderado
+   - Si el pago es a crédito: Crea cuenta por pagar en `cuentas_por_pagar`
+   - Si el pago es inmediato: Registra el pago y genera egreso de caja
+   - Genera comprobante de compra (PDF) con detalle
+4. Funcionalidades adicionales:
+   - Subir foto/scan de la factura del proveedor
+   - Agregar observaciones/notas sobre la compra
+   - Imprimir comprobante de entrada al almacén
+5. Restricciones configurables:
+   - Monto máximo para compras directas sin aprobación (ej: $500 USD)
+   - Compras > límite requieren aprobación de gerente
+   - Lista de productos autorizados para compra directa (o todos)
 
 **Consideraciones Multi-tenant:**
-- Cada negocio gestiona sus propias RFQs y cotizaciones.
-- Las cotizaciones no se comparten entre negocios.
+- Cada negocio registra sus compras directas independientemente.
+- Los límites de monto son configurables por negocio.
 
-**Seguridad:**
-- Requiere permiso: `compras_cotizacion_gestionar`
-- Las cotizaciones son confidenciales: solo visibles para el equipo de compras.
-- Los proveedores no deben ver las ofertas de otros proveedores (competencia justa).
+**Consideraciones de Seguridad:**
+- Requiere permiso: `compras_directa_crear`
+- Compras > monto límite requieren permiso adicional: `compras_directa_aprobar`
+- Auditoría completa: quién compró, cuánto, a qué proveedor.
+- Validar que el usuario solo registre compras en almacenes de su sede asignada.
 
-**UX:**
-- Plantillas de RFQ para productos frecuentes (ahorro de tiempo).
-- Vista de tabla dinámica con filtros y ordenamiento.
-- Gráficos de comparación visual (barras para precios, radar para criterios múltiples).
-- Notificación automática cuando un proveedor responde.
-- Vista móvil para revisión de cotizaciones en cualquier lugar.
+**Consideraciones UX:**
+- Formulario simple de un solo paso (no wizard para agilidad).
+- Autocompletado de proveedor con sugerencias de proveedores frecuentes.
+- Botón de "Agregar producto" para compras múltiples.
+- Cálculo automático de totales en tiempo real.
+- Opción de "Crear proveedor rápido" si es ocasional (solo nombre y RUC).
+- Acción rápida: "Guardar y registrar otra" para múltiples compras.
 
 **Reglas de Negocio:**
-- Los proveedores tienen plazo de 5-7 días para responder (configurable).
-- Las cotizaciones vencidas (>30 días) se marcan como "desactualizadas" y no se pueden convertir en OC sin revalidar precios.
-- Se recomienda solicitar mínimo 3 cotizaciones para compras > $1000 USD (buena práctica).
-- Las cotizaciones ganadoras se notifican al proveedor; las perdedoras reciben un agradecimiento profesional.
+- Las compras directas NO generan orden de compra (es compra ya realizada).
+- El stock se incrementa inmediatamente al confirmar.
+- Si el pago es a crédito, la cuenta por pagar se crea automáticamente.
+- Las compras directas aparecen en reportes de compras con etiqueta "Compra Directa".
+- Se recomienda usar órdenes de compra para compras planificadas y de alto monto.
+
+**Prioridad:** Media
 
 ---
 
-### **RF-INV-032: Configurar Reorden Automático**
+### **RF-INV-031: Registrar Pago a Proveedor**
 
 **Descripción:**  
-El sistema debe permitir configurar reglas de reorden automático para productos críticos o de alta rotación, generando automáticamente órdenes de compra sugeridas o solicitudes cuando el stock alcance el punto de reorden, minimizando quiebres de stock y optimizando el capital de trabajo.
+El sistema debe permitir registrar pagos a proveedores para saldar o abonar a cuentas por pagar, permitiendo pagos totales o parciales, múltiples formas de pago, y generando comprobantes de egreso con trazabilidad completa.
 
 **Criterios de Aceptación:**
-1. Para cada producto, se puede configurar:
-   - **Punto de Reorden (ROP - Reorder Point)**: Nivel de stock que activa el reorden
-   - **Cantidad de Reorden (ROQ - Reorder Quantity)**: Cuánto ordenar
-   - **Stock Mínimo**: Nivel de seguridad para evitar quiebres
-   - **Stock Máximo**: Nivel máximo deseado para no sobre-stockear
-   - **Lead Time**: Días que tarda el proveedor en entregar
-   - **Proveedor Principal**: A quién ordenar por defecto
-   - **Proveedor Alternativo**: Backup si el principal no está disponible
-2. Métodos de cálculo automático de ROP y ROQ:
-   - **Manual**: Usuario define valores fijos
-   - **Basado en Historial**: ROP = Demanda Promedio × Lead Time + Stock de Seguridad
-   - **Basado en Tendencia**: Considera estacionalidad y crecimiento
-3. El sistema ejecuta un job diario que:
-   - Revisa todos los productos con reorden automático habilitado
-   - Compara el stock actual vs. el punto de reorden
-   - Si stock actual ≤ ROP, genera una "Sugerencia de Compra"
-4. Vista de "Sugerencias de Compra Automáticas":
-   - Lista de productos que alcanzaron su punto de reorden
-   - Información: Producto, stock actual, ROP, cantidad sugerida, proveedor recomendado, urgencia
-   - Clasificación por urgencia:
-     - 🔴 Crítico: Stock < stock mínimo (riesgo de quiebre)
-     - 🟡 Urgente: Stock = ROP
-     - 🟢 Planificado: Proyección de alcanzar ROP en 7 días
-5. El usuario puede:
-   - **Aprobar sugerencia**: Crea orden de compra automáticamente
-   - **Modificar cantidad**: Ajustar ROQ antes de crear la orden
-   - **Cambiar proveedor**: Seleccionar alternativo
-   - **Rechazar/Posponer**: Si hay razones especiales (producto en descontinuación, promoción próxima)
-   - **Aprobar en lote**: Seleccionar múltiples sugerencias y crear múltiples órdenes con un clic
-6. Configuración avanzada:
-   - **Agrupación por proveedor**: Consolidar múltiples productos del mismo proveedor en una sola orden
-   - **Días de inventario objetivo**: El sistema calcula ROQ para mantener X días de stock
-   - **Estacionalidad**: Ajustar ROP/ROQ según época del año (ej: más bebidas en verano)
-   - **Promociones planificadas**: Aumentar stock anticipadamente si hay campaña de ventas
-7. Reportes de efectividad:
-   - "Quiebres de Stock Evitados por Reorden Automático"
-   - "Exceso de Inventario por Sobre-pedido"
-   - "Precisión del Forecast vs. Demanda Real"
+1. El módulo "Registrar Pago a Proveedor" permite seleccionar:
+   - Proveedor (búsqueda autocompletable)
+   - Muestra saldo pendiente total con el proveedor
+   - Lista de facturas/cuentas pendientes con checkbox para seleccionar cuáles pagar
+2. El formulario de pago incluye:
+   - **Encabezado**:
+     - Número de pago (auto-generado: PAG-PROV-YYYYMMDD-####)
+     - Fecha de pago
+     - Proveedor
+     - Método de pago (efectivo, transferencia bancaria, cheque)
+     - Cuenta bancaria de origen (si es transferencia)
+     - Número de cheque (si aplica)
+   - **Detalle de cuentas por pagar**:
+     - Factura/Documento
+     - Fecha de emisión
+     - Fecha de vencimiento
+     - Monto original
+     - Saldo pendiente
+     - Monto a pagar (editable, por defecto = saldo pendiente)
+   - **Totales**:
+     - Total a pagar (suma de montos seleccionados)
+     - Descuentos por pronto pago (si aplica)
+     - Total neto a pagar
+3. El sistema valida:
+   - Monto a pagar <= saldo pendiente por factura
+   - Total a pagar > 0
+   - Fondos suficientes en caja/cuenta (si el método es efectivo o cheque desde caja chica)
+4. Al confirmar el pago, el sistema:
+   - Registra el pago en `pagos_proveedor`
+   - Actualiza el saldo pendiente de cada factura en `cuentas_por_pagar`
+   - Marca facturas como `'pagada'` si saldo = 0, o `'parcialmente_pagada'` si saldo > 0
+   - Registra movimiento de egreso en caja/banco (según método de pago)
+   - Genera comprobante de egreso (PDF) con detalle de facturas pagadas
+   - Envía notificación/recibo al proveedor (opcional)
+5. El sistema permite:
+   - Aplicar descuentos por pronto pago (si se paga antes del vencimiento)
+   - Adjuntar comprobante de transferencia bancaria (foto/scan)
+   - Agregar observaciones sobre el pago
+   - Programar pagos futuros (fecha de ejecución)
+6. Funcionalidades adicionales:
+   - Pago a múltiples proveedores en un solo proceso (batch payment)
+   - Aplicación automática de notas de crédito pendientes
+   - Historial de pagos realizados al proveedor
 
 **Consideraciones Multi-tenant:**
-- Cada negocio configura sus propias reglas de reorden.
-- El cálculo de ROP puede usar diferentes algoritmos según el negocio.
+- Cada negocio registra sus pagos a proveedores independientemente.
+- Los fondos de caja/banco son específicos del negocio.
 
-**Seguridad:**
-- Requiere permiso: `inventario_reorden_configurar` (para configurar), `compras_sugerencia_aprobar` (para generar órdenes).
-- Las órdenes generadas automáticamente pueden requerir aprobación si superan límites de monto.
+**Consideraciones de Seguridad:**
+- Requiere permiso: `finanzas_pago_proveedor_registrar`
+- Pagos > $1000 USD requieren permiso adicional: `finanzas_pago_proveedor_aprobar`
+- Auditoría completa: quién pagó, cuánto, a quién, desde qué cuenta.
+- Los pagos confirmados no pueden editarse (solo anularse con contraasiento).
 
-**UX:**
-- Asistente de configuración: "Deja que el sistema calcule ROP/ROQ por ti" (basado en historial).
-- Dashboard con widget "Productos que Requieren Reorden" con contador de urgencias.
-- Simulador: "¿Qué pasaría si ordeno X cantidad?" (proyección de stock futuro).
-- Notificaciones push cuando hay sugerencias críticas.
+**Consideraciones UX:**
+- Vista clara del saldo total pendiente con el proveedor.
+- Checkbox para seleccionar facturas a pagar con un clic.
+- Calculadora automática del total a pagar.
+- Sugerencia de "Pagar todo" o "Pagar facturas vencidas solamente".
+- Confirmación clara antes de registrar: "Vas a pagar $2,500 a Proveedor XYZ".
+- Opción de "Imprimir comprobante" inmediatamente después del pago.
 
 **Reglas de Negocio:**
-- Los productos perecederos deben considerar su vida útil en el cálculo de ROQ (no ordenar más de lo que se puede vender antes del vencimiento).
-- El reorden automático se desactiva para productos marcados como "Descontinuado" o "Estacional Fuera de Temporada".
-- Si un producto tiene múltiples proveedores, el sistema alterna entre ellos para diversificar riesgo.
-- Las sugerencias no aprobadas en 7 días se marcan como "vencidas" y se re-generan con datos actualizados.
+- Los pagos se aplican primero a las facturas más antiguas (FIFO).
+- Si hay descuento por pronto pago, se calcula automáticamente si se paga antes del vencimiento.
+- Las notas de crédito pendientes se aplican automáticamente antes de desembolsar efectivo.
+- El sistema registra el tipo de cambio si el pago es en moneda diferente a la factura.
+- Los pagos parciales se permiten solo si el proveedor lo autoriza (configurable por proveedor).
+
+**Prioridad:** Alta
 
 ---
 
@@ -1871,10 +2137,11 @@ El sistema debe permitir configurar reglas de reorden automático para productos
 El **Módulo III: Gestión de Productos e Inventario** proporciona las funcionalidades completas para:
 
 ### Submódulo 6.3.1: Catálogo de Productos
-- **14 requisitos funcionales** (RF-INV-001 a RF-INV-014)
+- **21 requisitos funcionales** (RF-INV-001 a RF-INV-014, incluyendo variantes)
 - Gestión completa de productos, categorías, marcas
 - Combos promocionales y configuración de visibilidad en storefront
 - Búsqueda avanzada, importación masiva, y sistema de promociones
+- CRUDs completos para Categorías, Marcas, Combos y Proveedores
 
 ### Submódulo 6.3.2: Control de Inventario
 - **9 requisitos funcionales** (RF-INV-015 a RF-INV-023)
@@ -1884,13 +2151,16 @@ El **Módulo III: Gestión de Productos e Inventario** proporciona las funcional
 - Gestión de productos vencidos, dañados y mermas
 
 ### Submódulo 6.3.3: Compras y Proveedores
-- **9 requisitos funcionales** (RF-INV-024 a RF-INV-032)
-- Gestión integral de proveedores y evaluación de desempeño
+- **14 requisitos funcionales** (RF-INV-024 a RF-INV-031, incluyendo variantes)
+- Gestión integral de proveedores (CRUD completo)
 - Órdenes de compra con flujo de aprobación
-- Recepción de mercancía y conciliación de facturas (three-way matching)
-- Sistema de reorden automático y gestión de cotizaciones
+- Recepción de mercancía y entrada de inventario
+- Gestión de devoluciones a proveedores (CRUD completo)
+- Consulta de cuentas por pagar
+- Registro de compras directas
+- Registro de pagos a proveedores
 
-**Total: 32 requisitos funcionales** que garantizan el control completo del inventario, trazabilidad de productos alcohólicos (cumplimiento regulatorio), y optimización de la cadena de suministro para licorerías.
+**Total: 44 requisitos funcionales** que garantizan el control completo del inventario, trazabilidad de productos alcohólicos (cumplimiento regulatorio), y optimización de la cadena de suministro para licorerías.
 
 ---
 

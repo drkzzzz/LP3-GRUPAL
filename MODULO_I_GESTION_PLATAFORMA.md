@@ -14,6 +14,8 @@ Este módulo gestiona las funcionalidades de administración de la plataforma Sa
 
 ## RF-PLT-001: Registrar Nuevo Negocio (Tenant)
 
+**Prioridad:** Alta
+
 **Descripción:**  
 El sistema debe permitir a un SuperAdmin o mediante un proceso de auto-registro crear nuevos negocios (tenants) en la plataforma, configurando sus datos básicos, plan de suscripción inicial, y generando automáticamente la estructura necesaria para su operación independiente.
 
@@ -67,13 +69,15 @@ El sistema debe permitir a un SuperAdmin o mediante un proceso de auto-registro 
 
 ---
 
-## RF-PLT-002: Gestionar Planes de Suscripción
+## RF-PLT-002: Crear Plan de Suscripción
+
+**Prioridad:** Alta
 
 **Descripción:**  
-El sistema debe permitir al SuperAdmin configurar y gestionar los diferentes planes de suscripción disponibles en la plataforma, definiendo características, límites, precios, y periodicidad de cada plan.
+El sistema debe permitir al SuperAdmin crear nuevos planes de suscripción en la plataforma, definiendo características, límites, precios, y periodicidad de cada plan.
 
 **Criterios de Aceptación:**
-1. Cada plan de suscripción incluye:
+1. El formulario de creación de plan incluye:
    - Nombre del plan (ej: "Free Trial", "Basic", "Professional", "Enterprise")
    - Descripción detallada
    - Precio (puede ser 0 para Free Trial)
@@ -86,44 +90,216 @@ El sistema debe permitir al SuperAdmin configurar y gestionar los diferentes pla
      - Almacenamiento de documentos (GB)
      - Funcionalidades incluidas (módulos activos)
      - Soporte técnico (email, chat, prioritario, dedicado)
-   - Estado: Activo, Inactivo, Deprecado
+   - Estado inicial: Activo, Inactivo
    - Visibilidad: Público (visible para nuevos clientes), Privado (solo por invitación)
-2. El sistema permite:
-   - Crear nuevos planes
-   - Editar planes existentes (sin afectar suscripciones activas)
-   - Desactivar planes (los negocios con ese plan continúan, pero no se permite nuevas contrataciones)
-   - Versionar planes (crear nueva versión manteniendo la anterior para clientes legacy)
-3. Comparativa de planes:
-   - Tabla comparativa visual mostrando características de cada plan
-   - Recomendación automática según tamaño del negocio
-4. Descuentos y promociones:
+2. El sistema valida:
+   - Nombre del plan único (no duplicados)
+   - Precio >= 0
+   - Al menos un límite o característica definida
+3. Al confirmar la creación:
+   - Se genera registro en tabla `plan_suscripcion`
+   - Se asigna ID único al plan
+   - Se registra fecha de creación y usuario creador
+   - Se notifica al equipo de ventas (disponible nuevo plan)
+4. Descuentos y promociones configurables:
    - Descuento por pago anual (ej: 2 meses gratis)
    - Cupones de descuento aplicables
    - Precios especiales por región o tipo de negocio
 
 **Consideraciones Multi-tenant:**
 - Los planes son globales, no por tenant
-- Cada tenant puede estar en un plan diferente
+- Al crear el plan, estará disponible para todos los negocios según su visibilidad
 
 **Seguridad:**
-- Solo SuperAdmin puede crear/editar planes
-- Los cambios en planes activos requieren confirmación especial
-- Auditoría completa de cambios en planes
+- Solo SuperAdmin puede crear planes
+- Auditoría completa de creación de planes
 
 **UX:**
-- Interfaz tipo "pricing page" para visualización de planes
-- Comparativa lado a lado de características
-- Calculadora de precios según necesidades
+- Wizard de creación en 3 pasos: Información básica → Límites y características → Precios
+- Vista previa de cómo se verá el plan en la página de pricing
+- Plantillas predefinidas para planes comunes
 
 **Reglas de Negocio:**
-- Un plan deprecado no se puede reactivar
-- Los negocios en planes deprecados pueden permanecer o deben migrar a nuevo plan
-- El plan Free Trial es único y no renovable
-- Los cambios de precio en planes solo aplican a nuevas suscripciones
+- El plan Free Trial es único (solo puede haber uno activo)
+- Los planes con precio 0 se marcan automáticamente como "Free Trial" o "Custom"
+- Los nuevos planes se crean con estado "Inactivo" por defecto hasta revisión
+
+---
+
+## RF-PLT-002A: Editar Plan de Suscripción
+
+**Prioridad:** Media
+
+**Descripción:**  
+El sistema debe permitir al SuperAdmin modificar planes de suscripción existentes sin afectar las suscripciones activas de los negocios.
+
+**Criterios de Aceptación:**
+1. El sistema permite editar:
+   - Nombre del plan (con validación de unicidad)
+   - Descripción detallada
+   - Límites y características (usuarios, sedes, productos, almacenamiento, módulos)
+   - Soporte técnico incluido
+   - Visibilidad (público/privado)
+2. Campos NO editables:
+   - ID del plan (inmutable)
+   - Fecha de creación
+3. Para cambios de precio:
+   - El sistema crea una nueva versión del plan automáticamente
+   - El plan anterior queda como "legacy" para suscripciones existentes
+   - Nuevas suscripciones usan el precio actualizado
+4. El sistema registra:
+   - Historial de cambios (qué se modificó, valores anteriores y nuevos)
+   - Usuario que realizó el cambio
+   - Fecha y hora del cambio
+5. Impacto de cambios:
+   - Cambios en características/límites aplican a nuevas suscripciones
+   - Suscripciones activas mantienen las características del plan original (versionado)
+   - Opción de "Aplicar cambios a suscripciones existentes" (requiere confirmación especial)
+
+**Consideraciones Multi-tenant:**
+- Los cambios en planes globales NO afectan automáticamente a negocios con suscripciones activas
+- Se mantiene versionado para proteger a clientes existentes
+
+**Seguridad:**
+- Solo SuperAdmin puede editar planes
+- Los cambios en planes activos requieren confirmación especial
+- Auditoría completa de todas las modificaciones
+
+**UX:**
+- Formulario con datos precargados
+- Indicador visual de cambios no guardados
+- Vista comparativa: "Antes → Después"
+- Advertencia clara si los cambios afectarían suscripciones activas
+
+**Reglas de Negocio:**
+- Los cambios de precio siempre crean nueva versión (protección de contratos existentes)
+- Los cambios en límites pueden aplicarse inmediatamente con consentimiento del cliente
+- Los planes con suscripciones activas no se pueden eliminar (solo desactivar)
+
+---
+
+## RF-PLT-002B: Desactivar Plan de Suscripción
+
+**Prioridad:** Media
+
+**Descripción:**  
+El sistema debe permitir al SuperAdmin desactivar planes de suscripción, evitando que nuevos negocios se suscriban pero manteniendo el servicio para suscripciones existentes.
+
+**Criterios de Aceptación:**
+1. El SuperAdmin selecciona un plan activo para desactivar
+2. El sistema solicita motivo de desactivación:
+   - Plan descontinuado
+   - Reemplazado por nuevo plan
+   - Cambio de estrategia comercial
+   - Otro (texto libre)
+3. Al confirmar la desactivación:
+   - Estado del plan cambia a `'inactivo'` o `'deprecado'`
+   - El plan desaparece de la página de pricing pública
+   - Las suscripciones activas del plan continúan funcionando normalmente
+   - No se permiten nuevas suscripciones al plan
+4. El sistema registra:
+   - Fecha de desactivación
+   - Usuario que desactivó
+   - Motivo de desactivación
+   - Número de suscripciones activas afectadas
+5. Opciones para negocios con el plan desactivado:
+   - Pueden continuar con el plan indefinidamente (grandfathering)
+   - Se les puede ofrecer migración a plan equivalente o superior
+   - Notificación opcional: "Tu plan será descontinuado, migra a [Plan X]"
+
+**Consideraciones Multi-tenant:**
+- Los negocios con el plan desactivado no pierden acceso ni funcionalidad
+- La desactivación solo afecta nuevas contrataciones
+
+**Seguridad:**
+- Solo SuperAdmin puede desactivar planes
+- Desactivar plan con suscripciones activas requiere confirmación especial
+- Auditoría completa de desactivaciones
+
+**UX:**
+- Modal de confirmación con advertencia clara
+- Resumen: "X negocios tienen este plan actualmente"
+- Sugerencia de plan de migración para clientes existentes
+
+**Reglas de Negocio:**
+- Un plan desactivado NO se puede reactivar (integridad histórica)
+- Si se necesita un plan similar, debe crearse uno nuevo
+- Los planes deprecados se mantienen en el sistema indefinidamente (historial)
+- Las suscripciones activas del plan deprecado pueden renovarse automáticamente
+
+---
+
+## RF-PLT-002C: Listar y Comparar Planes de Suscripción
+
+**Prioridad:** Alta
+
+**Descripción:**  
+El sistema debe proporcionar vistas para listar todos los planes disponibles y comparar sus características, tanto para administración interna como para presentación a clientes.
+
+**Criterios de Aceptación:**
+1. **Vista administrativa** (para SuperAdmin):
+   - Lista de todos los planes (activos, inactivos, deprecados)
+   - Información mostrada:
+     - Nombre del plan
+     - Precio y periodicidad
+     - Estado (activo/inactivo/deprecado)
+     - Visibilidad (público/privado)
+     - Número de suscripciones activas
+     - Fecha de creación
+   - Filtros:
+     - Por estado (activo, inactivo, deprecado)
+     - Por visibilidad (público, privado)
+     - Por rango de precio
+   - Ordenamiento por: Nombre, precio, fecha de creación, número de suscripciones
+   - Acciones rápidas: Ver detalles, Editar, Desactivar, Duplicar
+2. **Tabla comparativa visual** (para clientes):
+   - Muestra solo planes activos y públicos
+   - Características lado a lado:
+     - Precio mensual/anual
+     - Usuarios incluidos
+     - Sedes permitidas
+     - Productos en catálogo
+     - Almacenamiento
+     - Módulos activos
+     - Tipo de soporte
+   - Destacar diferencias clave
+   - Botón "Seleccionar Plan" para cada uno
+3. **Recomendación automática**:
+   - Según perfil del negocio:
+     - Tamaño (pequeño, mediano, grande)
+     - Número estimado de usuarios/sedes
+     - Presupuesto
+   - Sugerencia: "Recomendamos el plan [X] para tu negocio"
+4. **Calculadora de precios**:
+   - Selector de necesidades (usuarios, sedes, módulos)
+   - Cálculo dinámico del plan recomendado
+   - Comparativa de ahorro anual vs. mensual
+
+**Consideraciones Multi-tenant:**
+- Los clientes solo ven planes públicos
+- SuperAdmin ve todos los planes (incluidos privados e inactivos)
+
+**Seguridad:**
+- Planes privados solo visibles para usuarios autorizados
+- Los precios pueden ocultarse según configuración regional
+
+**UX:**
+- Interfaz tipo "pricing page" moderna
+- Gráficos de comparativa interactivos
+- Responsiva para móviles
+- Código de colores para facilitar comparación
+
+**Reglas de Negocio:**
+- Los planes se ordenan por defecto: Free Trial → Basic → Professional → Enterprise
+- Los planes deprecados no aparecen en comparativas públicas
+- La tabla comparativa destaca el plan más popular
+- Se puede marcar un plan como "Recomendado" o "Más popular"
 
 ---
 
 ## RF-PLT-003: Cambiar Plan de Suscripción
+
+**Prioridad:** Alta
 
 **Descripción:**  
 El sistema debe permitir a los negocios actualizar (upgrade) o degradar (downgrade) su plan de suscripción, calculando ajustes prorrateados, validando límites del nuevo plan, y aplicando los cambios de manera inmediata o al final del período actual.
@@ -179,6 +355,8 @@ El sistema debe permitir a los negocios actualizar (upgrade) o degradar (downgra
 ---
 
 ## RF-PLT-004: Facturar Suscripciones Automáticamente
+
+**Prioridad:** Alta
 
 **Descripción:**  
 El sistema debe generar automáticamente facturas de suscripción mensual/anual para cada negocio, procesar el pago mediante el método configurado, y gestionar casos de pago fallido con reintentos y notificaciones.
@@ -258,6 +436,8 @@ El sistema debe generar automáticamente facturas de suscripción mensual/anual 
 
 ## RF-PLT-005: Suspender o Cancelar Suscripción
 
+**Prioridad:** Alta
+
 **Descripción:**  
 El sistema debe permitir suspender temporalmente o cancelar definitivamente la suscripción de un negocio, gestionando el acceso al sistema, la retención de datos, y los procesos de reembolso o finalización según corresponda.
 
@@ -332,6 +512,8 @@ El sistema debe permitir suspender temporalmente o cancelar definitivamente la s
 ---
 
 ## RF-PLT-006: Monitorear Uso de Recursos por Negocio
+
+**Prioridad:** Media
 
 **Descripción:**  
 El sistema debe proporcionar al SuperAdmin herramientas de monitoreo en tiempo real del uso de recursos de cada negocio, permitiendo identificar abusos, planificar capacidad, y hacer cumplir los límites del plan de suscripción.
@@ -411,6 +593,8 @@ El sistema debe proporcionar al SuperAdmin herramientas de monitoreo en tiempo r
 ---
 
 ## RF-PLT-007: Generar Reportes Consolidados de la Plataforma
+
+**Prioridad:** Media
 
 **Descripción:**  
 El sistema debe proporcionar al SuperAdmin reportes consolidados con métricas clave de toda la plataforma, permitiendo analizar el crecimiento, ingresos, salud del negocio SaaS, y tomar decisiones estratégicas.
@@ -498,6 +682,8 @@ El sistema debe proporcionar al SuperAdmin reportes consolidados con métricas c
 
 ## RF-PLT-008: Configurar Parámetros Globales de la Plataforma
 
+**Prioridad:** Alta
+
 **Descripción:**  
 El sistema debe permitir al SuperAdmin configurar parámetros globales que afectan a toda la plataforma, como tasas de impuestos, métodos de pago disponibles, integraciones con servicios externos, y políticas generales.
 
@@ -575,6 +761,8 @@ El sistema debe permitir al SuperAdmin configurar parámetros globales que afect
 ---
 
 ## RF-PLT-009: Auditar Actividad de Usuarios y Sistema
+
+**Prioridad:** Alta
 
 **Descripción:**  
 El sistema debe registrar automáticamente todas las acciones críticas realizadas por usuarios y procesos del sistema, proporcionando al SuperAdmin herramientas de auditoría para investigar incidentes, detectar anomalías, y cumplir con requisitos de compliance.
