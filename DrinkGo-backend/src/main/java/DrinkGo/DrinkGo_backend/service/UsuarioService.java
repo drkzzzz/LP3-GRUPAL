@@ -1,5 +1,13 @@
 package DrinkGo.DrinkGo_backend.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import DrinkGo.DrinkGo_backend.dto.RegistroRequest;
 import DrinkGo.DrinkGo_backend.dto.TokenRequest;
 import DrinkGo.DrinkGo_backend.dto.TokenResponse;
@@ -9,13 +17,6 @@ import DrinkGo.DrinkGo_backend.entity.Usuario;
 import DrinkGo.DrinkGo_backend.repository.SesionUsuarioRepository;
 import DrinkGo.DrinkGo_backend.repository.UsuarioRepository;
 import DrinkGo.DrinkGo_backend.security.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * Servicio de autenticación - Reemplaza RegistroService.
@@ -140,6 +141,16 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findByUuid(uuid)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + uuid));
         return usuario.getNegocioId();
+    }
+
+        /**
+     * Obtener el ID del usuario a partir de su UUID.
+     * Usado en Bloque 6 para registrar quién creó/aprobó órdenes de compra.
+     */
+    public Long obtenerUsuarioId(String uuid) {
+        Usuario usuario = usuarioRepository.findByUuid(uuid)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + uuid));
+        return usuario.getId();
     }
 
     // ============================================================
