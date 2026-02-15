@@ -318,7 +318,7 @@ Content-Type: application/json
 ```
 
 ### Body (JSON)
-```json
+```jsonBLOQUE 12: GASTOS E INGRESOS
 {
   "aprobadoPor": 1,
   "notas": "Devolución aprobada - producto efectivamente llegó dañado según inspección"
