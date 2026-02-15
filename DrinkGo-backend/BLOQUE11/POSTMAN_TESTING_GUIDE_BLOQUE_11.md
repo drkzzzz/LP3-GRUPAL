@@ -47,18 +47,19 @@ Content-Type: application/json
   {
     "id": 1,
     "negocioId": 1,
+    "sedeId": 1,
     "ventaId": 101,
     "pedidoId": null,
-    "clienteId": 1,
+    "clienteId": null,
     "numeroDevolucion": "DEV-1-20250214001",
     "estado": "solicitada",
     "tipoDevolucion": "total",
     "categoriaMotivo": "defectuoso",
-    "motivo": "Producto llegó con la botella rota",
+    "detalleMotivo": "Producto llegó con la botella rota",
     "metodoReembolso": "pago_original",
-    "montoTotal": 125.50,
-    "impuestosDevueltos": 22.59,
-    "montoReembolso": 125.50,
+    "subtotal": 102.91,
+    "montoImpuesto": 18.52,
+    "total": 121.43,
     "notas": "Cliente solicita reembolso completo",
     "solicitadoEn": "2026-02-14T11:45:00",
     "aprobadoEn": null,
@@ -66,17 +67,18 @@ Content-Type: application/json
     "rechazadoEn": null,
     "procesadoPor": null,
     "aprobadoPor": null,
-    "rechazadoPor": null,
-    "createdAt": "2026-02-14T11:45:00",
-    "updatedAt": "2026-02-14T11:45:00",
+    "solicitadoPor": null,
+    "razonRechazo": null,
+    "creadoEn": "2026-02-14T11:45:00",
+    "actualizadoEn": "2026-02-14T11:45:00",
     "detalles": [
       {
         "id": 1,
         "detalleVentaId": null,
-        "productoId": 5,
+        "productoId": 1,
         "cantidad": 2.000,
         "precioUnitario": 45.00,
-        "subtotal": 90.00,
+        "total": 90.00,
         "devolverStock": true,
         "notas": "Ron Diplomático - 2 botellas rotas"
       }
@@ -104,12 +106,42 @@ Content-Type: application/json
 {
   "id": 1,
   "negocioId": 1,
+  "sedeId": 1,
+  "ventaId": 101,
+  "pedidoId": null,
+  "clienteId": null,
   "numeroDevolucion": "DEV-1-20250214001",
   "estado": "solicitada",
   "tipoDevolucion": "total",
   "categoriaMotivo": "defectuoso",
-  "montoTotal": 125.50,
-  "detalles": [...]
+  "detalleMotivo": "Producto llegó con la botella rota",
+  "metodoReembolso": "pago_original",
+  "subtotal": 102.91,
+  "montoImpuesto": 18.52,
+  "total": 121.43,
+  "notas": "Cliente solicita reembolso completo",
+  "solicitadoEn": "2026-02-14T11:45:00",
+  "aprobadoEn": null,
+  "completadoEn": null,
+  "rechazadoEn": null,
+  "procesadoPor": null,
+  "aprobadoPor": null,
+  "solicitadoPor": null,
+  "razonRechazo": null,
+  "creadoEn": "2026-02-14T11:45:00",
+  "actualizadoEn": "2026-02-14T11:45:00",
+  "detalles": [
+    {
+      "id": 1,
+      "detalleVentaId": null,
+      "productoId": 1,
+      "cantidad": 2.000,
+      "precioUnitario": 45.00,
+      "total": 90.00,
+      "devolverStock": true,
+      "notas": "Ron Diplomático - 2 botellas rotas"
+    }
+  ]
 }
 ```
 
@@ -138,22 +170,23 @@ Content-Type: application/json
 ```json
 {
   "negocioId": 1,
-  "ventaId": 102,
-  "clienteId": 2,
+  "sedeId": 1,
+  "ventaId": 1,
+  "clienteId": 1,
   "tipoDevolucion": "parcial",
   "categoriaMotivo": "articulo_incorrecto",
-  "motivo": "Se envió producto equivocado - cliente pidió Whisky Black Label pero recibió Red Label",
+  "detalleMotivo": "Se envió producto equivocado - cliente pidió Whisky Black Label pero recibió Red Label",
   "metodoReembolso": "credito_tienda",
-  "montoTotal": 89.90,
-  "impuestosDevueltos": 16.18,
-  "montoReembolso": 89.90,
-  "notas": "Cliente acepta crédito en tienda",
+  "subtotal": 89.90,
+  "montoImpuesto": 16.18,
+  "total": 106.08,
+  "notas": "Devolución sin cliente registrado",
   "detalles": [
     {
-      "productoId": 12,
-      "cantidad": 1.000,
+      "productoId": 1,
+      "cantidad": 1,
       "precioUnitario": 89.90,
-      "subtotal": 89.90,
+      "total": 89.90,
       "devolverStock": true,
       "notas": "Producto incorrecto - devolver a inventario"
     }
@@ -166,33 +199,44 @@ Content-Type: application/json
 {
   "id": 6,
   "negocioId": 1,
+  "sedeId": 1,
   "ventaId": 102,
-  "clienteId": 2,
+  "clienteId": null,
   "numeroDevolucion": "DEV-1-20260214112045",
   "estado": "solicitada",
   "tipoDevolucion": "parcial",
   "categoriaMotivo": "articulo_incorrecto",
-  "motivo": "Se envió producto equivocado",
+  "detalleMotivo": "Se envió producto equivocado",
   "metodoReembolso": "credito_tienda",
-  "montoTotal": 89.90,
-  "impuestosDevueltos": 16.18,
-  "montoReembolso": 89.90,
+  "subtotal": 89.90,
+  "montoImpuesto": 16.18,
+  "total": 106.08,
   "notas": "Cliente acepta crédito en tienda",
   "solicitadoEn": "2026-02-14T11:20:45",
-  "createdAt": "2026-02-14T11:20:45",
-  "updatedAt": "2026-02-14T11:20:45",
+  "creadoEn": "2026-02-14T11:20:45",
+  "actualizadoEn": "2026-02-14T11:20:45",
   "detalles": [
     {
       "id": 10,
-      "productoId": 12,
+      "productoId": 1,
       "cantidad": 1.000,
       "precioUnitario": 89.90,
-      "subtotal": 89.90,
+      "total": 89.90,
       "devolverStock": true,
-      "notas": "Producto incorrecto"
-    }
-  ]
+      "ns de Error (400 BAD REQUEST)
+```json
+{
+  "error": "El negocioId es obligatorio"
 }
+```
+```json
+{
+  "error": "El sedeId es obligatorio"
+}
+```
+```json
+{
+  "error": "El tipo de devolución
 ```
 
 ### Caso de Error (400 BAD REQUEST)
@@ -219,27 +263,31 @@ Content-Type: application/json
 ```
 
 ### Body (JSON)
-```json
-{
-  "categoriaMotivo": "defectuoso",
-  "motivo": "Actualización: Producto llegó con botella rota Y con fecha de vencimiento próxima",
+```detalleMotivo": "Actualización: Producto llegó con botella rota Y con fecha de vencimiento próxima",
   "metodoReembolso": "efectivo",
+  "subtotal": 125.50,
+  "montoImpuesto": 22.59,
+  "total": 148.09tivo",
   "montoTotal": 125.50,
   "impuestosDevueltos": 22.59,
   "montoReembolso": 125.50,
   "notas": "Cliente prefiere reembolso en efectivo - actualizado por solicitud"
 }
+
 ```
 
 ### Response Esperada (200 OK)
 ```json
-{
-  "id": 1,
-  "negocioId": 1,
+{sedeId": 1,
   "numeroDevolucion": "DEV-1-20250214001",
   "estado": "solicitada",
   "categoriaMotivo": "defectuoso",
-  "motivo": "Actualización: Producto llegó con botella rota Y con fecha de vencimiento próxima",
+  "detalleMotivo": "Actualización: Producto llegó con botella rota Y con fecha de vencimiento próxima",
+  "metodoReembolso": "efectivo",
+  "subtotal": 125.50,
+  "montoImpuesto": 22.59,
+  "total": 148.09,
+  "actualizadoEn"Actualización: Producto llegó con botella rota Y con fecha de vencimiento próxima",
   "metodoReembolso": "efectivo",
   "montoTotal": 125.50,
   "updatedAt": "2026-02-14T11:25:00"
@@ -476,22 +524,27 @@ Content-Type: application/json
 
 1. **Al crear devolución**:
    - `negocioId` es obligatorio
+   - `sedeId` es obligatorio
+   - `ventaId` es obligatorio (toda devolución debe venir de una venta)
+   - `clienteId` es obligatorio (se debe saber a quién reembolsar)
    - `tipoDevolucion` es obligatorio
    - Debe incluir al menos un detalle
-   - Se genera automáticamente `numeroDevolucion` único
+   - Se genera automáticamente `numeroDevolucion` único formato: `DEV-{negocioId}-{timestamp}`
 
 2. **Al actualizar devolución**:
    - Solo si estado = 'solicitada'
    - Pertenece al negocio actual
+   - Campos actualizables: `categoriaMotivo`, `detalleMotivo`, `metodoReembolso`, `subtotal`, `montoImpuesto`, `total`, `notas`
 
 3. **Al aprobar/rechazar**:
    - Solo si estado = 'solicitada'
    - Se registra fecha y usuario que aprobó/rechazó
+   - Al rechazar se guarda la razón en `razonRechazo`
 
 4. **Al completar**:
    - Solo si estado = 'aprobada'
    - Se registra fecha y usuario que procesó
-   - Se reintegra stock si `devolverStock = true`
+   - Se reintegra stock si `devolverStock = true` (pendiente integración con inventario)
 
 5. **Al eliminar**:
    - Solo si estado = 'solicitada'

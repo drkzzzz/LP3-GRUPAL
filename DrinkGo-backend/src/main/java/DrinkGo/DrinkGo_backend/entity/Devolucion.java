@@ -27,13 +27,13 @@ public class Devolucion {
     @Column(name = "numero_devolucion", unique = true, nullable = false, length = 30)
     private String numeroDevolucion;
 
-    @Column(name = "venta_id")
+    @Column(name = "venta_id", nullable = false)
     private Long ventaId;
 
     @Column(name = "pedido_id")
     private Long pedidoId;
 
-    @Column(name = "cliente_id")
+    @Column(name = "cliente_id", nullable = false)
     private Long clienteId;
 
     @Column(name = "tipo_devolucion", nullable = false)

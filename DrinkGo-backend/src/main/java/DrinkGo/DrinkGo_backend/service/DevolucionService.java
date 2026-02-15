@@ -41,6 +41,12 @@ public class DevolucionService {
         if (request.getSedeId() == null) {
             throw new RuntimeException("El sedeId es obligatorio");
         }
+        if (request.getVentaId() == null) {
+            throw new RuntimeException("El ventaId es obligatorio - toda devolución debe estar asociada a una venta");
+        }
+        if (request.getClienteId() == null) {
+            throw new RuntimeException("El clienteId es obligatorio - debe especificar a quién se le reembolsa");
+        }
         if (request.getTipoDevolucion() == null) {
             throw new RuntimeException("El tipo de devolución es obligatorio");
         }
