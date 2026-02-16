@@ -2,13 +2,10 @@ package DrinkGo.DrinkGo_backend.controller;
 
 import DrinkGo.DrinkGo_backend.dto.StockInventarioRequest;
 import DrinkGo.DrinkGo_backend.dto.StockInventarioResponse;
-import DrinkGo.DrinkGo_backend.security.UsuarioAutenticado;
 import DrinkGo.DrinkGo_backend.service.StockInventarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -59,11 +56,9 @@ public class StockInventarioController {
         return ResponseEntity.ok(stockService.actualizar(id, request, negocioId));
     }
 
-    // ── Método auxiliar ──
+    // ── Método auxiliar (sin seguridad: valor por defecto para pruebas) ──
 
     private Long obtenerNegocioId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UsuarioAutenticado usuario = (UsuarioAutenticado) auth.getPrincipal();
-        return usuario.getNegocioId();
+        return 1L;
     }
 }

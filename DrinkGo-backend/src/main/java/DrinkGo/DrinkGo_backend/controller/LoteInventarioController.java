@@ -2,13 +2,10 @@ package DrinkGo.DrinkGo_backend.controller;
 
 import DrinkGo.DrinkGo_backend.dto.LoteInventarioRequest;
 import DrinkGo.DrinkGo_backend.dto.LoteInventarioResponse;
-import DrinkGo.DrinkGo_backend.security.UsuarioAutenticado;
 import DrinkGo.DrinkGo_backend.service.LoteInventarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,8 +42,9 @@ public class LoteInventarioController {
     /** POST /restful/lotes - Registrar entrada de lote (RF-INV-002) */
     @PostMapping
     public ResponseEntity<LoteInventarioResponse> crear(@Valid @RequestBody LoteInventarioRequest request) {
-        UsuarioAutenticado usuario = obtenerUsuario();
-        LoteInventarioResponse response = loteService.crear(request, usuario.getNegocioId(), usuario.getUsuarioId());
+        Long negocioId = obtenerNegocioId();
+        Long usuarioId = 1L; // Sin seguridad: valor por defecto para pruebas
+        LoteInventarioResponse response = loteService.crear(request, negocioId, usuarioId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -66,14 +64,9 @@ public class LoteInventarioController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Métodos auxiliares ──
+    // ── Método auxiliar (sin seguridad: valor por defecto para pruebas) ──
 
     private Long obtenerNegocioId() {
-        return obtenerUsuario().getNegocioId();
-    }
-
-    private UsuarioAutenticado obtenerUsuario() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return (UsuarioAutenticado) auth.getPrincipal();
+        return 1L;
     }
 }

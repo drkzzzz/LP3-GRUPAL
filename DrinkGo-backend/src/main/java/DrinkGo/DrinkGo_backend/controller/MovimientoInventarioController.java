@@ -2,13 +2,10 @@ package DrinkGo.DrinkGo_backend.controller;
 
 import DrinkGo.DrinkGo_backend.dto.MovimientoInventarioRequest;
 import DrinkGo.DrinkGo_backend.dto.MovimientoInventarioResponse;
-import DrinkGo.DrinkGo_backend.security.UsuarioAutenticado;
 import DrinkGo.DrinkGo_backend.service.MovimientoInventarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,20 +47,16 @@ public class MovimientoInventarioController {
     @PostMapping
     public ResponseEntity<MovimientoInventarioResponse> crear(
             @Valid @RequestBody MovimientoInventarioRequest request) {
-        UsuarioAutenticado usuario = obtenerUsuario();
+        Long negocioId = obtenerNegocioId();
+        Long usuarioId = 1L; // Sin seguridad: valor por defecto para pruebas
         MovimientoInventarioResponse response = movimientoService.crear(
-                request, usuario.getNegocioId(), usuario.getUsuarioId());
+                request, negocioId, usuarioId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // ── Métodos auxiliares ──
+    // ── Método auxiliar (sin seguridad: valor por defecto para pruebas) ──
 
     private Long obtenerNegocioId() {
-        return obtenerUsuario().getNegocioId();
-    }
-
-    private UsuarioAutenticado obtenerUsuario() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return (UsuarioAutenticado) auth.getPrincipal();
+        return 1L;
     }
 }

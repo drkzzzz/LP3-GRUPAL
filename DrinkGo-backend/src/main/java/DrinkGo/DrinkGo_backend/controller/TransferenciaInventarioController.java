@@ -2,13 +2,10 @@ package DrinkGo.DrinkGo_backend.controller;
 
 import DrinkGo.DrinkGo_backend.dto.TransferenciaInventarioRequest;
 import DrinkGo.DrinkGo_backend.dto.TransferenciaInventarioResponse;
-import DrinkGo.DrinkGo_backend.security.UsuarioAutenticado;
 import DrinkGo.DrinkGo_backend.service.TransferenciaInventarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -46,36 +43,40 @@ public class TransferenciaInventarioController {
     @PostMapping
     public ResponseEntity<TransferenciaInventarioResponse> crear(
             @Valid @RequestBody TransferenciaInventarioRequest request) {
-        UsuarioAutenticado usuario = obtenerUsuario();
+        Long negocioId = obtenerNegocioId();
+        Long usuarioId = 1L; // Sin seguridad: valor por defecto para pruebas
         TransferenciaInventarioResponse response = transferenciaService.crear(
-                request, usuario.getNegocioId(), usuario.getUsuarioId());
+                request, negocioId, usuarioId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /** PUT /restful/transferencias/{id}/aprobar - Aprobar (borrador → pendiente) */
     @PutMapping("/{id}/aprobar")
     public ResponseEntity<TransferenciaInventarioResponse> aprobar(@PathVariable Long id) {
-        UsuarioAutenticado usuario = obtenerUsuario();
+        Long negocioId = obtenerNegocioId();
+        Long usuarioId = 1L;
         TransferenciaInventarioResponse response = transferenciaService.aprobar(
-                id, usuario.getNegocioId(), usuario.getUsuarioId());
+                id, negocioId, usuarioId);
         return ResponseEntity.ok(response);
     }
 
     /** PUT /restful/transferencias/{id}/despachar - Despachar (FIFO en origen, estado → en_transito) */
     @PutMapping("/{id}/despachar")
     public ResponseEntity<TransferenciaInventarioResponse> despachar(@PathVariable Long id) {
-        UsuarioAutenticado usuario = obtenerUsuario();
+        Long negocioId = obtenerNegocioId();
+        Long usuarioId = 1L;
         TransferenciaInventarioResponse response = transferenciaService.despachar(
-                id, usuario.getNegocioId(), usuario.getUsuarioId());
+                id, negocioId, usuarioId);
         return ResponseEntity.ok(response);
     }
 
     /** PUT /restful/transferencias/{id}/recibir - Recibir (entrada en destino, estado → recibida) */
     @PutMapping("/{id}/recibir")
     public ResponseEntity<TransferenciaInventarioResponse> recibir(@PathVariable Long id) {
-        UsuarioAutenticado usuario = obtenerUsuario();
+        Long negocioId = obtenerNegocioId();
+        Long usuarioId = 1L;
         TransferenciaInventarioResponse response = transferenciaService.recibir(
-                id, usuario.getNegocioId(), usuario.getUsuarioId());
+                id, negocioId, usuarioId);
         return ResponseEntity.ok(response);
     }
 
@@ -87,14 +88,9 @@ public class TransferenciaInventarioController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Métodos auxiliares ──
+    // ── Método auxiliar (sin seguridad: valor por defecto para pruebas) ──
 
     private Long obtenerNegocioId() {
-        return obtenerUsuario().getNegocioId();
-    }
-
-    private UsuarioAutenticado obtenerUsuario() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return (UsuarioAutenticado) auth.getPrincipal();
+        return 1L;
     }
 }
