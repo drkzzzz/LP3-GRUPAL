@@ -17,13 +17,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/tienda-online/paginas")
 public class PaginaTiendaOnlineController {
-    
+
     private final PaginaTiendaOnlineService paginaService;
-    
+
     public PaginaTiendaOnlineController(PaginaTiendaOnlineService paginaService) {
         this.paginaService = paginaService;
     }
-    
+
     /**
      * GET /api/tienda-online/paginas?negocioId={negocioId}
      * Listar todas las páginas de un negocio (admin)
@@ -33,7 +33,7 @@ public class PaginaTiendaOnlineController {
         List<PaginaTiendaOnline> paginas = paginaService.listarPorNegocio(negocioId);
         return ResponseEntity.ok(paginas);
     }
-    
+
     /**
      * GET /api/tienda-online/paginas/publicadas?negocioId={negocioId}
      * Listar solo páginas publicadas (público)
@@ -43,7 +43,7 @@ public class PaginaTiendaOnlineController {
         List<PaginaTiendaOnline> paginas = paginaService.listarPublicadas(negocioId);
         return ResponseEntity.ok(paginas);
     }
-    
+
     /**
      * GET /api/tienda-online/paginas/{id}?negocioId={negocioId}
      * Obtener página por ID
@@ -51,8 +51,7 @@ public class PaginaTiendaOnlineController {
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerPorId(
             @PathVariable Long id,
-            @RequestParam Long negocioId
-    ) {
+            @RequestParam Long negocioId) {
         try {
             PaginaTiendaOnline pagina = paginaService.obtenerPorId(id, negocioId);
             return ResponseEntity.ok(pagina);
@@ -61,7 +60,7 @@ public class PaginaTiendaOnlineController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     /**
      * GET /api/tienda-online/paginas/slug/{slug}?negocioId={negocioId}
      * Obtener página por slug (público)
@@ -69,8 +68,7 @@ public class PaginaTiendaOnlineController {
     @GetMapping("/slug/{slug}")
     public ResponseEntity<?> obtenerPorSlug(
             @PathVariable String slug,
-            @RequestParam Long negocioId
-    ) {
+            @RequestParam Long negocioId) {
         try {
             PaginaTiendaOnline pagina = paginaService.obtenerPorSlug(negocioId, slug);
             return ResponseEntity.ok(pagina);
@@ -79,7 +77,7 @@ public class PaginaTiendaOnlineController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     /**
      * POST /api/tienda-online/paginas
      * Crear nueva página
@@ -94,7 +92,7 @@ public class PaginaTiendaOnlineController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     /**
      * PUT /api/tienda-online/paginas/{id}?negocioId={negocioId}
      * Actualizar página existente
@@ -103,8 +101,7 @@ public class PaginaTiendaOnlineController {
     public ResponseEntity<?> actualizar(
             @PathVariable Long id,
             @RequestParam Long negocioId,
-            @RequestBody PaginaTiendaOnlineDTO dto
-    ) {
+            @RequestBody PaginaTiendaOnlineDTO dto) {
         try {
             PaginaTiendaOnline pagina = paginaService.actualizar(id, dto, negocioId);
             return ResponseEntity.ok(pagina);
@@ -113,7 +110,7 @@ public class PaginaTiendaOnlineController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     /**
      * DELETE /api/tienda-online/paginas/{id}?negocioId={negocioId}
      * Eliminar página
@@ -121,8 +118,7 @@ public class PaginaTiendaOnlineController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminar(
             @PathVariable Long id,
-            @RequestParam Long negocioId
-    ) {
+            @RequestParam Long negocioId) {
         try {
             paginaService.eliminar(id, negocioId);
             return ResponseEntity.noContent().build();
@@ -131,17 +127,17 @@ public class PaginaTiendaOnlineController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     /**
-     * PATCH /api/tienda-online/paginas/{id}/publicar?negocioId={negocioId}&publicado={true/false}
+     * PATCH
+     * /api/tienda-online/paginas/{id}/publicar?negocioId={negocioId}&publicado={true/false}
      * Publicar/Despublicar página
      */
     @PatchMapping("/{id}/publicar")
     public ResponseEntity<?> cambiarEstadoPublicacion(
             @PathVariable Long id,
             @RequestParam Long negocioId,
-            @RequestParam Boolean publicado
-    ) {
+            @RequestParam Boolean publicado) {
         try {
             PaginaTiendaOnline pagina = paginaService.cambiarEstadoPublicacion(id, negocioId, publicado);
             return ResponseEntity.ok(pagina);
@@ -150,17 +146,17 @@ public class PaginaTiendaOnlineController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     /**
-     * PATCH /api/tienda-online/paginas/{id}/orden?negocioId={negocioId}&orden={numero}
+     * PATCH
+     * /api/tienda-online/paginas/{id}/orden?negocioId={negocioId}&orden={numero}
      * Actualizar orden de página
      */
     @PatchMapping("/{id}/orden")
     public ResponseEntity<?> actualizarOrden(
             @PathVariable Long id,
             @RequestParam Long negocioId,
-            @RequestParam Integer orden
-    ) {
+            @RequestParam Integer orden) {
         try {
             PaginaTiendaOnline pagina = paginaService.actualizarOrden(id, negocioId, orden);
             return ResponseEntity.ok(pagina);

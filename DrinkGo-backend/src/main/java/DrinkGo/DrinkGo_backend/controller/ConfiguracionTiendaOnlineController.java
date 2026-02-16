@@ -16,13 +16,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/tienda-online/configuracion")
 public class ConfiguracionTiendaOnlineController {
-    
+
     private final ConfiguracionTiendaOnlineService configuracionService;
-    
+
     public ConfiguracionTiendaOnlineController(ConfiguracionTiendaOnlineService configuracionService) {
         this.configuracionService = configuracionService;
     }
-    
+
     /**
      * GET /api/tienda-online/configuracion?negocioId={negocioId}
      * Obtener configuración de la tienda online por negocio
@@ -36,7 +36,7 @@ public class ConfiguracionTiendaOnlineController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
     }
-    
+
     /**
      * GET /api/tienda-online/configuracion/slug/{slug}
      * Obtener configuración por slug de tienda (público)
@@ -47,7 +47,7 @@ public class ConfiguracionTiendaOnlineController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-    
+
     /**
      * POST /api/tienda-online/configuracion
      * Crear configuración de tienda online
@@ -62,7 +62,7 @@ public class ConfiguracionTiendaOnlineController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     /**
      * PUT /api/tienda-online/configuracion/{id}?negocioId={negocioId}
      * Actualizar configuración de tienda online
@@ -71,8 +71,7 @@ public class ConfiguracionTiendaOnlineController {
     public ResponseEntity<?> actualizar(
             @PathVariable Long id,
             @RequestParam Long negocioId,
-            @RequestBody ConfiguracionTiendaOnlineDTO dto
-    ) {
+            @RequestBody ConfiguracionTiendaOnlineDTO dto) {
         try {
             ConfiguracionTiendaOnline configuracion = configuracionService.actualizar(id, dto, negocioId);
             return ResponseEntity.ok(configuracion);
@@ -81,16 +80,16 @@ public class ConfiguracionTiendaOnlineController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     /**
-     * PATCH /api/tienda-online/configuracion/estado?negocioId={negocioId}&habilitado={true/false}
+     * PATCH
+     * /api/tienda-online/configuracion/estado?negocioId={negocioId}&habilitado={true/false}
      * Habilitar/Deshabilitar tienda online
      */
     @PatchMapping("/estado")
     public ResponseEntity<?> cambiarEstado(
             @RequestParam Long negocioId,
-            @RequestParam Boolean habilitado
-    ) {
+            @RequestParam Boolean habilitado) {
         try {
             ConfiguracionTiendaOnline configuracion = configuracionService.cambiarEstado(negocioId, habilitado);
             return ResponseEntity.ok(configuracion);
@@ -99,7 +98,7 @@ public class ConfiguracionTiendaOnlineController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     /**
      * GET /api/tienda-online/configuracion/existe?negocioId={negocioId}
      * Verificar si existe configuración para un negocio

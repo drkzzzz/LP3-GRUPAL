@@ -10,22 +10,23 @@ import java.util.Optional;
 
 @Service
 public class ConfiguracionTiendaOnlineService {
-    
+
     private final ConfiguracionTiendaOnlineRepository configuracionRepository;
-    
+
     public ConfiguracionTiendaOnlineService(ConfiguracionTiendaOnlineRepository configuracionRepository) {
         this.configuracionRepository = configuracionRepository;
     }
-    
+
     /**
      * Obtener configuración de tienda online por negocio
      */
     @Transactional(readOnly = true)
     public ConfiguracionTiendaOnline obtenerPorNegocio(Long negocioId) {
         return configuracionRepository.findByNegocioId(negocioId)
-                .orElseThrow(() -> new RuntimeException("Configuración de tienda online no encontrada para el negocio: " + negocioId));
+                .orElseThrow(() -> new RuntimeException(
+                        "Configuración de tienda online no encontrada para el negocio: " + negocioId));
     }
-    
+
     /**
      * Obtener configuración por slug de tienda
      */
@@ -33,7 +34,7 @@ public class ConfiguracionTiendaOnlineService {
     public Optional<ConfiguracionTiendaOnline> obtenerPorSlug(String slugTienda) {
         return configuracionRepository.findBySlugTienda(slugTienda);
     }
-    
+
     /**
      * Crear configuración de tienda online
      */
@@ -43,20 +44,20 @@ public class ConfiguracionTiendaOnlineService {
         if (configuracionRepository.existsByNegocioId(dto.getNegocioId())) {
             throw new RuntimeException("Ya existe una configuración de tienda online para este negocio");
         }
-        
+
         // Validar slug único si se proporciona
         if (dto.getSlugTienda() != null && !dto.getSlugTienda().isEmpty()) {
             if (configuracionRepository.existsBySlugTienda(dto.getSlugTienda())) {
                 throw new RuntimeException("El slug de tienda ya está en uso: " + dto.getSlugTienda());
             }
         }
-        
+
         ConfiguracionTiendaOnline configuracion = new ConfiguracionTiendaOnline();
         mapearDtoAEntidad(dto, configuracion);
-        
+
         return configuracionRepository.save(configuracion);
     }
-    
+
     /**
      * Actualizar configuración de tienda online
      */
@@ -64,24 +65,24 @@ public class ConfiguracionTiendaOnlineService {
     public ConfiguracionTiendaOnline actualizar(Long id, ConfiguracionTiendaOnlineDTO dto, Long negocioId) {
         ConfiguracionTiendaOnline configuracion = configuracionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Configuración de tienda online no encontrada"));
-        
+
         // Verificar que la configuración pertenece al negocio
         if (!configuracion.getNegocioId().equals(negocioId)) {
             throw new RuntimeException("La configuración no pertenece al negocio especificado");
         }
-        
+
         // Validar slug único si cambió
         if (dto.getSlugTienda() != null && !dto.getSlugTienda().equals(configuracion.getSlugTienda())) {
             if (configuracionRepository.existsBySlugTienda(dto.getSlugTienda())) {
                 throw new RuntimeException("El slug de tienda ya está en uso: " + dto.getSlugTienda());
             }
         }
-        
+
         mapearDtoAEntidad(dto, configuracion);
-        
+
         return configuracionRepository.save(configuracion);
     }
-    
+
     /**
      * Habilitar/Deshabilitar tienda online
      */
@@ -91,7 +92,7 @@ public class ConfiguracionTiendaOnlineService {
         configuracion.setEstaHabilitado(habilitado);
         return configuracionRepository.save(configuracion);
     }
-    
+
     /**
      * Verificar si existe configuración para un negocio
      */
@@ -99,7 +100,7 @@ public class ConfiguracionTiendaOnlineService {
     public boolean existeConfiguracion(Long negocioId) {
         return configuracionRepository.existsByNegocioId(negocioId);
     }
-    
+
     /**
      * Mapear DTO a entidad
      */
