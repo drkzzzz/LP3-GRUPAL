@@ -21,7 +21,7 @@ public interface AlmacenRepository extends JpaRepository<Almacen, Long> {
     
     Optional<Almacen> findBySedeIdAndCodigo(Long sedeId, String codigo);
     
-    @Query("SELECT a FROM Almacen a WHERE a.sedeId = :sedeId AND a.esPrincipal = true AND a.estaActivo = true")
+    @Query("SELECT a FROM Almacen a WHERE a.sedeId = :sedeId AND a.esPredeterminado = true AND a.estaActivo = true")
     Optional<Almacen> findAlmacenPrincipal(@Param("sedeId") Long sedeId);
     
     @Query("SELECT a FROM Almacen a WHERE a.sedeId = :sedeId AND a.tipoAlmacenamiento = :tipo AND a.estaActivo = true")

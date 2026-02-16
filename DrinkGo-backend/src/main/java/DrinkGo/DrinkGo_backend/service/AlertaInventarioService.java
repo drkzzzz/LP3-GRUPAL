@@ -35,6 +35,12 @@ public class AlertaInventarioService {
     @Autowired
     private MovimientoInventarioRepository movimientoRepository;
 
+    @Autowired
+    private ProductoRepository productoRepository;
+
+    @Autowired
+    private AlmacenRepository almacenRepository;
+
     private static final int DIAS_ALERTA_VENCIMIENTO = 30;
 
     // ============================================================
@@ -47,10 +53,31 @@ public class AlertaInventarioService {
                 .collect(Collectors.toList());
     }
 
+    public AlertaInventarioResponse obtenerPorId(Long id, Long negocioId) {
+        AlertaInventario alerta = alertaRepository.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RuntimeException("Alerta no encontrada"));
+        return convertirAResponse(alerta);
+    }
+
     public List<AlertaInventarioResponse> listarActivas(Long negocioId) {
         return alertaRepository.findByNegocioIdAndEstaResueltaOrderByCreadoEnDesc(negocioId, false).stream()
                 .map(this::convertirAResponse)
                 .collect(Collectors.toList());
+    }
+
+    /** Retorna entidades AlertaInventario activas (no resueltas) */
+    public List<AlertaInventario> listarAlertasActivas(Long negocioId) {
+        return alertaRepository.findByNegocioIdAndEstaResueltaOrderByCreadoEnDesc(negocioId, false);
+    }
+
+    /** Retorna todas las entidades AlertaInventario */
+    public List<AlertaInventario> listarAlertas(Long negocioId) {
+        return alertaRepository.findByNegocioIdOrderByCreadoEnDesc(negocioId);
+    }
+
+    /** Retorna entidades AlertaInventario filtradas por tipo */
+    public List<AlertaInventario> listarAlertasPorTipo(Long negocioId, AlertaInventario.TipoAlerta tipo) {
+        return alertaRepository.findByNegocioIdAndTipoAlertaOrderByCreadoEnDesc(negocioId, tipo);
     }
 
     @Transactional
@@ -69,6 +96,79 @@ public class AlertaInventarioService {
         AlertaInventario alerta = alertaRepository.findByIdAndNegocioId(alertaId, negocioId)
                 .orElseThrow(() -> new RuntimeException("Alerta no encontrada"));
         alertaRepository.delete(alerta);
+    }
+
+    /** Crear alerta manualmente */
+    @Transactional
+    public AlertaInventario crearAlerta(Long negocioId, AlertaCreateRequest request) {
+        AlertaInventario alerta = new AlertaInventario();
+        alerta.setNegocioId(negocioId);
+        if (request.getProductoId() != null) {
+            Producto producto = productoRepository.findByIdAndNegocioId(request.getProductoId(), negocioId)
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+            alerta.setProducto(producto);
+        }
+        if (request.getAlmacenId() != null) {
+            Almacen almacen = almacenRepository.findByIdAndNegocioId(request.getAlmacenId(), negocioId)
+                    .orElseThrow(() -> new RuntimeException("Almacén no encontrado"));
+            alerta.setAlmacen(almacen);
+        }
+        alerta.setTipoAlerta(AlertaInventario.TipoAlerta.valueOf(request.getTipoAlerta()));
+        alerta.setMensaje(request.getMensaje());
+        alerta.setValorUmbral(request.getValorUmbral());
+        alerta.setValorActual(request.getValorActual());
+        alerta.setEstaResuelta(false);
+        return alertaRepository.save(alerta);
+    }
+
+    /** Resolver alerta (marcar como resuelta) */
+    @Transactional
+    public AlertaInventario resolverAlerta(Long negocioId, Long alertaId) {
+        AlertaInventario alerta = alertaRepository.findByIdAndNegocioId(alertaId, negocioId)
+                .orElseThrow(() -> new RuntimeException("Alerta no encontrada"));
+        alerta.setEstaResuelta(true);
+        alerta.setResueltaEn(LocalDateTime.now());
+        return alertaRepository.save(alerta);
+    }
+
+    /** Actualizar alerta */
+    @Transactional
+    public AlertaInventario actualizarAlerta(Long negocioId, Long alertaId, AlertaUpdateRequest request) {
+        AlertaInventario alerta = alertaRepository.findByIdAndNegocioId(alertaId, negocioId)
+                .orElseThrow(() -> new RuntimeException("Alerta no encontrada"));
+        if (request.getMensaje() != null) alerta.setMensaje(request.getMensaje());
+        if (request.getValorUmbral() != null) alerta.setValorUmbral(request.getValorUmbral());
+        if (request.getValorActual() != null) alerta.setValorActual(request.getValorActual());
+        if (request.getEstaResuelta() != null) {
+            alerta.setEstaResuelta(request.getEstaResuelta());
+            if (request.getEstaResuelta()) {
+                alerta.setResueltaEn(LocalDateTime.now());
+            }
+        }
+        return alertaRepository.save(alerta);
+    }
+
+    /** Verificar alertas para un producto específico dado sus IDs */
+    @Transactional
+    public void verificarAlertasProducto(Long negocioId, Long productoId, Long almacenId) {
+        Producto producto = productoRepository.findByIdAndNegocioId(productoId, negocioId)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        Almacen almacen = almacenRepository.findByIdAndNegocioId(almacenId, negocioId)
+                .orElseThrow(() -> new RuntimeException("Almacén no encontrado"));
+        verificarAlertas(negocioId, producto, almacen);
+    }
+
+    /** Verificar todas las alertas del negocio */
+    @Transactional
+    public void verificarTodasLasAlertas(Long negocioId) {
+        List<StockInventario> todosLosStocks = stockRepository.findByNegocioId(negocioId);
+        for (StockInventario stock : todosLosStocks) {
+            Producto producto = stock.getProducto();
+            Almacen almacen = stock.getAlmacen();
+            if (producto != null && almacen != null) {
+                verificarAlertas(negocioId, producto, almacen);
+            }
+        }
     }
 
     // ============================================================

@@ -67,8 +67,8 @@ public class StockInventarioService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Almacén", request.getAlmacenId()));
 
         // Verificar que no exista duplicado producto-almacén
-        if (stockRepository.findByProductoIdAndAlmacenIdAndNegocioId(
-                request.getProductoId(), request.getAlmacenId(), negocioId).isPresent()) {
+        if (stockRepository.findByNegocioIdAndProductoIdAndAlmacenId(
+                negocioId, request.getProductoId(), request.getAlmacenId()).isPresent()) {
             throw new OperacionInvalidaException(
                     "Ya existe un registro de stock para este producto en este almacén");
         }
@@ -100,7 +100,7 @@ public class StockInventarioService {
             lote.setCantidadRestante(request.getCantidadEnMano());
             lote.setPrecioCompra(BigDecimal.ZERO);
             lote.setFechaRecepcion(LocalDate.now());
-            lote.setEstado(LoteInventario.EstadoLote.disponible);
+            lote.setEstado(LoteInventario.LoteEstado.disponible);
             lote.setNotas("Lote generado automáticamente al crear registro de stock inicial");
             lote.setCreadoEn(LocalDateTime.now());
             LoteInventario loteGuardado = loteRepository.save(lote);
@@ -143,6 +143,61 @@ public class StockInventarioService {
 
         StockInventario guardado = stockRepository.save(stock);
         return convertirAResponse(guardado);
+    }
+
+    /** Listar stock filtrado por producto */
+    public List<StockInventarioResponse> listarPorProducto(Long negocioId, Long productoId) {
+        return stockRepository.findByNegocioIdAndProductoId(negocioId, productoId).stream()
+                .map(this::convertirAResponse)
+                .collect(Collectors.toList());
+    }
+
+    /** Obtener stock por producto y almacén */
+    public StockInventarioResponse obtenerPorProductoAlmacen(Long negocioId, Long productoId, Long almacenId) {
+        StockInventario stock = stockRepository.findByNegocioIdAndProductoIdAndAlmacenId(negocioId, productoId, almacenId)
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Stock para producto " + productoId + " en almacén " + almacenId));
+        return convertirAResponse(stock);
+    }
+
+    /** Listar stock filtrado por almacén */
+    public List<StockInventarioResponse> listarPorAlmacen(Long negocioId, Long almacenId) {
+        return stockRepository.findByNegocioIdAndAlmacenId(negocioId, almacenId).stream()
+                .map(this::convertirAResponse)
+                .collect(Collectors.toList());
+    }
+
+    /** Eliminar registro de stock */
+    @Transactional
+    public void eliminar(Long id, Long negocioId) {
+        StockInventario stock = stockRepository.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Stock de inventario", id));
+        stockRepository.delete(stock);
+    }
+
+    /** Obtener o crear registro de stock */
+    @Transactional
+    public StockInventario obtenerOCrearStock(Long negocioId, Long productoId, Long almacenId) {
+        return stockRepository.findByNegocioIdAndProductoIdAndAlmacenId(negocioId, productoId, almacenId)
+                .orElseGet(() -> {
+                    Producto producto = productoRepository.findById(productoId).orElse(null);
+                    Almacen almacen = almacenRepository.findById(almacenId).orElse(null);
+                    StockInventario nuevoStock = new StockInventario();
+                    nuevoStock.setNegocioId(negocioId);
+                    nuevoStock.setProducto(producto);
+                    nuevoStock.setAlmacen(almacen);
+                    nuevoStock.setCantidadEnMano(0);
+                    nuevoStock.setCantidadReservada(0);
+                    nuevoStock.setCreadoEn(LocalDateTime.now());
+                    return stockRepository.save(nuevoStock);
+                });
+    }
+
+    /** Listar stock bajo (por debajo del mínimo) */
+    public List<StockInventarioResponse> listarStockBajo(Long negocioId) {
+        return stockRepository.findStockBajo(negocioId).stream()
+                .map(this::convertirAResponse)
+                .collect(Collectors.toList());
     }
 
     // ── Método auxiliar de conversión ──

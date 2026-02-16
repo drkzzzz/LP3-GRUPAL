@@ -87,7 +87,7 @@ public class TransferenciaInventarioService {
         transferencia.setNumeroTransferencia(numero);
         transferencia.setAlmacenOrigen(origen);
         transferencia.setAlmacenDestino(destino);
-        transferencia.setEstado(TransferenciaInventario.EstadoTransferencia.borrador);
+        transferencia.setEstado(TransferenciaInventario.TransferenciaEstado.borrador);
         transferencia.setSolicitadoPor(usuarioId);
         transferencia.setNotas(request.getNotas());
         transferencia.setSolicitadoEn(LocalDateTime.now());
@@ -128,8 +128,8 @@ public class TransferenciaInventarioService {
         TransferenciaInventario trans = transferenciaRepository.findByIdAndNegocioId(id, negocioId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Transferencia de inventario", id));
 
-        if (trans.getEstado() != TransferenciaInventario.EstadoTransferencia.borrador &&
-            trans.getEstado() != TransferenciaInventario.EstadoTransferencia.pendiente) {
+        if (trans.getEstado() != TransferenciaInventario.TransferenciaEstado.borrador &&
+            trans.getEstado() != TransferenciaInventario.TransferenciaEstado.pendiente) {
             throw new OperacionInvalidaException(
                     "Solo se pueden despachar transferencias en estado 'borrador' o 'pendiente'. Estado actual: " +
                     trans.getEstado().name());
@@ -143,7 +143,7 @@ public class TransferenciaInventarioService {
 
             // Validar disponibilidad
             Optional<StockInventario> stockOpt = stockRepository
-                    .findByProductoIdAndAlmacenIdAndNegocioId(productoId, almacenOrigenId, negocioId);
+                    .findByNegocioIdAndProductoIdAndAlmacenId(negocioId, productoId, almacenOrigenId);
 
             if (stockOpt.isEmpty() || stockOpt.get().getCantidadEnMano() < cantidad) {
                 int disponible = stockOpt.map(StockInventario::getCantidadEnMano).orElse(0);
@@ -172,7 +172,7 @@ public class TransferenciaInventarioService {
             detalle.setCantidadEnviada(cantidad);
         }
 
-        trans.setEstado(TransferenciaInventario.EstadoTransferencia.en_transito);
+        trans.setEstado(TransferenciaInventario.TransferenciaEstado.en_transito);
         trans.setDespachadoEn(LocalDateTime.now());
 
         TransferenciaInventario guardada = transferenciaRepository.save(trans);
@@ -195,7 +195,7 @@ public class TransferenciaInventarioService {
         TransferenciaInventario trans = transferenciaRepository.findByIdAndNegocioId(id, negocioId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Transferencia de inventario", id));
 
-        if (trans.getEstado() != TransferenciaInventario.EstadoTransferencia.en_transito) {
+        if (trans.getEstado() != TransferenciaInventario.TransferenciaEstado.en_transito) {
             throw new OperacionInvalidaException(
                     "Solo se pueden recibir transferencias en estado 'en_transito'. Estado actual: " +
                     trans.getEstado().name());
@@ -226,7 +226,7 @@ public class TransferenciaInventarioService {
             detalle.setCantidadRecibida(cantidadRecibida);
         }
 
-        trans.setEstado(TransferenciaInventario.EstadoTransferencia.recibida);
+        trans.setEstado(TransferenciaInventario.TransferenciaEstado.recibida);
         trans.setRecibidoPor(usuarioId);
         trans.setRecibidoEn(LocalDateTime.now());
 
@@ -243,16 +243,36 @@ public class TransferenciaInventarioService {
         TransferenciaInventario trans = transferenciaRepository.findByIdAndNegocioId(id, negocioId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Transferencia de inventario", id));
 
-        if (trans.getEstado() != TransferenciaInventario.EstadoTransferencia.borrador) {
+        if (trans.getEstado() != TransferenciaInventario.TransferenciaEstado.borrador) {
             throw new OperacionInvalidaException(
                     "Solo se pueden aprobar transferencias en estado 'borrador'. Estado actual: " +
                     trans.getEstado().name());
         }
 
-        trans.setEstado(TransferenciaInventario.EstadoTransferencia.pendiente);
+        trans.setEstado(TransferenciaInventario.TransferenciaEstado.pendiente);
         trans.setAprobadoPor(usuarioId);
         trans.setAprobadoEn(LocalDateTime.now());
 
+        TransferenciaInventario guardada = transferenciaRepository.save(trans);
+        return convertirAResponse(guardada);
+    }
+
+    /**
+     * Actualizar transferencia en estado borrador.
+     * Solo permite cambiar notas y detalles.
+     */
+    @Transactional
+    public TransferenciaInventarioResponse actualizar(Long id, TransferenciaInventarioRequest request, Long negocioId) {
+        TransferenciaInventario trans = transferenciaRepository.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Transferencia de inventario", id));
+
+        if (trans.getEstado() != TransferenciaInventario.TransferenciaEstado.borrador) {
+            throw new OperacionInvalidaException(
+                    "Solo se pueden actualizar transferencias en estado 'borrador'. Estado actual: " + 
+                    trans.getEstado().name());
+        }
+
+        trans.setNotas(request.getNotas());
         TransferenciaInventario guardada = transferenciaRepository.save(trans);
         return convertirAResponse(guardada);
     }
@@ -266,14 +286,14 @@ public class TransferenciaInventarioService {
         TransferenciaInventario trans = transferenciaRepository.findByIdAndNegocioId(id, negocioId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Transferencia de inventario", id));
 
-        if (trans.getEstado() != TransferenciaInventario.EstadoTransferencia.borrador &&
-            trans.getEstado() != TransferenciaInventario.EstadoTransferencia.pendiente) {
+        if (trans.getEstado() != TransferenciaInventario.TransferenciaEstado.borrador &&
+            trans.getEstado() != TransferenciaInventario.TransferenciaEstado.pendiente) {
             throw new OperacionInvalidaException(
                     "Solo se pueden cancelar transferencias en estado 'borrador' o 'pendiente'. Estado actual: " +
                     trans.getEstado().name());
         }
 
-        trans.setEstado(TransferenciaInventario.EstadoTransferencia.cancelada);
+        trans.setEstado(TransferenciaInventario.TransferenciaEstado.cancelada);
         transferenciaRepository.save(trans);
     }
 
@@ -282,8 +302,8 @@ public class TransferenciaInventarioService {
     private void descontarFIFOOrigen(Long negocioId, Long productoId, Long almacenId, int cantidadADescontar) {
         List<LoteInventario> lotesDisponibles = loteRepository
                 .findLotesFIFODisponibles(
-                        productoId, almacenId, negocioId,
-                        LoteInventario.EstadoLote.disponible, 0);
+                        negocioId, productoId, almacenId,
+                        LoteInventario.LoteEstado.disponible, java.time.LocalDate.now());
 
         int restante = cantidadADescontar;
         for (LoteInventario lote : lotesDisponibles) {
@@ -291,7 +311,7 @@ public class TransferenciaInventarioService {
             int descontar = Math.min(restante, lote.getCantidadRestante());
             lote.setCantidadRestante(lote.getCantidadRestante() - descontar);
             if (lote.getCantidadRestante() == 0) {
-                lote.setEstado(LoteInventario.EstadoLote.agotado);
+                lote.setEstado(LoteInventario.LoteEstado.agotado);
             }
             loteRepository.save(lote);
             restante -= descontar;
@@ -318,7 +338,7 @@ public class TransferenciaInventarioService {
         lote.setCantidadInicial(cantidad);
         lote.setCantidadRestante(cantidad);
         lote.setFechaRecepcion(java.time.LocalDate.now());
-        lote.setEstado(LoteInventario.EstadoLote.disponible);
+        lote.setEstado(LoteInventario.LoteEstado.disponible);
         lote.setCreadoEn(LocalDateTime.now());
 
         // Heredar datos del lote origen si existe
@@ -337,7 +357,7 @@ public class TransferenciaInventarioService {
 
     private void actualizarStockDestino(Long negocioId, Producto producto, Almacen almacen, int cantidad) {
         Optional<StockInventario> stockOpt = stockRepository
-                .findByProductoIdAndAlmacenIdAndNegocioId(producto.getId(), almacen.getId(), negocioId);
+                .findByNegocioIdAndProductoIdAndAlmacenId(negocioId, producto.getId(), almacen.getId());
 
         StockInventario stock;
         if (stockOpt.isPresent()) {

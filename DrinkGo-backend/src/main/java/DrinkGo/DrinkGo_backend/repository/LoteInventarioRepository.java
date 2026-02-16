@@ -59,4 +59,22 @@ public interface LoteInventarioRepository extends JpaRepository<LoteInventario, 
 
     /** Verificar si un número de lote ya existe en el negocio para evitar duplicados */
     boolean existsByNegocioIdAndNumeroLote(Long negocioId, String numeroLote);
+
+    /** FIFO simplificado (3 params): lotes disponibles con cantidad > 0, sin filtro de vencimiento */
+    @Query("SELECT l FROM LoteInventario l WHERE l.negocioId = :negocioId " +
+           "AND l.productoId = :productoId AND l.almacenId = :almacenId " +
+           "AND l.estado = 'disponible' AND l.cantidadRestante > 0 " +
+           "ORDER BY l.fechaRecepcion ASC, l.id ASC")
+    List<LoteInventario> findLotesDisponiblesFIFO(
+            @Param("negocioId") Long negocioId,
+            @Param("productoId") Long productoId,
+            @Param("almacenId") Long almacenId);
+
+    /** Listar lotes de un producto en orden FIFO */
+    List<LoteInventario> findByNegocioIdAndProductoIdOrderByFechaRecepcionAsc(
+            Long negocioId, Long productoId);
+
+    /** Listar lotes de un producto en un almacén en orden FIFO */
+    List<LoteInventario> findByNegocioIdAndProductoIdAndAlmacenIdOrderByFechaRecepcionAsc(
+            Long negocioId, Long productoId, Long almacenId);
 }

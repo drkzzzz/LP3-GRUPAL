@@ -76,7 +76,7 @@ public class LoteInventarioService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Almacén", request.getAlmacenId()));
 
         // Verificar unicidad del número de lote
-        if (loteRepository.existsByNumeroLoteAndNegocioId(request.getNumeroLote(), negocioId)) {
+        if (loteRepository.existsByNegocioIdAndNumeroLote(negocioId, request.getNumeroLote())) {
             throw new OperacionInvalidaException(
                     "Ya existe un lote con el número '" + request.getNumeroLote() + "' en este negocio");
         }
@@ -95,7 +95,7 @@ public class LoteInventarioService {
         lote.setFechaRecepcion(request.getFechaRecepcion());
         lote.setProveedorId(request.getProveedorId());
         lote.setOrdenCompraId(request.getOrdenCompraId());
-        lote.setEstado(LoteInventario.EstadoLote.disponible);
+        lote.setEstado(LoteInventario.LoteEstado.disponible);
         lote.setNotas(request.getNotas());
         lote.setCreadoEn(LocalDateTime.now());
 
@@ -148,8 +148,8 @@ public class LoteInventarioService {
         int cantidadRestante = lote.getCantidadRestante();
         if (cantidadRestante > 0) {
             Optional<StockInventario> stockOpt = stockRepository
-                    .findByProductoIdAndAlmacenIdAndNegocioId(
-                            lote.getProductoId(), lote.getAlmacenId(), negocioId);
+                    .findByNegocioIdAndProductoIdAndAlmacenId(
+                            negocioId, lote.getProductoId(), lote.getAlmacenId());
 
             if (stockOpt.isPresent()) {
                 StockInventario stock = stockOpt.get();
@@ -171,7 +171,7 @@ public class LoteInventarioService {
             }
         }
 
-        lote.setEstado(LoteInventario.EstadoLote.agotado);
+        lote.setEstado(LoteInventario.LoteEstado.agotado);
         lote.setCantidadRestante(0);
         loteRepository.save(lote);
     }
@@ -185,8 +185,8 @@ public class LoteInventarioService {
                               int cantidadADescontar, Long usuarioId, String motivo) {
         List<LoteInventario> lotesDisponibles = loteRepository
                 .findLotesFIFODisponibles(
-                        productoId, almacenId, negocioId,
-                        LoteInventario.EstadoLote.disponible, 0);
+                        negocioId, productoId, almacenId,
+                        LoteInventario.LoteEstado.disponible, java.time.LocalDate.now());
 
         int totalDisponible = lotesDisponibles.stream()
                 .mapToInt(LoteInventario::getCantidadRestante).sum();
@@ -205,7 +205,7 @@ public class LoteInventarioService {
 
             // Marcar como agotado si llega a 0
             if (lote.getCantidadRestante() == 0) {
-                lote.setEstado(LoteInventario.EstadoLote.agotado);
+                lote.setEstado(LoteInventario.LoteEstado.agotado);
             }
 
             loteRepository.save(lote);
@@ -230,7 +230,7 @@ public class LoteInventarioService {
 
     private void actualizarStockEntrada(Long negocioId, Producto producto, Almacen almacen, int cantidad) {
         Optional<StockInventario> stockOpt = stockRepository
-                .findByProductoIdAndAlmacenIdAndNegocioId(producto.getId(), almacen.getId(), negocioId);
+                .findByNegocioIdAndProductoIdAndAlmacenId(negocioId, producto.getId(), almacen.getId());
 
         StockInventario stock;
         if (stockOpt.isPresent()) {
@@ -251,7 +251,7 @@ public class LoteInventarioService {
 
     private void actualizarStockSalida(Long negocioId, Long productoId, Long almacenId, int cantidad) {
         StockInventario stock = stockRepository
-                .findByProductoIdAndAlmacenIdAndNegocioId(productoId, almacenId, negocioId)
+                .findByNegocioIdAndProductoIdAndAlmacenId(negocioId, productoId, almacenId)
                 .orElseThrow(() -> new RecursoNoEncontradoException(
                         "No existe registro de stock para el producto " + productoId + " en el almacén " + almacenId));
 
@@ -284,6 +284,31 @@ public class LoteInventarioService {
         movimiento.setRealizadoPor(usuarioId);
         movimiento.setCreadoEn(LocalDateTime.now());
         movimientoRepository.save(movimiento);
+    }
+
+    /** Listar lotes filtrados por producto (FIFO order) */
+    public List<LoteInventarioResponse> listarPorProducto(Long negocioId, Long productoId) {
+        return loteRepository.findByNegocioIdAndProductoIdOrderByFechaRecepcionAsc(negocioId, productoId).stream()
+                .map(this::convertirAResponse)
+                .collect(Collectors.toList());
+    }
+
+    /** Listar lotes filtrados por producto y almacén (FIFO order) */
+    public List<LoteInventarioResponse> listarPorProductoAlmacen(Long negocioId, Long productoId, Long almacenId) {
+        return loteRepository.findByNegocioIdAndProductoIdAndAlmacenIdOrderByFechaRecepcionAsc(negocioId, productoId, almacenId).stream()
+                .map(this::convertirAResponse)
+                .collect(Collectors.toList());
+    }
+
+    /** Verificar lotes vencidos y marcarlos */
+    @Transactional
+    public void verificarVencimientos(Long negocioId) {
+        List<LoteInventario> vencidos = loteRepository.findByNegocioIdAndEstadoAndFechaVencimientoBefore(
+                negocioId, LoteInventario.LoteEstado.disponible, java.time.LocalDate.now());
+        for (LoteInventario lote : vencidos) {
+            lote.setEstado(LoteInventario.LoteEstado.vencido);
+            loteRepository.save(lote);
+        }
     }
 
     private LoteInventarioResponse convertirAResponse(LoteInventario lote) {

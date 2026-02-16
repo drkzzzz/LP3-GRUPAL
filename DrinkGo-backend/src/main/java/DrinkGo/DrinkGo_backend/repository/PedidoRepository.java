@@ -72,8 +72,8 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     List<Pedido> findPedidosPendientesVerificacionEdad(@Param("tenantId") Long tenantId);
     
     // Generar número de pedido
-    @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(numero_pedido FROM 7) AS INTEGER)), 0) + 1 " +
-                   "FROM drinkgo.pedido WHERE tenant_id = :tenantId AND numero_pedido LIKE :prefijo%", 
+    @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(numero_pedido FROM 7) AS UNSIGNED)), 0) + 1 " +
+                   "FROM pedidos WHERE negocio_id = :tenantId AND numero_pedido LIKE CONCAT(:prefijo, '%')", 
            nativeQuery = true)
     Integer obtenerSiguienteNumeroPedido(@Param("tenantId") Long tenantId, 
                                          @Param("prefijo") String prefijo);

@@ -487,7 +487,8 @@ public class InventarioService {
     }
 
     /**
-     * Eliminar stock (borrado lógico con @SQLDelete).
+     * Eliminar stock (borrado físico).
+     * NOTA: La tabla stock_inventario NO tiene columna eliminado_en.
      */
     @Transactional
     public void eliminarStock(Long negocioId, Long stockId) {
@@ -537,7 +538,8 @@ public class InventarioService {
     }
 
     /**
-     * Eliminar lote (borrado lógico con @SQLDelete).
+     * Eliminar lote (borrado físico).
+     * NOTA: La tabla lotes_inventario NO tiene columna eliminado_en.
      */
     @Transactional
     public void eliminarLote(Long negocioId, Long loteId) {
@@ -619,7 +621,8 @@ public class InventarioService {
     }
 
     /**
-     * Eliminar movimiento (borrado lógico con @SQLDelete).
+     * Eliminar movimiento (borrado físico).
+     * NOTA: La tabla movimientos_inventario NO tiene columna eliminado_en.
      */
     @Transactional
     public void eliminarMovimiento(Long negocioId, Long movimientoId) {
