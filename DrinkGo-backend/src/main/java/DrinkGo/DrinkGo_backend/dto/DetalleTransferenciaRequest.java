@@ -3,7 +3,7 @@ package DrinkGo.DrinkGo_backend.dto;
 import jakarta.validation.constraints.*;
 
 /**
- * DTO para cada ítem de detalle en una transferencia.
+ * DTO para cada ítem de detalle en una transferencia de inventario.
  */
 public class DetalleTransferenciaRequest {
 
@@ -19,17 +19,39 @@ public class DetalleTransferenciaRequest {
     @Size(max = 300, message = "Las notas no pueden exceder 300 caracteres")
     private String notas;
 
+    // Constructores
     public DetalleTransferenciaRequest() {}
 
-    public Long getProductoId() { return productoId; }
-    public void setProductoId(Long productoId) { this.productoId = productoId; }
+    // Getters y Setters
+    public Long getProductoId() { 
+        return productoId; 
+    }
+    
+    public void setProductoId(Long productoId) { 
+        this.productoId = productoId; 
+    }
 
-    public Long getLoteId() { return loteId; }
-    public void setLoteId(Long loteId) { this.loteId = loteId; }
+    public Long getLoteId() { 
+        return loteId; 
+    }
+    
+    public void setLoteId(Long loteId) { 
+        this.loteId = loteId; 
+    }
 
-    public Integer getCantidadSolicitada() { return cantidadSolicitada; }
-    public void setCantidadSolicitada(Integer cantidadSolicitada) { this.cantidadSolicitada = cantidadSolicitada; }
+    public Integer getCantidadSolicitada() { 
+        return cantidadSolicitada; 
+    }
+    
+    public void setCantidadSolicitada(Integer cantidadSolicitada) { 
+        this.cantidadSolicitada = cantidadSolicitada; 
+    }
 
-    public String getNotas() { return notas; }
-    public void setNotas(String notas) { this.notas = notas; }
+    public String getNotas() { 
+        return notas; 
+    }
+    
+    public void setNotas(String notas) { 
+        this.notas = notas; 
+    }
 }

@@ -1,72 +1,62 @@
 package DrinkGo.DrinkGo_backend.service;
 
+import DrinkGo.DrinkGo_backend.dto.AlertaCreateRequest;
 import DrinkGo.DrinkGo_backend.dto.AlertaInventarioResponse;
+import DrinkGo.DrinkGo_backend.dto.AlertaUpdateRequest;
 import DrinkGo.DrinkGo_backend.entity.*;
-import DrinkGo.DrinkGo_backend.exception.RecursoNoEncontradoException;
 import DrinkGo.DrinkGo_backend.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
  * Servicio para alertas de inventario (RF-INV-004..005).
- * Genera automáticamente alertas de:
- * - Stock bajo
- * - Próximo a vencer
- * - Vencido
- * - Sobrestock
- * - Punto de reorden
+ * Detecta automáticamente stock bajo, productos próximos a vencer y vencidos.
  */
 @Service
 public class AlertaInventarioService {
 
-    private final AlertaInventarioRepository alertaRepository;
-    private final StockInventarioRepository stockRepository;
-    private final LoteInventarioRepository loteRepository;
-    private final MovimientoInventarioRepository movimientoRepository;
+    @Autowired
+    private AlertaInventarioRepository alertaRepository;
 
-    public AlertaInventarioService(AlertaInventarioRepository alertaRepository,
-                                    StockInventarioRepository stockRepository,
-                                    LoteInventarioRepository loteRepository,
-                                    MovimientoInventarioRepository movimientoRepository) {
-        this.alertaRepository = alertaRepository;
-        this.stockRepository = stockRepository;
-        this.loteRepository = loteRepository;
-        this.movimientoRepository = movimientoRepository;
-    }
+    @Autowired
+    private StockInventarioRepository stockRepository;
 
-    /** Listar todas las alertas del negocio */
+    @Autowired
+    private LoteInventarioRepository loteRepository;
+
+    @Autowired
+    private MovimientoInventarioRepository movimientoRepository;
+
+    private static final int DIAS_ALERTA_VENCIMIENTO = 30;
+
+    // ============================================================
+    // CONSULTAS Y CRUD
+    // ============================================================
+
     public List<AlertaInventarioResponse> listar(Long negocioId) {
         return alertaRepository.findByNegocioIdOrderByCreadoEnDesc(negocioId).stream()
                 .map(this::convertirAResponse)
                 .collect(Collectors.toList());
     }
 
-    /** Listar alertas activas (no resueltas) */
     public List<AlertaInventarioResponse> listarActivas(Long negocioId) {
-        return alertaRepository.findByNegocioIdAndEstaResueltaFalseOrderByCreadoEnDesc(negocioId).stream()
+        return alertaRepository.findByNegocioIdAndEstaResueltaOrderByCreadoEnDesc(negocioId, false).stream()
                 .map(this::convertirAResponse)
                 .collect(Collectors.toList());
     }
 
-    /** Obtener alerta por ID */
-    public AlertaInventarioResponse obtenerPorId(Long id, Long negocioId) {
-        AlertaInventario alerta = alertaRepository.findByIdAndNegocioId(id, negocioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Alerta de inventario", id));
-        return convertirAResponse(alerta);
-    }
-
-    /** Resolver alerta (borrado lógico: esta_resuelta = true) */
     @Transactional
     public void resolver(Long id, Long negocioId, Long usuarioId) {
         AlertaInventario alerta = alertaRepository.findByIdAndNegocioId(id, negocioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Alerta de inventario", id));
+                .orElseThrow(() -> new RuntimeException("Alerta no encontrada"));
 
         alerta.setEstaResuelta(true);
         alerta.setResueltaEn(LocalDateTime.now());
@@ -74,172 +64,85 @@ public class AlertaInventarioService {
         alertaRepository.save(alerta);
     }
 
+    @Transactional
+    public void eliminarAlerta(Long negocioId, Long alertaId) {
+        AlertaInventario alerta = alertaRepository.findByIdAndNegocioId(alertaId, negocioId)
+                .orElseThrow(() -> new RuntimeException("Alerta no encontrada"));
+        alertaRepository.delete(alerta);
+    }
+
+    // ============================================================
+    // LÓGICA DE VERIFICACIÓN AUTOMÁTICA
+    // ============================================================
+
     /**
-     * Verificar y generar alertas automáticas para un producto en un almacén.
-     * Se ejecuta después de cada movimiento de inventario.
+     * Verifica y genera alertas automáticas para un producto.
+     * Se debe llamar después de cada entrada o salida de stock.
      */
     @Transactional
     public void verificarAlertas(Long negocioId, Producto producto, Almacen almacen) {
-        // 1. Verificar stock bajo
         verificarStockBajo(negocioId, producto, almacen);
-
-        // 2. Verificar sobrestock
-        verificarSobrestock(negocioId, producto, almacen);
-
-        // 3. Verificar punto de reorden
-        verificarPuntoReorden(negocioId, producto, almacen);
-
-        // 4. Verificar lotes próximos a vencer
         verificarProximoAVencer(negocioId, producto);
-
-        // 5. Verificar lotes vencidos
         verificarVencidos(negocioId, producto);
     }
 
-    // ── Verificaciones de alertas ──
-
     private void verificarStockBajo(Long negocioId, Producto producto, Almacen almacen) {
-        if (producto.getStockMinimo() == null || producto.getStockMinimo() <= 0) return;
+        if (producto.getStockMinimo() == null) return;
 
         Optional<StockInventario> stockOpt = stockRepository
-                .findByProductoIdAndAlmacenIdAndNegocioId(producto.getId(), almacen.getId(), negocioId);
+                .findByNegocioIdAndProductoIdAndAlmacenId(negocioId, producto.getId(), almacen.getId());
 
         if (stockOpt.isPresent()) {
             int stockActual = stockOpt.get().getCantidadEnMano();
             if (stockActual <= producto.getStockMinimo()) {
                 crearAlertaSiNoExiste(negocioId, producto, almacen,
                         AlertaInventario.TipoAlerta.stock_bajo,
-                        "Stock bajo para '" + producto.getNombre() + "' en almacén '" +
-                        almacen.getNombre() + "'. Actual: " + stockActual +
-                        ", Mínimo: " + producto.getStockMinimo(),
+                        "Stock bajo para '" + producto.getNombre() + "' en " + almacen.getNombre() + 
+                        ". Actual: " + stockActual + ", Mínimo: " + producto.getStockMinimo(),
                         producto.getStockMinimo(), stockActual);
-            }
-        }
-    }
-
-    private void verificarSobrestock(Long negocioId, Producto producto, Almacen almacen) {
-        if (producto.getStockMaximo() == null || producto.getStockMaximo() <= 0) return;
-
-        Optional<StockInventario> stockOpt = stockRepository
-                .findByProductoIdAndAlmacenIdAndNegocioId(producto.getId(), almacen.getId(), negocioId);
-
-        if (stockOpt.isPresent()) {
-            int stockActual = stockOpt.get().getCantidadEnMano();
-            if (stockActual > producto.getStockMaximo()) {
-                crearAlertaSiNoExiste(negocioId, producto, almacen,
-                        AlertaInventario.TipoAlerta.sobrestock,
-                        "Sobrestock para '" + producto.getNombre() + "' en almacén '" +
-                        almacen.getNombre() + "'. Actual: " + stockActual +
-                        ", Máximo: " + producto.getStockMaximo(),
-                        producto.getStockMaximo(), stockActual);
-            }
-        }
-    }
-
-    private void verificarPuntoReorden(Long negocioId, Producto producto, Almacen almacen) {
-        if (producto.getPuntoReorden() == null || producto.getPuntoReorden() <= 0) return;
-
-        Optional<StockInventario> stockOpt = stockRepository
-                .findByProductoIdAndAlmacenIdAndNegocioId(producto.getId(), almacen.getId(), negocioId);
-
-        if (stockOpt.isPresent()) {
-            int stockActual = stockOpt.get().getCantidadEnMano();
-            if (stockActual <= producto.getPuntoReorden()) {
-                crearAlertaSiNoExiste(negocioId, producto, almacen,
-                        AlertaInventario.TipoAlerta.punto_reorden,
-                        "Punto de reorden alcanzado para '" + producto.getNombre() +
-                        "'. Actual: " + stockActual + ", Reorden: " + producto.getPuntoReorden(),
-                        producto.getPuntoReorden(), stockActual);
             }
         }
     }
 
     private void verificarProximoAVencer(Long negocioId, Producto producto) {
         LocalDate hoy = LocalDate.now();
-        LocalDate limite = hoy.plusDays(30); // Alertar 30 días antes del vencimiento
+        LocalDate limite = hoy.plusDays(DIAS_ALERTA_VENCIMIENTO);
 
-        List<LoteInventario> lotesProximos = loteRepository
-                .findByNegocioIdAndEstadoAndFechaVencimientoBetween(
-                        negocioId, LoteInventario.EstadoLote.disponible, hoy, limite);
+        List<LoteInventario> lotesProximos = loteRepository.findProximosAVencer(
+                negocioId, LoteInventario.LoteEstado.disponible, hoy, limite);
 
         for (LoteInventario lote : lotesProximos) {
             if (lote.getProductoId().equals(producto.getId())) {
-                // No necesitamos el almacén para alertas de vencimiento
-                crearAlertaSiNoExiste(negocioId, producto, null,
+                long dias = ChronoUnit.DAYS.between(hoy, lote.getFechaVencimiento());
+                crearAlertaSiNoExiste(negocioId, producto, lote.getAlmacen(),
                         AlertaInventario.TipoAlerta.proximo_vencer,
-                        "Lote '" + lote.getNumeroLote() + "' del producto '" +
-                        producto.getNombre() + "' próximo a vencer el " +
-                        lote.getFechaVencimiento() + ". Cantidad restante: " + lote.getCantidadRestante(),
-                        null, lote.getCantidadRestante());
+                        "Lote '" + lote.getNumeroLote() + "' vence en " + dias + " días.",
+                        DIAS_ALERTA_VENCIMIENTO, (int) dias);
             }
         }
     }
 
     private void verificarVencidos(Long negocioId, Producto producto) {
         LocalDate hoy = LocalDate.now();
+        List<LoteInventario> vencidos = loteRepository.findByNegocioIdAndEstadoAndFechaVencimientoBefore(
+                negocioId, LoteInventario.LoteEstado.disponible, hoy);
 
-        List<LoteInventario> lotesVencidos = loteRepository
-                .findByNegocioIdAndEstadoAndFechaVencimientoBefore(
-                        negocioId, LoteInventario.EstadoLote.disponible, hoy);
-
-        for (LoteInventario lote : lotesVencidos) {
+        for (LoteInventario lote : vencidos) {
             if (lote.getProductoId().equals(producto.getId())) {
-                int cantidadRestante = lote.getCantidadRestante();
-
-                // BUG-3 FIX: Descontar cantidadRestante del stock antes de marcar como vencido
-                if (cantidadRestante > 0) {
-                    Optional<StockInventario> stockOpt = stockRepository
-                            .findByProductoIdAndAlmacenIdAndNegocioId(
-                                    lote.getProductoId(), lote.getAlmacenId(), negocioId);
-
-                    if (stockOpt.isPresent()) {
-                        StockInventario stock = stockOpt.get();
-                        int nuevoStock = stock.getCantidadEnMano() - cantidadRestante;
-                        stock.setCantidadEnMano(Math.max(nuevoStock, 0));
-                        stock.setUltimoMovimientoEn(LocalDateTime.now());
-                        stockRepository.save(stock);
-                    }
-
-                    // Registrar movimiento de vencimiento
-                    Almacen almacenLote = lote.getAlmacen();
-                    MovimientoInventario mov = new MovimientoInventario();
-                    mov.setNegocioId(negocioId);
-                    mov.setProducto(producto);
-                    mov.setAlmacen(almacenLote);
-                    mov.setLote(lote);
-                    mov.setTipoMovimiento(MovimientoInventario.TipoMovimiento.vencimiento);
-                    mov.setCantidad(cantidadRestante);
-                    mov.setCostoUnitario(lote.getPrecioCompra());
-                    mov.setTipoReferencia("lote_vencido");
-                    mov.setReferenciaId(lote.getId());
-                    mov.setMotivo("Lote '" + lote.getNumeroLote() + "' vencido el " + lote.getFechaVencimiento());
-                    mov.setCreadoEn(LocalDateTime.now());
-                    movimientoRepository.save(mov);
-                }
-
-                // Marcar lote como vencido y poner cantidad en 0
-                lote.setEstado(LoteInventario.EstadoLote.vencido);
-                lote.setCantidadRestante(0);
-                loteRepository.save(lote);
-
-                crearAlertaSiNoExiste(negocioId, producto, null,
+                crearAlertaSiNoExiste(negocioId, producto, lote.getAlmacen(),
                         AlertaInventario.TipoAlerta.vencido,
-                        "Lote '" + lote.getNumeroLote() + "' del producto '" +
-                        producto.getNombre() + "' VENCIDO desde " +
-                        lote.getFechaVencimiento() + ". Cantidad descartada: " + cantidadRestante,
-                        null, cantidadRestante);
+                        "¡Lote '" + lote.getNumeroLote() + "' VENCIDO!",
+                        null, lote.getCantidadRestante());
             }
         }
     }
 
     private void crearAlertaSiNoExiste(Long negocioId, Producto producto, Almacen almacen,
-                                        AlertaInventario.TipoAlerta tipo, String mensaje,
-                                        Integer valorUmbral, Integer valorActual) {
-        Long almacenId = almacen != null ? almacen.getId() : null;
-
-        boolean yaExiste = alertaRepository
-                .existsByNegocioIdAndProductoIdAndAlmacenIdAndTipoAlertaAndEstaResueltaFalse(
-                        negocioId, producto.getId(), almacenId, tipo);
+                                      AlertaInventario.TipoAlerta tipo, String mensaje,
+                                      Integer umbral, Integer actual) {
+        Long almacenId = (almacen != null) ? almacen.getId() : null;
+        boolean yaExiste = alertaRepository.existsByNegocioIdAndProductoIdAndAlmacenIdAndTipoAlertaAndEstaResuelta(
+                negocioId, producto.getId(), almacenId, tipo, false);
 
         if (!yaExiste) {
             AlertaInventario alerta = new AlertaInventario();
@@ -248,10 +151,9 @@ public class AlertaInventarioService {
             alerta.setAlmacen(almacen);
             alerta.setTipoAlerta(tipo);
             alerta.setMensaje(mensaje);
-            alerta.setValorUmbral(valorUmbral);
-            alerta.setValorActual(valorActual);
+            alerta.setValorUmbral(umbral);
+            alerta.setValorActual(actual);
             alerta.setEstaResuelta(false);
-            alerta.setCreadoEn(LocalDateTime.now());
             alertaRepository.save(alerta);
         }
     }
@@ -261,10 +163,10 @@ public class AlertaInventarioService {
         resp.setId(alerta.getId());
         resp.setNegocioId(alerta.getNegocioId());
         resp.setProductoId(alerta.getProductoId());
-        resp.setProductoNombre(alerta.getProducto() != null ? alerta.getProducto().getNombre() : null);
+        resp.setProductoNombre(alerta.getProducto() != null ? alerta.getProducto().getNombre() : "N/A");
         resp.setAlmacenId(alerta.getAlmacenId());
-        resp.setAlmacenNombre(alerta.getAlmacen() != null ? alerta.getAlmacen().getNombre() : null);
-        resp.setTipoAlerta(alerta.getTipoAlerta() != null ? alerta.getTipoAlerta().name() : null);
+        resp.setAlmacenNombre(alerta.getAlmacen() != null ? alerta.getAlmacen().getNombre() : "N/A");
+        resp.setTipoAlerta(alerta.getTipoAlerta().name());
         resp.setMensaje(alerta.getMensaje());
         resp.setValorUmbral(alerta.getValorUmbral());
         resp.setValorActual(alerta.getValorActual());

@@ -1,15 +1,18 @@
 package DrinkGo.DrinkGo_backend.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import java.time.LocalDateTime;
 
 /**
  * Stock actual por producto y almacén (RF-INV-001).
- * Mapeo exacto de la tabla stock_inventario de drinkgo_database.sql.
- * La columna cantidad_disponible es GENERATED ALWAYS (calculada por MySQL).
+ * La columna cantidad_disponible es calculada por la base de datos (mano - reservada).
  */
 @Entity
 @Table(name = "stock_inventario")
+@SQLDelete(sql = "UPDATE stock_inventario SET eliminado_en = NOW() WHERE id = ?")
+@SQLRestriction("eliminado_en IS NULL")
 public class StockInventario {
 
     @Id
@@ -52,10 +55,24 @@ public class StockInventario {
     @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
 
-    @Column(name = "actualizado_en", nullable = false, insertable = false, updatable = false)
+    @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
-    // ── Getters y Setters ──
+    @Column(name = "eliminado_en")
+    private LocalDateTime eliminadoEn;
+
+    @PrePersist
+    protected void onCreate() {
+        this.creadoEn = LocalDateTime.now();
+        this.actualizadoEn = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.actualizadoEn = LocalDateTime.now();
+    }
+
+    // --- Getters y Setters ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -91,4 +108,7 @@ public class StockInventario {
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
 
     public LocalDateTime getActualizadoEn() { return actualizadoEn; }
+
+    public LocalDateTime getEliminadoEn() { return eliminadoEn; }
+    public void setEliminadoEn(LocalDateTime eliminadoEn) { this.eliminadoEn = eliminadoEn; }
 }

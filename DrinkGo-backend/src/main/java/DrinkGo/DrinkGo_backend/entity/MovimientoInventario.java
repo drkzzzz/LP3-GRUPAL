@@ -1,16 +1,20 @@
 package DrinkGo.DrinkGo_backend.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
  * Movimientos de inventario (RF-INV-004..006).
- * Mapeo exacto de la tabla movimientos_inventario de drinkgo_database.sql.
  * Registra cada entrada y salida con referencia al lote utilizado.
  */
 @Entity
 @Table(name = "movimientos_inventario")
+@SQLDelete(sql = "UPDATE movimientos_inventario SET eliminado_en = NOW() WHERE id = ?")
+@SQLRestriction("eliminado_en IS NULL")
 public class MovimientoInventario {
 
     public enum TipoMovimiento {
@@ -72,7 +76,15 @@ public class MovimientoInventario {
     @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
 
-    // ── Getters y Setters ──
+    @Column(name = "eliminado_en")
+    private LocalDateTime eliminadoEn;
+
+    @PrePersist
+    protected void onCreate() {
+        this.creadoEn = LocalDateTime.now();
+    }
+
+    // --- Getters y Setters ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -118,4 +130,7 @@ public class MovimientoInventario {
 
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
+
+    public LocalDateTime getEliminadoEn() { return eliminadoEn; }
+    public void setEliminadoEn(LocalDateTime eliminadoEn) { this.eliminadoEn = eliminadoEn; }
 }

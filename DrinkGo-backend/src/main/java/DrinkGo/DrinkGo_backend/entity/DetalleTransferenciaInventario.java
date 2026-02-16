@@ -1,10 +1,11 @@
 package DrinkGo.DrinkGo_backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 /**
  * Items de transferencia de inventario.
- * Mapeo exacto de la tabla detalle_transferencias_inventario de drinkgo_database.sql.
+ * Mapeo de la tabla detalle_transferencias_inventario de drinkgo_database.sql.
  */
 @Entity
 @Table(name = "detalle_transferencias_inventario")
@@ -17,6 +18,7 @@ public class DetalleTransferenciaInventario {
     @Column(name = "transferencia_id", nullable = false, insertable = false, updatable = false)
     private Long transferenciaId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "transferencia_id", nullable = false)
     private TransferenciaInventario transferencia;
@@ -47,34 +49,48 @@ public class DetalleTransferenciaInventario {
     @Column(name = "notas", length = 300)
     private String notas;
 
-    // ── Getters y Setters ──
+    // --- Getters y Setters ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public Long getTransferenciaId() { return transferencia != null ? transferencia.getId() : transferenciaId; }
+    public Long getTransferenciaId() { 
+        return transferencia != null ? transferencia.getId() : transferenciaId; 
+    }
 
     public TransferenciaInventario getTransferencia() { return transferencia; }
-    public void setTransferencia(TransferenciaInventario transferencia) { this.transferencia = transferencia; }
+    public void setTransferencia(TransferenciaInventario transferencia) { 
+        this.transferencia = transferencia; 
+    }
 
-    public Long getProductoId() { return producto != null ? producto.getId() : productoId; }
+    public Long getProductoId() { 
+        return producto != null ? producto.getId() : productoId; 
+    }
 
     public Producto getProducto() { return producto; }
     public void setProducto(Producto producto) { this.producto = producto; }
 
-    public Long getLoteId() { return lote != null ? lote.getId() : loteId; }
+    public Long getLoteId() { 
+        return lote != null ? lote.getId() : loteId; 
+    }
 
     public LoteInventario getLote() { return lote; }
     public void setLote(LoteInventario lote) { this.lote = lote; }
 
     public Integer getCantidadSolicitada() { return cantidadSolicitada; }
-    public void setCantidadSolicitada(Integer cantidadSolicitada) { this.cantidadSolicitada = cantidadSolicitada; }
+    public void setCantidadSolicitada(Integer cantidadSolicitada) { 
+        this.cantidadSolicitada = cantidadSolicitada; 
+    }
 
     public Integer getCantidadEnviada() { return cantidadEnviada; }
-    public void setCantidadEnviada(Integer cantidadEnviada) { this.cantidadEnviada = cantidadEnviada; }
+    public void setCantidadEnviada(Integer cantidadEnviada) { 
+        this.cantidadEnviada = cantidadEnviada; 
+    }
 
     public Integer getCantidadRecibida() { return cantidadRecibida; }
-    public void setCantidadRecibida(Integer cantidadRecibida) { this.cantidadRecibida = cantidadRecibida; }
+    public void setCantidadRecibida(Integer cantidadRecibida) { 
+        this.cantidadRecibida = cantidadRecibida; 
+    }
 
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }

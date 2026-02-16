@@ -1,15 +1,18 @@
 package DrinkGo.DrinkGo_backend.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import java.time.LocalDateTime;
 
 /**
  * Alertas de inventario automáticas (RF-INV-004..005).
- * Mapeo exacto de la tabla alertas_inventario de drinkgo_database.sql.
  * Genera alertas de stock bajo, próximo a vencer, vencido, etc.
  */
 @Entity
 @Table(name = "alertas_inventario")
+@SQLDelete(sql = "UPDATE alertas_inventario SET eliminado_en = NOW() WHERE id = ?")
+@SQLRestriction("eliminado_en IS NULL")
 public class AlertaInventario {
 
     public enum TipoAlerta {
@@ -23,15 +26,9 @@ public class AlertaInventario {
     @Column(name = "negocio_id", nullable = false)
     private Long negocioId;
 
-    @Column(name = "producto_id", nullable = false, insertable = false, updatable = false)
-    private Long productoId;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_id", nullable = false)
     private Producto producto;
-
-    @Column(name = "almacen_id", insertable = false, updatable = false)
-    private Long almacenId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "almacen_id")
@@ -62,7 +59,15 @@ public class AlertaInventario {
     @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
 
-    // ── Getters y Setters ──
+    @Column(name = "eliminado_en")
+    private LocalDateTime eliminadoEn;
+
+    @PrePersist
+    protected void onCreate() {
+        this.creadoEn = LocalDateTime.now();
+    }
+
+    // --- Getters y Setters ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -70,12 +75,8 @@ public class AlertaInventario {
     public Long getNegocioId() { return negocioId; }
     public void setNegocioId(Long negocioId) { this.negocioId = negocioId; }
 
-    public Long getProductoId() { return producto != null ? producto.getId() : productoId; }
-
     public Producto getProducto() { return producto; }
     public void setProducto(Producto producto) { this.producto = producto; }
-
-    public Long getAlmacenId() { return almacen != null ? almacen.getId() : almacenId; }
 
     public Almacen getAlmacen() { return almacen; }
     public void setAlmacen(Almacen almacen) { this.almacen = almacen; }
@@ -103,4 +104,7 @@ public class AlertaInventario {
 
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
+
+    public LocalDateTime getEliminadoEn() { return eliminadoEn; }
+    public void setEliminadoEn(LocalDateTime eliminadoEn) { this.eliminadoEn = eliminadoEn; }
 }

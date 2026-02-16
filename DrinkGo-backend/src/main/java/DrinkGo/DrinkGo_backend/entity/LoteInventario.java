@@ -1,20 +1,24 @@
 package DrinkGo.DrinkGo_backend.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
  * Lotes de inventario con sistema FIFO (RF-INV-002..003).
- * Mapeo exacto de la tabla lotes_inventario de drinkgo_database.sql.
  * Los lotes se consumen ordenados por fecha_recepcion ASC (FIFO estricto).
  */
 @Entity
 @Table(name = "lotes_inventario")
+@SQLDelete(sql = "UPDATE lotes_inventario SET eliminado_en = NOW() WHERE id = ?")
+@SQLRestriction("eliminado_en IS NULL")
 public class LoteInventario {
 
-    public enum EstadoLote {
+    public enum LoteEstado {
         disponible, agotado, vencido, cuarentena, devuelto
     }
 
@@ -68,7 +72,7 @@ public class LoteInventario {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false)
-    private EstadoLote estado = EstadoLote.disponible;
+    private LoteEstado estado = LoteEstado.disponible;
 
     @Column(name = "notas", columnDefinition = "TEXT")
     private String notas;
@@ -76,10 +80,24 @@ public class LoteInventario {
     @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
 
-    @Column(name = "actualizado_en", nullable = false, insertable = false, updatable = false)
+    @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
-    // ── Getters y Setters ──
+    @Column(name = "eliminado_en")
+    private LocalDateTime eliminadoEn;
+
+    @PrePersist
+    protected void onCreate() {
+        this.creadoEn = LocalDateTime.now();
+        this.actualizadoEn = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.actualizadoEn = LocalDateTime.now();
+    }
+
+    // --- Getters y Setters ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -124,14 +142,14 @@ public class LoteInventario {
     public Long getOrdenCompraId() { return ordenCompraId; }
     public void setOrdenCompraId(Long ordenCompraId) { this.ordenCompraId = ordenCompraId; }
 
-    public EstadoLote getEstado() { return estado; }
-    public void setEstado(EstadoLote estado) { this.estado = estado; }
+    public LoteEstado getEstado() { return estado; }
+    public void setEstado(LoteEstado estado) { this.estado = estado; }
 
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }
 
     public LocalDateTime getCreadoEn() { return creadoEn; }
-    public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
-
     public LocalDateTime getActualizadoEn() { return actualizadoEn; }
+    public LocalDateTime getEliminadoEn() { return eliminadoEn; }
+    public void setEliminadoEn(LocalDateTime eliminadoEn) { this.eliminadoEn = eliminadoEn; }
 }
