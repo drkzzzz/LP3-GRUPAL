@@ -8,6 +8,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Lotes de inventario con sistema FIFO (RF-INV-002..003).
+ * Los lotes se consumen ordenados por fecha_recepcion ASC (FIFO estricto).
+ */
 @Entity
 @Table(name = "lotes_inventario")
 @SQLDelete(sql = "UPDATE lotes_inventario SET eliminado_en = NOW() WHERE id = ?")
@@ -25,11 +29,19 @@ public class LoteInventario {
     @Column(name = "negocio_id", nullable = false)
     private Long negocioId;
 
-    @Column(name = "producto_id", nullable = false)
+    @Column(name = "producto_id", nullable = false, insertable = false, updatable = false)
     private Long productoId;
 
-    @Column(name = "almacen_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "producto_id", nullable = false)
+    private Producto producto;
+
+    @Column(name = "almacen_id", nullable = false, insertable = false, updatable = false)
     private Long almacenId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "almacen_id", nullable = false)
+    private Almacen almacen;
 
     @Column(name = "numero_lote", nullable = false, length = 50)
     private String numeroLote;
@@ -65,150 +77,79 @@ public class LoteInventario {
     @Column(name = "notas", columnDefinition = "TEXT")
     private String notas;
 
-    @Column(name = "creado_en", insertable = false, updatable = false)
+    @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
 
-    @Column(name = "actualizado_en", insertable = false, updatable = false)
+    @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
     @Column(name = "eliminado_en")
     private LocalDateTime eliminadoEn;
 
+    @PrePersist
+    protected void onCreate() {
+        this.creadoEn = LocalDateTime.now();
+        this.actualizadoEn = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.actualizadoEn = LocalDateTime.now();
+    }
+
     // --- Getters y Setters ---
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Long getNegocioId() { return negocioId; }
+    public void setNegocioId(Long negocioId) { this.negocioId = negocioId; }
 
-    public Long getNegocioId() {
-        return negocioId;
-    }
+    public Long getProductoId() { return producto != null ? producto.getId() : productoId; }
 
-    public void setNegocioId(Long negocioId) {
-        this.negocioId = negocioId;
-    }
+    public Producto getProducto() { return producto; }
+    public void setProducto(Producto producto) { this.producto = producto; }
 
-    public Long getProductoId() {
-        return productoId;
-    }
+    public Long getAlmacenId() { return almacen != null ? almacen.getId() : almacenId; }
 
-    public void setProductoId(Long productoId) {
-        this.productoId = productoId;
-    }
+    public Almacen getAlmacen() { return almacen; }
+    public void setAlmacen(Almacen almacen) { this.almacen = almacen; }
 
-    public Long getAlmacenId() {
-        return almacenId;
-    }
+    public String getNumeroLote() { return numeroLote; }
+    public void setNumeroLote(String numeroLote) { this.numeroLote = numeroLote; }
 
-    public void setAlmacenId(Long almacenId) {
-        this.almacenId = almacenId;
-    }
+    public Integer getCantidadInicial() { return cantidadInicial; }
+    public void setCantidadInicial(Integer cantidadInicial) { this.cantidadInicial = cantidadInicial; }
 
-    public String getNumeroLote() {
-        return numeroLote;
-    }
+    public Integer getCantidadRestante() { return cantidadRestante; }
+    public void setCantidadRestante(Integer cantidadRestante) { this.cantidadRestante = cantidadRestante; }
 
-    public void setNumeroLote(String numeroLote) {
-        this.numeroLote = numeroLote;
-    }
+    public BigDecimal getPrecioCompra() { return precioCompra; }
+    public void setPrecioCompra(BigDecimal precioCompra) { this.precioCompra = precioCompra; }
 
-    public Integer getCantidadInicial() {
-        return cantidadInicial;
-    }
+    public LocalDate getFechaFabricacion() { return fechaFabricacion; }
+    public void setFechaFabricacion(LocalDate fechaFabricacion) { this.fechaFabricacion = fechaFabricacion; }
 
-    public void setCantidadInicial(Integer cantidadInicial) {
-        this.cantidadInicial = cantidadInicial;
-    }
+    public LocalDate getFechaVencimiento() { return fechaVencimiento; }
+    public void setFechaVencimiento(LocalDate fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
 
-    public Integer getCantidadRestante() {
-        return cantidadRestante;
-    }
+    public LocalDate getFechaRecepcion() { return fechaRecepcion; }
+    public void setFechaRecepcion(LocalDate fechaRecepcion) { this.fechaRecepcion = fechaRecepcion; }
 
-    public void setCantidadRestante(Integer cantidadRestante) {
-        this.cantidadRestante = cantidadRestante;
-    }
+    public Long getProveedorId() { return proveedorId; }
+    public void setProveedorId(Long proveedorId) { this.proveedorId = proveedorId; }
 
-    public BigDecimal getPrecioCompra() {
-        return precioCompra;
-    }
+    public Long getOrdenCompraId() { return ordenCompraId; }
+    public void setOrdenCompraId(Long ordenCompraId) { this.ordenCompraId = ordenCompraId; }
 
-    public void setPrecioCompra(BigDecimal precioCompra) {
-        this.precioCompra = precioCompra;
-    }
+    public LoteEstado getEstado() { return estado; }
+    public void setEstado(LoteEstado estado) { this.estado = estado; }
 
-    public LocalDate getFechaFabricacion() {
-        return fechaFabricacion;
-    }
+    public String getNotas() { return notas; }
+    public void setNotas(String notas) { this.notas = notas; }
 
-    public void setFechaFabricacion(LocalDate fechaFabricacion) {
-        this.fechaFabricacion = fechaFabricacion;
-    }
-
-    public LocalDate getFechaVencimiento() {
-        return fechaVencimiento;
-    }
-
-    public void setFechaVencimiento(LocalDate fechaVencimiento) {
-        this.fechaVencimiento = fechaVencimiento;
-    }
-
-    public LocalDate getFechaRecepcion() {
-        return fechaRecepcion;
-    }
-
-    public void setFechaRecepcion(LocalDate fechaRecepcion) {
-        this.fechaRecepcion = fechaRecepcion;
-    }
-
-    public Long getProveedorId() {
-        return proveedorId;
-    }
-
-    public void setProveedorId(Long proveedorId) {
-        this.proveedorId = proveedorId;
-    }
-
-    public Long getOrdenCompraId() {
-        return ordenCompraId;
-    }
-
-    public void setOrdenCompraId(Long ordenCompraId) {
-        this.ordenCompraId = ordenCompraId;
-    }
-
-    public LoteEstado getEstado() {
-        return estado;
-    }
-
-    public void setEstado(LoteEstado estado) {
-        this.estado = estado;
-    }
-
-    public String getNotas() {
-        return notas;
-    }
-
-    public void setNotas(String notas) {
-        this.notas = notas;
-    }
-
-    public LocalDateTime getCreadoEn() {
-        return creadoEn;
-    }
-
-    public LocalDateTime getActualizadoEn() {
-        return actualizadoEn;
-    }
-
-    public LocalDateTime getEliminadoEn() {
-        return eliminadoEn;
-    }
-
-    public void setEliminadoEn(LocalDateTime eliminadoEn) {
-        this.eliminadoEn = eliminadoEn;
-    }
+    public LocalDateTime getCreadoEn() { return creadoEn; }
+    public LocalDateTime getActualizadoEn() { return actualizadoEn; }
+    public LocalDateTime getEliminadoEn() { return eliminadoEn; }
+    public void setEliminadoEn(LocalDateTime eliminadoEn) { this.eliminadoEn = eliminadoEn; }
 }

@@ -12,24 +12,25 @@ import java.util.Optional;
 @Repository
 public interface AlmacenRepository extends JpaRepository<Almacen, Long> {
     
-    List<Almacen> findBySedeIdAndActivoTrue(Long sedeId);
+    /** Buscar almacén por ID y negocio (validación multi-tenant) */
+    Optional<Almacen> findByIdAndNegocioId(Long id, Long negocioId);
+
+    List<Almacen> findBySedeIdAndEstaActivoTrue(Long sedeId);
     
-    List<Almacen> findByTenantIdAndActivoTrue(Long tenantId);
+    List<Almacen> findByNegocioIdAndEstaActivoTrue(Long negocioId);
     
     Optional<Almacen> findBySedeIdAndCodigo(Long sedeId, String codigo);
     
-    Optional<Almacen> findByIdAndTenantId(Long id, Long tenantId);
-    
-    @Query("SELECT a FROM Almacen a WHERE a.sedeId = :sedeId AND a.esPrincipal = true AND a.activo = true")
+    @Query("SELECT a FROM Almacen a WHERE a.sedeId = :sedeId AND a.esPrincipal = true AND a.estaActivo = true")
     Optional<Almacen> findAlmacenPrincipal(@Param("sedeId") Long sedeId);
     
-    @Query("SELECT a FROM Almacen a WHERE a.sedeId = :sedeId AND a.tipo = :tipo AND a.activo = true")
+    @Query("SELECT a FROM Almacen a WHERE a.sedeId = :sedeId AND a.tipoAlmacenamiento = :tipo AND a.estaActivo = true")
     List<Almacen> findBySedeIdAndTipo(@Param("sedeId") Long sedeId, @Param("tipo") String tipo);
     
-    @Query("SELECT a FROM Almacen a WHERE a.tenantId = :tenantId AND a.tipo = 'frio' AND a.activo = true")
-    List<Almacen> findAlmacenesFrios(@Param("tenantId") Long tenantId);
+    @Query("SELECT a FROM Almacen a WHERE a.negocioId = :negocioId AND a.tipoAlmacenamiento = 'frio' AND a.estaActivo = true")
+    List<Almacen> findAlmacenesFrios(@Param("negocioId") Long negocioId);
     
     boolean existsBySedeIdAndCodigo(Long sedeId, String codigo);
     
-    long countBySedeIdAndActivoTrue(Long sedeId);
+    long countBySedeIdAndEstaActivoTrue(Long sedeId);
 }
