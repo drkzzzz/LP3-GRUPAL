@@ -143,7 +143,7 @@ public class UsuarioService {
         if (sedesIds != null) {
             Set<Sede> sedes = new HashSet<>();
             for (Long sedeId : sedesIds) {
-                sedeRepository.findByIdAndNegocioId(sedeId, negocioId).ifPresent(sedes::add);
+                sedeRepository.findByIdAndTenantId(sedeId, negocioId).ifPresent(sedes::add);
             }
             usuario.setSedes(sedes);
         }
@@ -161,5 +161,112 @@ public class UsuarioService {
         return usuarioRepository.findByUuid(uuid)
                 .orElseThrow(() -> new RuntimeException("UUID no válido"))
                 .getNegocioId();
+    }
+
+    // ============================================================
+    // WRAPPERS PARA CONTROLADORES
+    // ============================================================
+
+    /** Wrapper para AuthController.listarUsuarios */
+    @Transactional(readOnly = true)
+    public List<Usuario> listarUsuarios(Long negocioId) {
+        return usuarioRepository.findByNegocioId(negocioId);
+    }
+
+    /** Wrapper para AuthController.obtenerUsuario */
+    @Transactional(readOnly = true)
+    public Usuario obtenerUsuario(Long negocioId, Long id) {
+        return obtenerPorId(id, negocioId);
+    }
+
+    /** Wrapper para UsuarioController.findByTenant */
+    @Transactional(readOnly = true)
+    public Page<Usuario> findByTenant(Long tenantId, Pageable pageable) {
+        return listarPaginado(tenantId, pageable);
+    }
+
+    /** Wrapper para UsuarioController.findById */
+    @Transactional(readOnly = true)
+    public Usuario findById(Long id, Long tenantId) {
+        return obtenerPorId(id, tenantId);
+    }
+
+    /** Wrapper para UsuarioController.findByRol */
+    @Transactional(readOnly = true)
+    public List<Usuario> findByRol(Long tenantId, String rolCodigo) {
+        return usuarioRepository.findByNegocioIdAndRol(tenantId, rolCodigo);
+    }
+
+    /** Wrapper para UsuarioController.findBySede */
+    @Transactional(readOnly = true)
+    public List<Usuario> findBySede(Long sedeId) {
+        return usuarioRepository.findBySedeId(sedeId);
+    }
+
+    /** Wrapper para UsuarioController.crear */
+    @Transactional
+    public Usuario crear(UsuarioDTO dto, Long tenantId) {
+        if (dto.getEmail() != null && usuarioRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("El email ya está registrado");
+        }
+        Usuario usuario = new Usuario();
+        usuario.setNegocioId(tenantId);
+        usuario.setNombres(dto.getNombres());
+        usuario.setApellidos(dto.getApellidos());
+        if (dto.getEmail() != null) usuario.setEmail(dto.getEmail());
+        if (dto.getTelefono() != null) usuario.setTelefono(dto.getTelefono());
+        if (dto.getContrasena() != null) usuario.setHashContrasena(dto.getContrasena());
+        return usuarioRepository.save(usuario);
+    }
+
+    /** Wrapper para UsuarioController.actualizar */
+    @Transactional
+    public Usuario actualizar(Long id, UsuarioDTO dto, Long tenantId) {
+        Usuario usuario = obtenerPorId(id, tenantId);
+        if (dto.getNombres() != null) usuario.setNombres(dto.getNombres());
+        if (dto.getApellidos() != null) usuario.setApellidos(dto.getApellidos());
+        if (dto.getTelefono() != null) usuario.setTelefono(dto.getTelefono());
+        if (dto.getEmail() != null && !dto.getEmail().equals(usuario.getEmail())) {
+            if (usuarioRepository.existsByEmail(dto.getEmail())) {
+                throw new RuntimeException("El email ya está en uso");
+            }
+            usuario.setEmail(dto.getEmail());
+        }
+        return usuarioRepository.save(usuario);
+    }
+
+    /** Wrapper para UsuarioController.cambiarContrasena */
+    @Transactional
+    public void cambiarContrasena(Long id, String contrasenaActual, String contrasenaNueva, Long tenantId) {
+        Usuario usuario = obtenerPorId(id, tenantId);
+        if (!passwordEncoder.matches(contrasenaActual, usuario.getHashContrasena())) {
+            throw new RuntimeException("Contraseña actual incorrecta");
+        }
+        usuario.setHashContrasena(contrasenaNueva);
+        usuarioRepository.save(usuario);
+    }
+
+    /** Wrapper para UsuarioController.asignarRoles */
+    @Transactional
+    public Usuario asignarRoles(Long id, Set<Long> rolesIds, Long tenantId) {
+        return asignarRolesYSedes(id, tenantId, rolesIds, null);
+    }
+
+    /** Wrapper para UsuarioController.asignarSedes */
+    @Transactional
+    public Usuario asignarSedes(Long id, Set<Long> sedesIds, Long tenantId) {
+        return asignarRolesYSedes(id, tenantId, null, sedesIds);
+    }
+
+    /** Wrapper para UsuarioController.desactivar */
+    @Transactional
+    public void desactivar(Long id, Long tenantId) {
+        eliminarUsuario(id, tenantId);
+    }
+
+    /** Wrapper para UsuarioController.loginPorPin (stub) */
+    @Transactional(readOnly = true)
+    public Usuario loginPorPin(Long tenantId, String pin) {
+        throw new RuntimeException("Login por PIN no implementado aún");
     }
 }

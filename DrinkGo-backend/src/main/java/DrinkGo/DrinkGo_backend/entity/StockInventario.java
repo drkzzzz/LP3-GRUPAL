@@ -1,18 +1,15 @@
 package DrinkGo.DrinkGo_backend.entity;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 import java.time.LocalDateTime;
 
 /**
  * Stock actual por producto y almacén (RF-INV-001).
  * La columna cantidad_disponible es calculada por la base de datos (mano - reservada).
+ * NOTA: la tabla stock_inventario NO tiene columna eliminado_en.
  */
 @Entity
 @Table(name = "stock_inventario")
-@SQLDelete(sql = "UPDATE stock_inventario SET eliminado_en = NOW() WHERE id = ?")
-@SQLRestriction("eliminado_en IS NULL")
 public class StockInventario {
 
     @Id
@@ -22,18 +19,18 @@ public class StockInventario {
     @Column(name = "negocio_id", nullable = false)
     private Long negocioId;
 
-    @Column(name = "producto_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "producto_id", nullable = false)
     private Long productoId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "producto_id", nullable = false)
+    @JoinColumn(name = "producto_id", insertable = false, updatable = false)
     private Producto producto;
 
-    @Column(name = "almacen_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "almacen_id", nullable = false)
     private Long almacenId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "almacen_id", nullable = false)
+    @JoinColumn(name = "almacen_id", insertable = false, updatable = false)
     private Almacen almacen;
 
     @Column(name = "cantidad_en_mano", nullable = false)
@@ -58,9 +55,6 @@ public class StockInventario {
     @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
-    @Column(name = "eliminado_en")
-    private LocalDateTime eliminadoEn;
-
     @PrePersist
     protected void onCreate() {
         this.creadoEn = LocalDateTime.now();
@@ -80,15 +74,23 @@ public class StockInventario {
     public Long getNegocioId() { return negocioId; }
     public void setNegocioId(Long negocioId) { this.negocioId = negocioId; }
 
-    public Long getProductoId() { return producto != null ? producto.getId() : productoId; }
+    public Long getProductoId() { return productoId; }
+    public void setProductoId(Long productoId) { this.productoId = productoId; }
 
     public Producto getProducto() { return producto; }
-    public void setProducto(Producto producto) { this.producto = producto; }
+    public void setProducto(Producto producto) {
+        this.producto = producto;
+        if (producto != null) this.productoId = producto.getId();
+    }
 
-    public Long getAlmacenId() { return almacen != null ? almacen.getId() : almacenId; }
+    public Long getAlmacenId() { return almacenId; }
+    public void setAlmacenId(Long almacenId) { this.almacenId = almacenId; }
 
     public Almacen getAlmacen() { return almacen; }
-    public void setAlmacen(Almacen almacen) { this.almacen = almacen; }
+    public void setAlmacen(Almacen almacen) {
+        this.almacen = almacen;
+        if (almacen != null) this.almacenId = almacen.getId();
+    }
 
     public Integer getCantidadEnMano() { return cantidadEnMano; }
     public void setCantidadEnMano(Integer cantidadEnMano) { this.cantidadEnMano = cantidadEnMano; }
@@ -108,7 +110,4 @@ public class StockInventario {
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
 
     public LocalDateTime getActualizadoEn() { return actualizadoEn; }
-
-    public LocalDateTime getEliminadoEn() { return eliminadoEn; }
-    public void setEliminadoEn(LocalDateTime eliminadoEn) { this.eliminadoEn = eliminadoEn; }
 }

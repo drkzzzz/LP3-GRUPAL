@@ -24,17 +24,17 @@ public class AlmacenService {
     
     @Transactional(readOnly = true)
     public List<Almacen> findBySede(Long sedeId) {
-        return almacenRepository.findBySedeIdAndActivoTrue(sedeId);
+        return almacenRepository.findBySedeIdAndEstaActivoTrue(sedeId);
     }
     
     @Transactional(readOnly = true)
     public List<Almacen> findByTenant(Long tenantId) {
-        return almacenRepository.findByTenantIdAndActivoTrue(tenantId);
+        return almacenRepository.findByNegocioIdAndEstaActivoTrue(tenantId);
     }
     
     @Transactional(readOnly = true)
     public Almacen findById(Long id, Long tenantId) {
-        return almacenRepository.findByIdAndTenantId(id, tenantId)
+        return almacenRepository.findByIdAndNegocioId(id, tenantId)
                 .orElseThrow(() -> new RuntimeException("Almacén no encontrado"));
     }
     

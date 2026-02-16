@@ -1,17 +1,11 @@
 package DrinkGo.DrinkGo_backend.controller;
 
-import DrinkGo.DrinkGo_backend.dto.TransferenciaDespachoRequest;
-import DrinkGo.DrinkGo_backend.dto.TransferenciaRecepcionRequest;
-import DrinkGo.DrinkGo_backend.dto.TransferenciaRequest;
-import DrinkGo.DrinkGo_backend.dto.TransferenciaUpdateRequest;
-import DrinkGo.DrinkGo_backend.entity.TransferenciaInventario;
-import DrinkGo.DrinkGo_backend.service.UsuarioService;
-import DrinkGo.DrinkGo_backend.service.TransferenciaService;
+import DrinkGo.DrinkGo_backend.dto.TransferenciaInventarioRequest;
+import DrinkGo.DrinkGo_backend.dto.TransferenciaInventarioResponse;
+import DrinkGo.DrinkGo_backend.service.TransferenciaInventarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -20,61 +14,48 @@ import java.util.Map;
 
 /**
  * Controlador de Transferencias de Inventario - Bloque 5.
- * Todos los endpoints requieren JWT.
- * CRUD completo: GET, POST, PUT, DELETE (borrado lógico).
+ * Unificado: delega a TransferenciaInventarioService.
  * Implementa RF-INV-007: Transferencias entre almacenes.
  * Flujo: borrador → pendiente → en_tránsito → recibida.
+ * negocioId hardcoded = 1L (JWT eliminado para entorno de desarrollo).
  */
 @RestController
 @RequestMapping("/restful/inventario/transferencia")
 public class TransferenciaController {
 
-    @Autowired
-    private TransferenciaService transferenciaService;
+    private static final Long NEGOCIO_ID = 1L;
+    private static final Long USUARIO_ID = 1L;
 
     @Autowired
-    private UsuarioService usuarioService;
+    private TransferenciaInventarioService transferenciaService;
 
-    /**
-     * GET /restful/inventario/transferencia
-     * Listar todas las transferencias del negocio.
-     */
+    /** GET /restful/inventario/transferencia — Listar todas las transferencias */
     @GetMapping
     public ResponseEntity<?> listarTransferencias() {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<TransferenciaInventario> transferencias = transferenciaService.listarTransferencias(negocioId);
+            List<TransferenciaInventarioResponse> transferencias = transferenciaService.listar(NEGOCIO_ID);
             return ResponseEntity.ok(transferencias);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * GET /restful/inventario/transferencia/{id}
-     * Obtener una transferencia por ID.
-     */
+    /** GET /restful/inventario/transferencia/{id} — Obtener transferencia por ID */
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerTransferencia(@PathVariable Long id) {
         try {
-            Long negocioId = obtenerNegocioId();
-            TransferenciaInventario transferencia = transferenciaService.obtenerTransferencia(negocioId, id);
+            TransferenciaInventarioResponse transferencia = transferenciaService.obtenerPorId(id, NEGOCIO_ID);
             return ResponseEntity.ok(transferencia);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * POST /restful/inventario/transferencia
-     * Crear una nueva transferencia (estado: borrador).
-     */
+    /** POST /restful/inventario/transferencia — Crear transferencia (estado: borrador) */
     @PostMapping
-    public ResponseEntity<?> crearTransferencia(@RequestBody TransferenciaRequest request) {
+    public ResponseEntity<?> crearTransferencia(@RequestBody TransferenciaInventarioRequest request) {
         try {
-            Long negocioId = obtenerNegocioId();
-            TransferenciaInventario transferencia = transferenciaService.crearTransferencia(negocioId, request);
-
+            TransferenciaInventarioResponse transferencia = transferenciaService.crear(request, NEGOCIO_ID, USUARIO_ID);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Transferencia creada exitosamente");
             response.put("transferencia", transferencia);
@@ -84,19 +65,25 @@ public class TransferenciaController {
         }
     }
 
-    /**
-     * POST /restful/inventario/transferencia/{id}/despachar
-     * Despachar una transferencia: descuenta stock de origen, cambia a en_transito.
-     */
-    @PostMapping("/{id}/despachar")
-    public ResponseEntity<?> despacharTransferencia(
-            @PathVariable Long id,
-            @RequestBody(required = false) TransferenciaDespachoRequest request) {
+    /** POST /restful/inventario/transferencia/{id}/aprobar — Aprobar (borrador → pendiente) */
+    @PostMapping("/{id}/aprobar")
+    public ResponseEntity<?> aprobarTransferencia(@PathVariable Long id) {
         try {
-            Long negocioId = obtenerNegocioId();
-            TransferenciaInventario transferencia = transferenciaService.despacharTransferencia(
-                    negocioId, id, request);
+            TransferenciaInventarioResponse transferencia = transferenciaService.aprobar(id, NEGOCIO_ID, USUARIO_ID);
+            Map<String, Object> response = new HashMap<>();
+            response.put("mensaje", "Transferencia aprobada exitosamente");
+            response.put("transferencia", transferencia);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return errorResponse(e.getMessage());
+        }
+    }
 
+    /** POST /restful/inventario/transferencia/{id}/despachar — Despachar (FIFO en origen) */
+    @PostMapping("/{id}/despachar")
+    public ResponseEntity<?> despacharTransferencia(@PathVariable Long id) {
+        try {
+            TransferenciaInventarioResponse transferencia = transferenciaService.despachar(id, NEGOCIO_ID, USUARIO_ID);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Transferencia despachada exitosamente");
             response.put("transferencia", transferencia);
@@ -106,19 +93,11 @@ public class TransferenciaController {
         }
     }
 
-    /**
-     * POST /restful/inventario/transferencia/{id}/recibir
-     * Recibir una transferencia: ingresa stock a destino, cambia a recibida.
-     */
+    /** POST /restful/inventario/transferencia/{id}/recibir — Recibir (entrada en destino) */
     @PostMapping("/{id}/recibir")
-    public ResponseEntity<?> recibirTransferencia(
-            @PathVariable Long id,
-            @RequestBody(required = false) TransferenciaRecepcionRequest request) {
+    public ResponseEntity<?> recibirTransferencia(@PathVariable Long id) {
         try {
-            Long negocioId = obtenerNegocioId();
-            TransferenciaInventario transferencia = transferenciaService.recibirTransferencia(
-                    negocioId, id, request);
-
+            TransferenciaInventarioResponse transferencia = transferenciaService.recibir(id, NEGOCIO_ID, USUARIO_ID);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Transferencia recibida exitosamente");
             response.put("transferencia", transferencia);
@@ -128,37 +107,25 @@ public class TransferenciaController {
         }
     }
 
-    /**
-     * POST /restful/inventario/transferencia/{id}/cancelar
-     * Cancelar una transferencia (solo si está en borrador o pendiente).
-     */
+    /** POST /restful/inventario/transferencia/{id}/cancelar — Cancelar transferencia */
     @PostMapping("/{id}/cancelar")
     public ResponseEntity<?> cancelarTransferencia(@PathVariable Long id) {
         try {
-            Long negocioId = obtenerNegocioId();
-            TransferenciaInventario transferencia = transferenciaService.cancelarTransferencia(negocioId, id);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("mensaje", "Transferencia cancelada exitosamente");
-            response.put("transferencia", transferencia);
+            transferenciaService.cancelar(id, NEGOCIO_ID);
+            Map<String, String> response = new HashMap<>();
+            response.put("mensaje", "Transferencia cancelada exitosamente (borrado lógico: estado → cancelada)");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * PUT /restful/inventario/transferencia/{id}
-     * Actualizar una transferencia (solo en estado 'borrador').
-     */
+    /** PUT /restful/inventario/transferencia/{id} — Actualizar (solo en borrador) */
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarTransferencia(
-            @PathVariable Long id, @RequestBody TransferenciaUpdateRequest request) {
+    public ResponseEntity<?> actualizarTransferencia(@PathVariable Long id,
+                                                      @RequestBody TransferenciaInventarioRequest request) {
         try {
-            Long negocioId = obtenerNegocioId();
-            TransferenciaInventario transferencia = transferenciaService.actualizarTransferencia(
-                    negocioId, id, request);
-
+            TransferenciaInventarioResponse transferencia = transferenciaService.actualizar(id, request, NEGOCIO_ID);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Transferencia actualizada exitosamente");
             response.put("transferencia", transferencia);
@@ -168,19 +135,13 @@ public class TransferenciaController {
         }
     }
 
-    /**
-     * DELETE /restful/inventario/transferencia/{id}
-     * Eliminar transferencia (borrado lógico).
-     * Solo si está en estado 'borrador' o 'cancelada'.
-     */
+    /** DELETE /restful/inventario/transferencia/{id} — Cancelar (borrado lógico: estado → cancelada) */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarTransferencia(@PathVariable Long id) {
         try {
-            Long negocioId = obtenerNegocioId();
-            transferenciaService.eliminarTransferencia(negocioId, id);
-
+            transferenciaService.cancelar(id, NEGOCIO_ID);
             Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Transferencia eliminada exitosamente (borrado lógico)");
+            response.put("mensaje", "Transferencia cancelada exitosamente (borrado lógico: estado → cancelada)");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
@@ -188,17 +149,8 @@ public class TransferenciaController {
     }
 
     // ============================================================
-    // MÉTODOS AUXILIARES
+    // MÉTODO AUXILIAR
     // ============================================================
-
-    private Long obtenerNegocioId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getPrincipal() == null) {
-            throw new RuntimeException("No se pudo obtener la autenticación del contexto de seguridad");
-        }
-        String uuid = auth.getPrincipal().toString();
-        return usuarioService.obtenerNegocioId(uuid);
-    }
 
     private ResponseEntity<?> errorResponse(String mensaje) {
         Map<String, String> error = new HashMap<>();

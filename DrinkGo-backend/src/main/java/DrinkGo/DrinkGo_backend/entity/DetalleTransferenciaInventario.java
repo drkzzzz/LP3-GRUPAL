@@ -15,26 +15,26 @@ public class DetalleTransferenciaInventario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "transferencia_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "transferencia_id", nullable = false)
     private Long transferenciaId;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "transferencia_id", nullable = false)
+    @JoinColumn(name = "transferencia_id", insertable = false, updatable = false)
     private TransferenciaInventario transferencia;
 
-    @Column(name = "producto_id", nullable = false, insertable = false, updatable = false)
+    @Column(name = "producto_id", nullable = false)
     private Long productoId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "producto_id", nullable = false)
+    @JoinColumn(name = "producto_id", insertable = false, updatable = false)
     private Producto producto;
 
-    @Column(name = "lote_id", insertable = false, updatable = false)
+    @Column(name = "lote_id")
     private Long loteId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lote_id")
+    @JoinColumn(name = "lote_id", insertable = false, updatable = false)
     private LoteInventario lote;
 
     @Column(name = "cantidad_solicitada", nullable = false)
@@ -54,28 +54,32 @@ public class DetalleTransferenciaInventario {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public Long getTransferenciaId() { 
-        return transferencia != null ? transferencia.getId() : transferenciaId; 
-    }
+    public Long getTransferenciaId() { return transferenciaId; }
+    public void setTransferenciaId(Long transferenciaId) { this.transferenciaId = transferenciaId; }
 
     public TransferenciaInventario getTransferencia() { return transferencia; }
-    public void setTransferencia(TransferenciaInventario transferencia) { 
-        this.transferencia = transferencia; 
+    public void setTransferencia(TransferenciaInventario transferencia) {
+        this.transferencia = transferencia;
+        if (transferencia != null) this.transferenciaId = transferencia.getId();
     }
 
-    public Long getProductoId() { 
-        return producto != null ? producto.getId() : productoId; 
-    }
+    public Long getProductoId() { return productoId; }
+    public void setProductoId(Long productoId) { this.productoId = productoId; }
 
     public Producto getProducto() { return producto; }
-    public void setProducto(Producto producto) { this.producto = producto; }
-
-    public Long getLoteId() { 
-        return lote != null ? lote.getId() : loteId; 
+    public void setProducto(Producto producto) {
+        this.producto = producto;
+        if (producto != null) this.productoId = producto.getId();
     }
 
+    public Long getLoteId() { return loteId; }
+    public void setLoteId(Long loteId) { this.loteId = loteId; }
+
     public LoteInventario getLote() { return lote; }
-    public void setLote(LoteInventario lote) { this.lote = lote; }
+    public void setLote(LoteInventario lote) {
+        this.lote = lote;
+        if (lote != null) this.loteId = lote.getId();
+    }
 
     public Integer getCantidadSolicitada() { return cantidadSolicitada; }
     public void setCantidadSolicitada(Integer cantidadSolicitada) { 

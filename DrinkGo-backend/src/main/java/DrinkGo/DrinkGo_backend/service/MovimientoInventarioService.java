@@ -162,6 +162,20 @@ public class MovimientoInventarioService {
 
     // ── Métodos auxiliares ──
 
+    /** Listar movimientos filtrados por producto */
+    public List<MovimientoInventarioResponse> listarPorProducto(Long negocioId, Long productoId) {
+        return movimientoRepository.findByNegocioIdAndProductoIdOrderByCreadoEnDesc(negocioId, productoId).stream()
+                .map(this::convertirAResponse)
+                .collect(Collectors.toList());
+    }
+
+    /** Listar movimientos filtrados por almacén */
+    public List<MovimientoInventarioResponse> listarPorAlmacen(Long negocioId, Long almacenId) {
+        return movimientoRepository.findByNegocioIdAndAlmacenIdOrderByCreadoEnDesc(negocioId, almacenId).stream()
+                .map(this::convertirAResponse)
+                .collect(Collectors.toList());
+    }
+
     /**
      * Crea un lote automático al registrar un movimiento de entrada.
      * Garantiza que todo stock tenga respaldo en lotes para mantener FIFO consistente.
@@ -178,7 +192,7 @@ public class MovimientoInventarioService {
         lote.setCantidadRestante(cantidad);
         lote.setPrecioCompra(costoUnitario != null ? costoUnitario : java.math.BigDecimal.ZERO);
         lote.setFechaRecepcion(java.time.LocalDate.now());
-        lote.setEstado(LoteInventario.EstadoLote.disponible);
+        lote.setEstado(LoteInventario.LoteEstado.disponible);
         lote.setNotas("Lote generado automáticamente por movimiento: " +
                 (motivo != null ? motivo : tipoMovimiento));
         lote.setCreadoEn(LocalDateTime.now());
@@ -188,7 +202,7 @@ public class MovimientoInventarioService {
     private void validarDisponibilidadSalida(Long negocioId, Long productoId,
                                               Long almacenId, int cantidad) {
         Optional<StockInventario> stockOpt = stockRepository
-                .findByProductoIdAndAlmacenIdAndNegocioId(productoId, almacenId, negocioId);
+                .findByNegocioIdAndProductoIdAndAlmacenId(negocioId, productoId, almacenId);
 
         if (stockOpt.isEmpty() || stockOpt.get().getCantidadEnMano() < cantidad) {
             int disponible = stockOpt.map(StockInventario::getCantidadEnMano).orElse(0);
@@ -201,8 +215,8 @@ public class MovimientoInventarioService {
     private void descontarFIFO(Long negocioId, Long productoId, Long almacenId, int cantidadADescontar) {
         List<LoteInventario> lotesDisponibles = loteRepository
                 .findLotesFIFODisponibles(
-                        productoId, almacenId, negocioId,
-                        LoteInventario.EstadoLote.disponible, 0);
+                        negocioId, productoId, almacenId,
+                        LoteInventario.LoteEstado.disponible, java.time.LocalDate.now());
 
         int restante = cantidadADescontar;
         for (LoteInventario lote : lotesDisponibles) {
@@ -212,7 +226,7 @@ public class MovimientoInventarioService {
             lote.setCantidadRestante(lote.getCantidadRestante() - descontar);
 
             if (lote.getCantidadRestante() == 0) {
-                lote.setEstado(LoteInventario.EstadoLote.agotado);
+                lote.setEstado(LoteInventario.LoteEstado.agotado);
             }
 
             loteRepository.save(lote);
@@ -227,7 +241,7 @@ public class MovimientoInventarioService {
 
     private void actualizarStock(Long negocioId, Long productoId, Long almacenId, int delta) {
         Optional<StockInventario> stockOpt = stockRepository
-                .findByProductoIdAndAlmacenIdAndNegocioId(productoId, almacenId, negocioId);
+                .findByNegocioIdAndProductoIdAndAlmacenId(negocioId, productoId, almacenId);
 
         StockInventario stock;
         if (stockOpt.isPresent()) {
