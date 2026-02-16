@@ -11,20 +11,20 @@ import java.util.Optional;
 
 @Repository
 public interface PaginaTiendaOnlineRepository extends JpaRepository<PaginaTiendaOnline, Long> {
-    
+
     List<PaginaTiendaOnline> findByNegocioId(Long negocioId);
-    
+
     List<PaginaTiendaOnline> findByNegocioIdAndEstaPublicadoTrue(Long negocioId);
-    
+
     Optional<PaginaTiendaOnline> findByNegocioIdAndSlug(Long negocioId, String slug);
-    
+
     Optional<PaginaTiendaOnline> findByIdAndNegocioId(Long id, Long negocioId);
-    
+
     boolean existsByNegocioIdAndSlug(Long negocioId, String slug);
-    
+
     @Query("SELECT p FROM PaginaTiendaOnline p WHERE p.negocioId = :negocioId ORDER BY p.orden ASC, p.titulo ASC")
     List<PaginaTiendaOnline> findByNegocioIdOrdenadas(@Param("negocioId") Long negocioId);
-    
+
     @Query("SELECT p FROM PaginaTiendaOnline p WHERE p.negocioId = :negocioId AND p.estaPublicado = true ORDER BY p.orden ASC, p.titulo ASC")
     List<PaginaTiendaOnline> findByNegocioIdPublicadasOrdenadas(@Param("negocioId") Long negocioId);
 }

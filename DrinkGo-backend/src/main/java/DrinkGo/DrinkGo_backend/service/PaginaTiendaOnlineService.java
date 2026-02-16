@@ -10,13 +10,13 @@ import java.util.List;
 
 @Service
 public class PaginaTiendaOnlineService {
-    
+
     private final PaginaTiendaOnlineRepository paginaRepository;
-    
+
     public PaginaTiendaOnlineService(PaginaTiendaOnlineRepository paginaRepository) {
         this.paginaRepository = paginaRepository;
     }
-    
+
     /**
      * Listar todas las páginas de un negocio
      */
@@ -24,7 +24,7 @@ public class PaginaTiendaOnlineService {
     public List<PaginaTiendaOnline> listarPorNegocio(Long negocioId) {
         return paginaRepository.findByNegocioIdOrdenadas(negocioId);
     }
-    
+
     /**
      * Listar solo páginas publicadas de un negocio
      */
@@ -32,7 +32,7 @@ public class PaginaTiendaOnlineService {
     public List<PaginaTiendaOnline> listarPublicadas(Long negocioId) {
         return paginaRepository.findByNegocioIdPublicadasOrdenadas(negocioId);
     }
-    
+
     /**
      * Obtener página por ID
      */
@@ -41,7 +41,7 @@ public class PaginaTiendaOnlineService {
         return paginaRepository.findByIdAndNegocioId(id, negocioId)
                 .orElseThrow(() -> new RuntimeException("Página no encontrada"));
     }
-    
+
     /**
      * Obtener página por slug
      */
@@ -50,7 +50,7 @@ public class PaginaTiendaOnlineService {
         return paginaRepository.findByNegocioIdAndSlug(negocioId, slug)
                 .orElseThrow(() -> new RuntimeException("Página no encontrada con slug: " + slug));
     }
-    
+
     /**
      * Crear nueva página
      */
@@ -60,32 +60,32 @@ public class PaginaTiendaOnlineService {
         if (paginaRepository.existsByNegocioIdAndSlug(dto.getNegocioId(), dto.getSlug())) {
             throw new RuntimeException("Ya existe una página con el slug: " + dto.getSlug());
         }
-        
+
         PaginaTiendaOnline pagina = new PaginaTiendaOnline();
         mapearDtoAEntidad(dto, pagina);
-        
+
         return paginaRepository.save(pagina);
     }
-    
+
     /**
      * Actualizar página existente
      */
     @Transactional
     public PaginaTiendaOnline actualizar(Long id, PaginaTiendaOnlineDTO dto, Long negocioId) {
         PaginaTiendaOnline pagina = obtenerPorId(id, negocioId);
-        
+
         // Validar slug único si cambió
         if (!pagina.getSlug().equals(dto.getSlug())) {
             if (paginaRepository.existsByNegocioIdAndSlug(negocioId, dto.getSlug())) {
                 throw new RuntimeException("Ya existe una página con el slug: " + dto.getSlug());
             }
         }
-        
+
         mapearDtoAEntidad(dto, pagina);
-        
+
         return paginaRepository.save(pagina);
     }
-    
+
     /**
      * Eliminar página
      */
@@ -94,7 +94,7 @@ public class PaginaTiendaOnlineService {
         PaginaTiendaOnline pagina = obtenerPorId(id, negocioId);
         paginaRepository.delete(pagina);
     }
-    
+
     /**
      * Publicar/Despublicar página
      */
@@ -104,7 +104,7 @@ public class PaginaTiendaOnlineService {
         pagina.setEstaPublicado(publicado);
         return paginaRepository.save(pagina);
     }
-    
+
     /**
      * Actualizar orden de página
      */
@@ -114,7 +114,7 @@ public class PaginaTiendaOnlineService {
         pagina.setOrden(nuevoOrden);
         return paginaRepository.save(pagina);
     }
-    
+
     /**
      * Mapear DTO a entidad
      */
