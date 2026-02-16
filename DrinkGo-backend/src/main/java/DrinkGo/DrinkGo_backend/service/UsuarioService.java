@@ -1,194 +1,165 @@
 package DrinkGo.DrinkGo_backend.service;
 
-import DrinkGo.DrinkGo_backend.dto.UsuarioDTO;
-import DrinkGo.DrinkGo_backend.entity.Rol;
-import DrinkGo.DrinkGo_backend.entity.Sede;
-import DrinkGo.DrinkGo_backend.entity.Usuario;
-import DrinkGo.DrinkGo_backend.repository.RolRepository;
-import DrinkGo.DrinkGo_backend.repository.SedeRepository;
-import DrinkGo.DrinkGo_backend.repository.UsuarioRepository;
+import DrinkGo.DrinkGo_backend.dto.*;
+import DrinkGo.DrinkGo_backend.entity.*;
+import DrinkGo.DrinkGo_backend.repository.*;
+import DrinkGo.DrinkGo_backend.security.JwtUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 @Service
 public class UsuarioService {
-    
-    private final UsuarioRepository usuarioRepository;
-    private final RolRepository rolRepository;
-    private final SedeRepository sedeRepository;
-    private final PasswordEncoder passwordEncoder;
-    
-    public UsuarioService(UsuarioRepository usuarioRepository, RolRepository rolRepository,
-                          SedeRepository sedeRepository, PasswordEncoder passwordEncoder) {
-        this.usuarioRepository = usuarioRepository;
-        this.rolRepository = rolRepository;
-        this.sedeRepository = sedeRepository;
-        this.passwordEncoder = passwordEncoder;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private SesionUsuarioRepository sesionRepository;
+
+    @Autowired
+    private RolRepository rolRepository;
+
+    @Autowired
+    private SedeRepository sedeRepository;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    // ============================================================
+    // AUTENTICACIÓN Y SEGURIDAD
+    // ============================================================
+
+    @Transactional
+    public Usuario registrar(RegistroRequest request) {
+        if (usuarioRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("El email ya está registrado");
+        }
+
+        Usuario usuario = new Usuario();
+        usuario.setNombres(request.getNombres());
+        usuario.setApellidos(request.getApellidos());
+        usuario.setEmail(request.getEmail());
+        usuario.setNegocioId(request.getNegocioId());
+        
+        // Encriptar contraseña
+        usuario.setHashContrasena(request.getLlaveSecreta());
+
+        return usuarioRepository.save(usuario);
     }
-    
-    @Transactional(readOnly = true)
-    public Page<Usuario> findByTenant(Long tenantId, Pageable pageable) {
-        return usuarioRepository.findByTenantIdAndActivoTrue(tenantId, pageable);
+
+    @Transactional
+    public TokenResponse generarToken(TokenRequest request) {
+        Usuario usuario = usuarioRepository.findByUuid(request.getClienteId())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        if (!usuario.getEstaActivo()) {
+            throw new RuntimeException("El usuario está desactivado");
+        }
+
+        if (!passwordEncoder.matches(request.getLlaveSecreta(), usuario.getHashContrasena())) {
+            throw new RuntimeException("Contraseña incorrecta");
+        }
+
+        String token = jwtUtil.generarToken(usuario.getUuid());
+
+        // Guardar sesión
+        SesionUsuario sesion = new SesionUsuario();
+        sesion.setUsuarioId(usuario.getId());
+        sesion.setHashToken(token);
+        sesion.setEstaActivo(true);
+        sesion.setExpiraEn(LocalDateTime.now().plusYears(1));
+        sesionRepository.save(sesion);
+
+        // Actualizar último acceso
+        usuario.setUltimoAccesoEn(LocalDateTime.now());
+        usuarioRepository.save(usuario);
+
+        return new TokenResponse(token, usuario.getUuid());
     }
-    
+
+    // ============================================================
+    // GESTIÓN DE USUARIOS (CRUD + ROLES/SEDES)
+    // ============================================================
+
     @Transactional(readOnly = true)
-    public Usuario findById(Long id, Long tenantId) {
-        return usuarioRepository.findByIdAndTenantId(id, tenantId)
+    public Page<Usuario> listarPaginado(Long negocioId, Pageable pageable) {
+        return usuarioRepository.findByNegocioIdAndEstaActivoTrue(negocioId, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Usuario obtenerPorId(Long id, Long negocioId) {
+        return usuarioRepository.findByIdAndNegocioId(id, negocioId)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
     }
-    
+
     @Transactional(readOnly = true)
-    public List<Usuario> buscar(Long tenantId, String busqueda) {
-        return usuarioRepository.buscarUsuarios(tenantId, busqueda);
+    public List<Usuario> buscar(Long negocioId, String busqueda) {
+        return usuarioRepository.buscarUsuarios(negocioId, busqueda);
     }
-    
-    @Transactional(readOnly = true)
-    public List<Usuario> findByRol(Long tenantId, String rolCodigo) {
-        return usuarioRepository.findByTenantIdAndRol(tenantId, rolCodigo);
-    }
-    
-    @Transactional(readOnly = true)
-    public List<Usuario> findBySede(Long sedeId) {
-        return usuarioRepository.findBySedeId(sedeId);
-    }
-    
+
     @Transactional
-    public Usuario crear(UsuarioDTO dto, Long tenantId) {
-        if (usuarioRepository.existsByTenantIdAndEmail(tenantId, dto.getEmail())) {
-            throw new RuntimeException("Ya existe un usuario con el email: " + dto.getEmail());
-        }
-        
-        Usuario usuario = new Usuario();
-        usuario.setTenantId(tenantId);
-        usuario.setEmail(dto.getEmail());
-        usuario.setContrasenaHash(passwordEncoder.encode(dto.getContrasena()));
-        
-        mapearDtoAEntidad(dto, usuario, tenantId);
-        
-        return usuarioRepository.save(usuario);
-    }
-    
-    @Transactional
-    public Usuario actualizar(Long id, UsuarioDTO dto, Long tenantId) {
-        Usuario usuario = findById(id, tenantId);
-        
-        // Verificar email único si cambió
-        if (!usuario.getEmail().equals(dto.getEmail()) 
-            && usuarioRepository.existsByTenantIdAndEmail(tenantId, dto.getEmail())) {
-            throw new RuntimeException("Ya existe un usuario con el email: " + dto.getEmail());
-        }
-        
-        usuario.setEmail(dto.getEmail());
-        
-        // Actualizar contraseña solo si se proporciona
-        if (dto.getContrasena() != null && !dto.getContrasena().isEmpty()) {
-            usuario.setContrasenaHash(passwordEncoder.encode(dto.getContrasena()));
-        }
-        
-        mapearDtoAEntidad(dto, usuario, tenantId);
-        
-        return usuarioRepository.save(usuario);
-    }
-    
-    @Transactional
-    public void cambiarContrasena(Long id, String contrasenaActual, String contrasenaNueva, Long tenantId) {
-        Usuario usuario = findById(id, tenantId);
-        
-        if (!passwordEncoder.matches(contrasenaActual, usuario.getContrasenaHash())) {
-            throw new RuntimeException("Contraseña actual incorrecta");
-        }
-        
-        usuario.setContrasenaHash(passwordEncoder.encode(contrasenaNueva));
-        usuarioRepository.save(usuario);
-    }
-    
-    @Transactional
-    public Usuario asignarRoles(Long id, Set<Long> rolesIds, Long tenantId) {
-        Usuario usuario = findById(id, tenantId);
-        
-        Set<Rol> roles = new HashSet<>();
-        for (Long rolId : rolesIds) {
-            Rol rol = rolRepository.findById(rolId)
-                    .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + rolId));
-            // Verificar que el rol es válido para el tenant
-            if (rol.getTenantId() != null && !rol.getTenantId().equals(tenantId)) {
-                throw new RuntimeException("Rol no válido para este negocio");
+    public Usuario actualizarUsuario(Long id, Long negocioId, UsuarioUpdateRequest request) {
+        Usuario usuario = obtenerPorId(id, negocioId);
+
+        if (request.getEmail() != null && !request.getEmail().equals(usuario.getEmail())) {
+            if (usuarioRepository.existsByEmail(request.getEmail())) {
+                throw new RuntimeException("El email ya está en uso");
             }
-            roles.add(rol);
+            usuario.setEmail(request.getEmail());
         }
-        
-        usuario.setRoles(roles);
+
+        if (request.getNombres() != null) usuario.setNombres(request.getNombres());
+        if (request.getApellidos() != null) usuario.setApellidos(request.getApellidos());
+        if (request.getTelefono() != null) usuario.setTelefono(request.getTelefono());
+        if (request.getEstaActivo() != null) usuario.setEstaActivo(request.getEstaActivo());
+
         return usuarioRepository.save(usuario);
     }
-    
+
     @Transactional
-    public Usuario asignarSedes(Long id, Set<Long> sedesIds, Long tenantId) {
-        Usuario usuario = findById(id, tenantId);
-        
-        Set<Sede> sedes = new HashSet<>();
-        for (Long sedeId : sedesIds) {
-            Sede sede = sedeRepository.findByIdAndTenantId(sedeId, tenantId)
-                    .orElseThrow(() -> new RuntimeException("Sede no encontrada: " + sedeId));
-            sedes.add(sede);
-        }
-        
-        usuario.setSedes(sedes);
-        return usuarioRepository.save(usuario);
-    }
-    
-    @Transactional
-    public void desactivar(Long id, Long tenantId) {
-        Usuario usuario = findById(id, tenantId);
-        usuario.setActivo(false);
-        usuarioRepository.save(usuario);
-    }
-    
-    @Transactional
-    public void actualizarUltimoAcceso(Long id) {
-        usuarioRepository.actualizarUltimoAcceso(id, OffsetDateTime.now());
-    }
-    
-    @Transactional(readOnly = true)
-    public Usuario loginPorPin(Long tenantId, String pin) {
-        return usuarioRepository.findByPinRapido(tenantId, pin)
-                .orElseThrow(() -> new RuntimeException("PIN inválido"));
-    }
-    
-    private void mapearDtoAEntidad(UsuarioDTO dto, Usuario usuario, Long tenantId) {
-        usuario.setCodigoEmpleado(dto.getCodigoEmpleado());
-        usuario.setNombres(dto.getNombres());
-        usuario.setApellidos(dto.getApellidos());
-        usuario.setTelefono(dto.getTelefono());
-        usuario.setAvatarUrl(dto.getAvatarUrl());
-        usuario.setSedePreferidaId(dto.getSedePreferidaId());
-        usuario.setPinRapido(dto.getPinRapido());
-        
-        if (dto.getActivo() != null) usuario.setActivo(dto.getActivo());
-        
-        // Asignar roles si se proporcionan
-        if (dto.getRolesIds() != null && !dto.getRolesIds().isEmpty()) {
+    public Usuario asignarRolesYSedes(Long id, Long negocioId, Set<Long> rolesIds, Set<Long> sedesIds) {
+        Usuario usuario = obtenerPorId(id, negocioId);
+
+        if (rolesIds != null) {
             Set<Rol> roles = new HashSet<>();
-            for (Long rolId : dto.getRolesIds()) {
+            for (Long rolId : rolesIds) {
                 rolRepository.findById(rolId).ifPresent(roles::add);
             }
             usuario.setRoles(roles);
         }
-        
-        // Asignar sedes si se proporcionan
-        if (dto.getSedesIds() != null && !dto.getSedesIds().isEmpty()) {
+
+        if (sedesIds != null) {
             Set<Sede> sedes = new HashSet<>();
-            for (Long sedeId : dto.getSedesIds()) {
-                sedeRepository.findByIdAndTenantId(sedeId, tenantId).ifPresent(sedes::add);
+            for (Long sedeId : sedesIds) {
+                sedeRepository.findByIdAndNegocioId(sedeId, negocioId).ifPresent(sedes::add);
             }
             usuario.setSedes(sedes);
         }
+
+        return usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public void eliminarUsuario(Long id, Long negocioId) {
+        Usuario usuario = obtenerPorId(id, negocioId);
+        usuarioRepository.delete(usuario); // Borrado lógico vía @SQLDelete
+    }
+
+    public Long obtenerNegocioId(String uuid) {
+        return usuarioRepository.findByUuid(uuid)
+                .orElseThrow(() -> new RuntimeException("UUID no válido"))
+                .getNegocioId();
     }
 }

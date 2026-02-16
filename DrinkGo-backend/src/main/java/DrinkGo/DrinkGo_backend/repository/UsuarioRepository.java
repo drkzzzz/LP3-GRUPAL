@@ -9,46 +9,50 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     
+    // --- Búsquedas básicas ---
     Optional<Usuario> findByEmail(String email);
     
-    Optional<Usuario> findByUuid(UUID uuid);
+    Optional<Usuario> findByUuid(String uuid);
     
-    Optional<Usuario> findByTenantIdAndEmail(Long tenantId, String email);
+    Optional<Usuario> findByNegocioIdAndEmail(Long negocioId, String email);
     
-    Optional<Usuario> findByIdAndTenantId(Long id, Long tenantId);
+    Optional<Usuario> findByIdAndNegocioId(Long id, Long negocioId);
     
-    Page<Usuario> findByTenantIdAndActivoTrue(Long tenantId, Pageable pageable);
+    // --- Paginación y Listados ---
+    Page<Usuario> findByNegocioIdAndEstaActivoTrue(Long negocioId, Pageable pageable);
     
-    Page<Usuario> findByTenantId(Long tenantId, Pageable pageable);
+    Page<Usuario> findByNegocioId(Long negocioId, Pageable pageable);
     
-    @Query("SELECT u FROM Usuario u WHERE u.tenantId = :tenantId AND u.activo = true " +
+    List<Usuario> findByNegocioId(Long negocioId);
+
+    // --- Búsquedas Avanzadas (Roles y Sedes) ---
+    @Query("SELECT u FROM Usuario u WHERE u.negocioId = :negocioId AND u.estaActivo = true " +
            "AND (LOWER(u.nombres) LIKE LOWER(CONCAT('%', :busqueda, '%')) " +
            "OR LOWER(u.apellidos) LIKE LOWER(CONCAT('%', :busqueda, '%')) " +
            "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :busqueda, '%')))")
-    List<Usuario> buscarUsuarios(@Param("tenantId") Long tenantId, @Param("busqueda") String busqueda);
+    List<Usuario> buscarUsuarios(@Param("negocioId") Long negocioId, @Param("busqueda") String busqueda);
     
-    @Query("SELECT u FROM Usuario u JOIN u.roles r WHERE u.tenantId = :tenantId AND r.codigo = :rolCodigo AND u.activo = true")
-    List<Usuario> findByTenantIdAndRol(@Param("tenantId") Long tenantId, @Param("rolCodigo") String rolCodigo);
+    @Query("SELECT u FROM Usuario u JOIN u.roles r WHERE u.negocioId = :negocioId AND r.codigo = :rolCodigo AND u.estaActivo = true")
+    List<Usuario> findByNegocioIdAndRol(@Param("negocioId") Long negocioId, @Param("rolCodigo") String rolCodigo);
     
-    @Query("SELECT u FROM Usuario u JOIN u.sedes s WHERE s.id = :sedeId AND u.activo = true")
+    @Query("SELECT u FROM Usuario u JOIN u.sedes s WHERE s.id = :sedeId AND u.estaActivo = true")
     List<Usuario> findBySedeId(@Param("sedeId") Long sedeId);
     
-    @Query("SELECT u FROM Usuario u WHERE u.tenantId = :tenantId AND u.pinRapido = :pin AND u.activo = true")
-    Optional<Usuario> findByPinRapido(@Param("tenantId") Long tenantId, @Param("pin") String pin);
-    
+    // --- Seguridad y Actualización ---
     @Modifying
-    @Query("UPDATE Usuario u SET u.ultimoAcceso = :fecha WHERE u.id = :id")
-    void actualizarUltimoAcceso(@Param("id") Long id, @Param("fecha") OffsetDateTime fecha);
+    @Query("UPDATE Usuario u SET u.ultimoAccesoEn = :fecha WHERE u.id = :id")
+    void actualizarUltimoAcceso(@Param("id") Long id, @Param("fecha") LocalDateTime fecha);
     
-    boolean existsByTenantIdAndEmail(Long tenantId, String email);
+    boolean existsByEmail(String email);
     
-    long countByTenantIdAndActivoTrue(Long tenantId);
+    boolean existsByNegocioIdAndEmail(Long negocioId, String email);
+    
+    long countByNegocioIdAndEstaActivoTrue(Long negocioId);
 }

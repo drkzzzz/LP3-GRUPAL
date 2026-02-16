@@ -1,167 +1,154 @@
 package DrinkGo.DrinkGo_backend.entity;
 
 import jakarta.persistence.*;
-import java.time.OffsetDateTime;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * Entidad Usuario - Usuarios/empleados de cada licorería
- * Tabla: drinkgo.usuario
+ * Entidad Usuario - Gestiona usuarios, empleados y autenticación.
+ * Compatible con MySQL (XAMPP).
  */
 @Entity
-@Table(name = "usuario", schema = "drinkgo",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "email"}))
+@Table(name = "usuarios")
+@SQLDelete(sql = "UPDATE usuarios SET eliminado_en = NOW() WHERE id = ?")
+@SQLRestriction("eliminado_en IS NULL")
 public class Usuario {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @Column(name = "tenant_id", nullable = false)
-    private Long tenantId;
-    
-    @Column(name = "uuid", unique = true, nullable = false)
-    private UUID uuid;
-    
-    @Column(name = "codigo_empleado", length = 30)
-    private String codigoEmpleado;
-    
-    @Column(name = "nombres", nullable = false, length = 120)
-    private String nombres;
-    
-    @Column(name = "apellidos", length = 120)
-    private String apellidos;
-    
-    @Column(name = "email", nullable = false)
+
+    @Column(name = "uuid", nullable = false, unique = true, length = 36)
+    private String uuid;
+
+    @Column(name = "negocio_id", nullable = false)
+    private Long negocioId;
+
+    @Column(name = "email", nullable = false, length = 150)
     private String email;
-    
-    @Column(name = "telefono", length = 20)
+
+    @Column(name = "hash_contrasena", nullable = false)
+    private String hashContrasena;
+
+    @Column(name = "nombres", nullable = false, length = 100)
+    private String nombres;
+
+    @Column(name = "apellidos", nullable = false, length = 100)
+    private String apellidos;
+
+    @Column(name = "telefono", length = 30)
     private String telefono;
-    
-    @Column(name = "contrasena_hash", nullable = false, length = 200)
-    private String contrasenaHash;
-    
-    @Column(name = "avatar_url", length = 500)
-    private String avatarUrl;
-    
-    @Column(name = "sede_preferida_id")
-    private Long sedePreferidaId;
-    
-    @Column(name = "pin_rapido", length = 10)
-    private String pinRapido;
-    
-    @Column(name = "activo", nullable = false)
-    private Boolean activo = true;
-    
-    @Column(name = "ultimo_acceso")
-    private OffsetDateTime ultimoAcceso;
-    
+
+    @Column(name = "url_avatar", length = 500)
+    private String urlAvatar;
+
+    @Column(name = "esta_activo", nullable = false)
+    private Boolean estaActivo = true;
+
+    @Column(name = "ultimo_acceso_en")
+    private LocalDateTime ultimoAccesoEn;
+
     @Column(name = "creado_en", nullable = false, updatable = false)
-    private OffsetDateTime creadoEn;
-    
-    @Column(name = "actualizado_en", nullable = false)
-    private OffsetDateTime actualizadoEn;
-    
-    // Relaciones
+    private LocalDateTime creadoEn;
+
+    @Column(name = "actualizado_en")
+    private LocalDateTime actualizadoEn;
+
+    @Column(name = "eliminado_en")
+    private LocalDateTime eliminadoEn;
+
+    // --- Relaciones rescatadas de feature/angello-login ---
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "usuario_rol",
-        schema = "drinkgo",
         joinColumns = @JoinColumn(name = "usuario_id"),
         inverseJoinColumns = @JoinColumn(name = "rol_id")
     )
     private Set<Rol> roles = new HashSet<>();
-    
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "usuario_sede",
-        schema = "drinkgo",
         joinColumns = @JoinColumn(name = "usuario_id"),
         inverseJoinColumns = @JoinColumn(name = "sede_id")
     )
     private Set<Sede> sedes = new HashSet<>();
-    
+
+    // --- Ciclo de vida ---
     @PrePersist
     protected void onCreate() {
-        if (uuid == null) {
-            uuid = UUID.randomUUID();
+        if (this.uuid == null) {
+            this.uuid = UUID.randomUUID().toString();
         }
-        creadoEn = OffsetDateTime.now();
-        actualizadoEn = OffsetDateTime.now();
+        this.creadoEn = LocalDateTime.now();
+        this.actualizadoEn = LocalDateTime.now();
     }
-    
+
     @PreUpdate
     protected void onUpdate() {
-        actualizadoEn = OffsetDateTime.now();
+        this.actualizadoEn = LocalDateTime.now();
     }
-    
-    // Getters y Setters
+
+    /**
+     * Encriptar contraseña con BCrypt
+     */
+    public void setHashContrasena(String contrasenaPlana) {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        this.hashContrasena = encoder.encode(contrasenaPlana);
+    }
+
+    // --- Getters y Setters ---
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    
-    public Long getTenantId() { return tenantId; }
-    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
-    
-    public UUID getUuid() { return uuid; }
-    public void setUuid(UUID uuid) { this.uuid = uuid; }
-    
-    public String getCodigoEmpleado() { return codigoEmpleado; }
-    public void setCodigoEmpleado(String codigoEmpleado) { this.codigoEmpleado = codigoEmpleado; }
-    
-    public String getNombres() { return nombres; }
-    public void setNombres(String nombres) { this.nombres = nombres; }
-    
-    public String getApellidos() { return apellidos; }
-    public void setApellidos(String apellidos) { this.apellidos = apellidos; }
-    
+
+    public String getUuid() { return uuid; }
+    public void setUuid(String uuid) { this.uuid = uuid; }
+
+    public Long getNegocioId() { return negocioId; }
+    public void setNegocioId(Long negocioId) { this.negocioId = negocioId; }
+
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
-    
+
+    public String getHashContrasena() { return hashContrasena; }
+    public void setHashContrasenaDirecto(String hash) { this.hashContrasena = hash; }
+
+    public String getNombres() { return nombres; }
+    public void setNombres(String nombres) { this.nombres = nombres; }
+
+    public String getApellidos() { return apellidos; }
+    public void setApellidos(String apellidos) { this.apellidos = apellidos; }
+
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
-    
-    public String getContrasenaHash() { return contrasenaHash; }
-    public void setContrasenaHash(String contrasenaHash) { this.contrasenaHash = contrasenaHash; }
-    
-    public String getAvatarUrl() { return avatarUrl; }
-    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
-    
-    public Long getSedePreferidaId() { return sedePreferidaId; }
-    public void setSedePreferidaId(Long sedePreferidaId) { this.sedePreferidaId = sedePreferidaId; }
-    
-    public String getPinRapido() { return pinRapido; }
-    public void setPinRapido(String pinRapido) { this.pinRapido = pinRapido; }
-    
-    public Boolean getActivo() { return activo; }
-    public void setActivo(Boolean activo) { this.activo = activo; }
-    
-    public OffsetDateTime getUltimoAcceso() { return ultimoAcceso; }
-    public void setUltimoAcceso(OffsetDateTime ultimoAcceso) { this.ultimoAcceso = ultimoAcceso; }
-    
-    public OffsetDateTime getCreadoEn() { return creadoEn; }
-    public OffsetDateTime getActualizadoEn() { return actualizadoEn; }
-    
+
+    public String getUrlAvatar() { return urlAvatar; }
+    public void setUrlAvatar(String urlAvatar) { this.urlAvatar = urlAvatar; }
+
+    public Boolean getEstaActivo() { return estaActivo; }
+    public void setEstaActivo(Boolean estaActivo) { this.estaActivo = estaActivo; }
+
+    public LocalDateTime getUltimoAccesoEn() { return ultimoAccesoEn; }
+    public void setUltimoAccesoEn(LocalDateTime ultimoAccesoEn) { this.ultimoAccesoEn = ultimoAccesoEn; }
+
+    public LocalDateTime getCreadoEn() { return creadoEn; }
+    public LocalDateTime getActualizadoEn() { return actualizadoEn; }
+    public LocalDateTime getEliminadoEn() { return eliminadoEn; }
+
     public Set<Rol> getRoles() { return roles; }
     public void setRoles(Set<Rol> roles) { this.roles = roles; }
-    
+
     public Set<Sede> getSedes() { return sedes; }
     public void setSedes(Set<Sede> sedes) { this.sedes = sedes; }
-    
+
     // Métodos de utilidad
-    public void addRol(Rol rol) {
-        this.roles.add(rol);
-    }
-    
-    public void removeRol(Rol rol) {
-        this.roles.remove(rol);
-    }
-    
-    public void addSede(Sede sede) {
-        this.sedes.add(sede);
-    }
-    
     public String getNombreCompleto() {
         return nombres + (apellidos != null ? " " + apellidos : "");
     }
