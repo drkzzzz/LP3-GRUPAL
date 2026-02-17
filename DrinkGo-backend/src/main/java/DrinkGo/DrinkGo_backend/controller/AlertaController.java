@@ -1,16 +1,14 @@
 package DrinkGo.DrinkGo_backend.controller;
 
 import DrinkGo.DrinkGo_backend.dto.AlertaCreateRequest;
+import DrinkGo.DrinkGo_backend.dto.AlertaInventarioResponse;
 import DrinkGo.DrinkGo_backend.dto.AlertaUpdateRequest;
 import DrinkGo.DrinkGo_backend.entity.AlertaInventario;
 import DrinkGo.DrinkGo_backend.entity.AlertaInventario.TipoAlerta;
 import DrinkGo.DrinkGo_backend.service.AlertaInventarioService;
-import DrinkGo.DrinkGo_backend.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -19,60 +17,59 @@ import java.util.Map;
 
 /**
  * Controlador de Alertas de Inventario - Bloque 5.
- * Todos los endpoints requieren JWT.
- * CRUD completo: GET, POST, PUT, DELETE (borrado lógico).
+ * Unificado: delega a AlertaInventarioService.
  * Implementa RF-INV-004 y RF-INV-005.
+ * negocioId hardcoded = 1L (JWT eliminado para entorno de desarrollo).
  */
 @RestController
 @RequestMapping("/restful/inventario/alertas")
 public class AlertaController {
 
+    private static final Long NEGOCIO_ID = 1L;
+    private static final Long USUARIO_ID = 1L;
+
     @Autowired
     private AlertaInventarioService alertaService;
 
-    @Autowired
-    private UsuarioService usuarioService;
-
-    /**
-     * GET /restful/inventario/alertas
-     * Listar todas las alertas activas del negocio.
-     */
+    /** GET /restful/inventario/alertas — Listar alertas activas */
     @GetMapping
     public ResponseEntity<?> listarAlertasActivas() {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<AlertaInventario> alertas = alertaService.listarAlertasActivas(negocioId);
+            List<AlertaInventarioResponse> alertas = alertaService.listarActivas(NEGOCIO_ID);
             return ResponseEntity.ok(alertas);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * GET /restful/inventario/alertas/todas
-     * Listar todas las alertas (activas y resueltas).
-     */
+    /** GET /restful/inventario/alertas/todas — Listar todas (activas y resueltas) */
     @GetMapping("/todas")
     public ResponseEntity<?> listarTodasLasAlertas() {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<AlertaInventario> alertas = alertaService.listarAlertas(negocioId);
+            List<AlertaInventarioResponse> alertas = alertaService.listar(NEGOCIO_ID);
             return ResponseEntity.ok(alertas);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * GET /restful/inventario/alertas/tipo/{tipoAlerta}
-     * Listar alertas por tipo (stock_bajo, proximo_vencer, vencido, etc.).
-     */
+    /** GET /restful/inventario/alertas/{id} — Obtener alerta por ID */
+    @GetMapping("/{id}")
+    public ResponseEntity<?> obtenerAlerta(@PathVariable Long id) {
+        try {
+            AlertaInventarioResponse alerta = alertaService.obtenerPorId(id, NEGOCIO_ID);
+            return ResponseEntity.ok(alerta);
+        } catch (RuntimeException e) {
+            return errorResponse(e.getMessage());
+        }
+    }
+
+    /** GET /restful/inventario/alertas/tipo/{tipoAlerta} — Filtrar por tipo */
     @GetMapping("/tipo/{tipoAlerta}")
     public ResponseEntity<?> listarAlertasPorTipo(@PathVariable String tipoAlerta) {
         try {
-            Long negocioId = obtenerNegocioId();
             TipoAlerta tipo = TipoAlerta.valueOf(tipoAlerta);
-            List<AlertaInventario> alertas = alertaService.listarAlertasPorTipo(negocioId, tipo);
+            List<AlertaInventario> alertas = alertaService.listarAlertasPorTipo(NEGOCIO_ID, tipo);
             return ResponseEntity.ok(alertas);
         } catch (IllegalArgumentException e) {
             Map<String, String> error = new HashMap<>();
@@ -84,16 +81,11 @@ public class AlertaController {
         }
     }
 
-    /**
-     * POST /restful/inventario/alertas
-     * Crear una alerta de inventario manualmente.
-     */
+    /** POST /restful/inventario/alertas — Crear alerta manualmente */
     @PostMapping
     public ResponseEntity<?> crearAlerta(@RequestBody AlertaCreateRequest request) {
         try {
-            Long negocioId = obtenerNegocioId();
-            AlertaInventario alerta = alertaService.crearAlerta(negocioId, request);
-
+            AlertaInventario alerta = alertaService.crearAlerta(NEGOCIO_ID, request);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Alerta creada exitosamente");
             response.put("alerta", alerta);
@@ -103,35 +95,24 @@ public class AlertaController {
         }
     }
 
-    /**
-     * POST /restful/inventario/alertas/{id}/resolver
-     * Marcar una alerta como resuelta.
-     */
+    /** POST /restful/inventario/alertas/{id}/resolver — Marcar como resuelta */
     @PostMapping("/{id}/resolver")
     public ResponseEntity<?> resolverAlerta(@PathVariable Long id) {
         try {
-            Long negocioId = obtenerNegocioId();
-            AlertaInventario alerta = alertaService.resolverAlerta(negocioId, id);
-
-            Map<String, Object> response = new HashMap<>();
+            alertaService.resolver(id, NEGOCIO_ID, USUARIO_ID);
+            Map<String, String> response = new HashMap<>();
             response.put("mensaje", "Alerta resuelta exitosamente");
-            response.put("alerta", alerta);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * POST /restful/inventario/alertas/verificar
-     * Ejecutar verificación de todas las alertas del negocio bajo demanda.
-     */
+    /** POST /restful/inventario/alertas/verificar — Verificar alertas bajo demanda */
     @PostMapping("/verificar")
     public ResponseEntity<?> verificarAlertas() {
         try {
-            Long negocioId = obtenerNegocioId();
-            alertaService.verificarTodasLasAlertas(negocioId);
-
+            alertaService.verificarTodasLasAlertas(NEGOCIO_ID);
             Map<String, String> response = new HashMap<>();
             response.put("mensaje", "Verificación de alertas completada exitosamente");
             return ResponseEntity.ok(response);
@@ -140,16 +121,11 @@ public class AlertaController {
         }
     }
 
-    /**
-     * PUT /restful/inventario/alertas/{id}
-     * Actualizar una alerta de inventario.
-     */
+    /** PUT /restful/inventario/alertas/{id} — Actualizar alerta */
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizarAlerta(@PathVariable Long id, @RequestBody AlertaUpdateRequest request) {
         try {
-            Long negocioId = obtenerNegocioId();
-            AlertaInventario alerta = alertaService.actualizarAlerta(negocioId, id, request);
-
+            AlertaInventario alerta = alertaService.actualizarAlerta(NEGOCIO_ID, id, request);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Alerta actualizada exitosamente");
             response.put("alerta", alerta);
@@ -159,18 +135,13 @@ public class AlertaController {
         }
     }
 
-    /**
-     * DELETE /restful/inventario/alertas/{id}
-     * Eliminar alerta (borrado lógico).
-     */
+    /** DELETE /restful/inventario/alertas/{id} — Eliminar alerta */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarAlerta(@PathVariable Long id) {
         try {
-            Long negocioId = obtenerNegocioId();
-            alertaService.eliminarAlerta(negocioId, id);
-
+            alertaService.eliminarAlerta(NEGOCIO_ID, id);
             Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Alerta eliminada exitosamente (borrado lógico)");
+            response.put("mensaje", "Alerta eliminada exitosamente");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
@@ -178,17 +149,8 @@ public class AlertaController {
     }
 
     // ============================================================
-    // MÉTODOS AUXILIARES
+    // MÉTODO AUXILIAR
     // ============================================================
-
-    private Long obtenerNegocioId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getPrincipal() == null) {
-            throw new RuntimeException("No se pudo obtener la autenticación del contexto de seguridad");
-        }
-        String uuid = auth.getPrincipal().toString();
-        return usuarioService.obtenerNegocioId(uuid);
-    }
 
     private ResponseEntity<?> errorResponse(String mensaje) {
         Map<String, String> error = new HashMap<>();

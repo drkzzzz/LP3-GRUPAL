@@ -1,17 +1,18 @@
 package DrinkGo.DrinkGo_backend.entity;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Lotes de inventario con sistema FIFO (RF-INV-002..003).
+ * Los lotes se consumen ordenados por fecha_recepcion ASC (FIFO estricto).
+ * NOTA: la tabla lotes_inventario NO tiene columna eliminado_en.
+ */
 @Entity
 @Table(name = "lotes_inventario")
-@SQLDelete(sql = "UPDATE lotes_inventario SET eliminado_en = NOW() WHERE id = ?")
-@SQLRestriction("eliminado_en IS NULL")
 public class LoteInventario {
 
     public enum LoteEstado {
@@ -28,8 +29,16 @@ public class LoteInventario {
     @Column(name = "producto_id", nullable = false)
     private Long productoId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "producto_id", insertable = false, updatable = false)
+    private Producto producto;
+
     @Column(name = "almacen_id", nullable = false)
     private Long almacenId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "almacen_id", insertable = false, updatable = false)
+    private Almacen almacen;
 
     @Column(name = "numero_lote", nullable = false, length = 50)
     private String numeroLote;
@@ -65,150 +74,84 @@ public class LoteInventario {
     @Column(name = "notas", columnDefinition = "TEXT")
     private String notas;
 
-    @Column(name = "creado_en", insertable = false, updatable = false)
+    @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
 
-    @Column(name = "actualizado_en", insertable = false, updatable = false)
+    @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
-    @Column(name = "eliminado_en")
-    private LocalDateTime eliminadoEn;
+    @PrePersist
+    protected void onCreate() {
+        this.creadoEn = LocalDateTime.now();
+        this.actualizadoEn = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.actualizadoEn = LocalDateTime.now();
+    }
 
     // --- Getters y Setters ---
 
-    public Long getId() {
-        return id;
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Long getNegocioId() { return negocioId; }
+    public void setNegocioId(Long negocioId) { this.negocioId = negocioId; }
+
+    public Long getProductoId() { return productoId; }
+    public void setProductoId(Long productoId) { this.productoId = productoId; }
+
+    public Producto getProducto() { return producto; }
+    public void setProducto(Producto producto) {
+        this.producto = producto;
+        if (producto != null) this.productoId = producto.getId();
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public Long getAlmacenId() { return almacenId; }
+    public void setAlmacenId(Long almacenId) { this.almacenId = almacenId; }
+
+    public Almacen getAlmacen() { return almacen; }
+    public void setAlmacen(Almacen almacen) {
+        this.almacen = almacen;
+        if (almacen != null) this.almacenId = almacen.getId();
     }
 
-    public Long getNegocioId() {
-        return negocioId;
-    }
+    public String getNumeroLote() { return numeroLote; }
+    public void setNumeroLote(String numeroLote) { this.numeroLote = numeroLote; }
 
-    public void setNegocioId(Long negocioId) {
-        this.negocioId = negocioId;
-    }
+    public Integer getCantidadInicial() { return cantidadInicial; }
+    public void setCantidadInicial(Integer cantidadInicial) { this.cantidadInicial = cantidadInicial; }
 
-    public Long getProductoId() {
-        return productoId;
-    }
+    public Integer getCantidadRestante() { return cantidadRestante; }
+    public void setCantidadRestante(Integer cantidadRestante) { this.cantidadRestante = cantidadRestante; }
 
-    public void setProductoId(Long productoId) {
-        this.productoId = productoId;
-    }
+    public BigDecimal getPrecioCompra() { return precioCompra; }
+    public void setPrecioCompra(BigDecimal precioCompra) { this.precioCompra = precioCompra; }
 
-    public Long getAlmacenId() {
-        return almacenId;
-    }
+    public LocalDate getFechaFabricacion() { return fechaFabricacion; }
+    public void setFechaFabricacion(LocalDate fechaFabricacion) { this.fechaFabricacion = fechaFabricacion; }
 
-    public void setAlmacenId(Long almacenId) {
-        this.almacenId = almacenId;
-    }
+    public LocalDate getFechaVencimiento() { return fechaVencimiento; }
+    public void setFechaVencimiento(LocalDate fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
 
-    public String getNumeroLote() {
-        return numeroLote;
-    }
+    public LocalDate getFechaRecepcion() { return fechaRecepcion; }
+    public void setFechaRecepcion(LocalDate fechaRecepcion) { this.fechaRecepcion = fechaRecepcion; }
 
-    public void setNumeroLote(String numeroLote) {
-        this.numeroLote = numeroLote;
-    }
+    public Long getProveedorId() { return proveedorId; }
+    public void setProveedorId(Long proveedorId) { this.proveedorId = proveedorId; }
 
-    public Integer getCantidadInicial() {
-        return cantidadInicial;
-    }
+    public Long getOrdenCompraId() { return ordenCompraId; }
+    public void setOrdenCompraId(Long ordenCompraId) { this.ordenCompraId = ordenCompraId; }
 
-    public void setCantidadInicial(Integer cantidadInicial) {
-        this.cantidadInicial = cantidadInicial;
-    }
+    public LoteEstado getEstado() { return estado; }
+    public void setEstado(LoteEstado estado) { this.estado = estado; }
 
-    public Integer getCantidadRestante() {
-        return cantidadRestante;
-    }
+    public String getNotas() { return notas; }
+    public void setNotas(String notas) { this.notas = notas; }
 
-    public void setCantidadRestante(Integer cantidadRestante) {
-        this.cantidadRestante = cantidadRestante;
-    }
+    public LocalDateTime getCreadoEn() { return creadoEn; }
+    public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
 
-    public BigDecimal getPrecioCompra() {
-        return precioCompra;
-    }
-
-    public void setPrecioCompra(BigDecimal precioCompra) {
-        this.precioCompra = precioCompra;
-    }
-
-    public LocalDate getFechaFabricacion() {
-        return fechaFabricacion;
-    }
-
-    public void setFechaFabricacion(LocalDate fechaFabricacion) {
-        this.fechaFabricacion = fechaFabricacion;
-    }
-
-    public LocalDate getFechaVencimiento() {
-        return fechaVencimiento;
-    }
-
-    public void setFechaVencimiento(LocalDate fechaVencimiento) {
-        this.fechaVencimiento = fechaVencimiento;
-    }
-
-    public LocalDate getFechaRecepcion() {
-        return fechaRecepcion;
-    }
-
-    public void setFechaRecepcion(LocalDate fechaRecepcion) {
-        this.fechaRecepcion = fechaRecepcion;
-    }
-
-    public Long getProveedorId() {
-        return proveedorId;
-    }
-
-    public void setProveedorId(Long proveedorId) {
-        this.proveedorId = proveedorId;
-    }
-
-    public Long getOrdenCompraId() {
-        return ordenCompraId;
-    }
-
-    public void setOrdenCompraId(Long ordenCompraId) {
-        this.ordenCompraId = ordenCompraId;
-    }
-
-    public LoteEstado getEstado() {
-        return estado;
-    }
-
-    public void setEstado(LoteEstado estado) {
-        this.estado = estado;
-    }
-
-    public String getNotas() {
-        return notas;
-    }
-
-    public void setNotas(String notas) {
-        this.notas = notas;
-    }
-
-    public LocalDateTime getCreadoEn() {
-        return creadoEn;
-    }
-
-    public LocalDateTime getActualizadoEn() {
-        return actualizadoEn;
-    }
-
-    public LocalDateTime getEliminadoEn() {
-        return eliminadoEn;
-    }
-
-    public void setEliminadoEn(LocalDateTime eliminadoEn) {
-        this.eliminadoEn = eliminadoEn;
-    }
+    public LocalDateTime getActualizadoEn() { return actualizadoEn; }
 }

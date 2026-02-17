@@ -6,18 +6,13 @@ import org.hibernate.annotations.SQLRestriction;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Entidad Usuario - Mapea la tabla 'usuarios' de drinkgo_database.sql.
- * Reemplaza la entidad Registro del patrón de clase.
- *
- * Equivalencias con CLASE_API_REFERENCIA.md:
- *   cliente_id    → uuid (identificador único del usuario/tenant)
- *   llave_secreta → hash_contrasena (BCrypt)
- *   access_token  → almacenado en sesiones_usuario.hash_token
- *
- * Borrado lógico con @SQLDelete y @SQLRestriction (RF-ADM-011..013).
+ * Entidad Usuario - Gestiona usuarios, empleados y autenticación.
+ * Compatible con MySQL (XAMPP).
  */
 @Entity
 @Table(name = "usuarios")
@@ -47,12 +42,6 @@ public class Usuario {
     @Column(name = "apellidos", nullable = false, length = 100)
     private String apellidos;
 
-    @Column(name = "tipo_documento", length = 20)
-    private String tipoDocumento;
-
-    @Column(name = "numero_documento", length = 20)
-    private String numeroDocumento;
-
     @Column(name = "telefono", length = 30)
     private String telefono;
 
@@ -62,288 +51,105 @@ public class Usuario {
     @Column(name = "esta_activo", nullable = false)
     private Boolean estaActivo = true;
 
-    @Column(name = "email_verificado_en")
-    private LocalDateTime emailVerificadoEn;
-
     @Column(name = "ultimo_acceso_en")
     private LocalDateTime ultimoAccesoEn;
 
-    @Column(name = "ip_ultimo_acceso", length = 45)
-    private String ipUltimoAcceso;
-
-    @Column(name = "contrasena_cambiada_en")
-    private LocalDateTime contrasenaCambiadaEn;
-
-    @Column(name = "intentos_fallidos_acceso", nullable = false)
-    private Integer intentosFallidosAcceso = 0;
-
-    @Column(name = "bloqueado_hasta")
-    private LocalDateTime bloqueadoHasta;
-
-    @Column(name = "debe_cambiar_contrasena", nullable = false)
-    private Boolean debeCambiarContrasena = false;
-
-    @Column(name = "idioma", nullable = false, length = 5)
-    private String idioma = "es";
-
-    @Column(name = "formato_fecha_preferido", length = 20)
-    private String formatoFechaPreferido;
-
-    @Column(name = "zona_horaria_preferida", length = 50)
-    private String zonaHorariaPreferida;
-
-    @Column(name = "notificaciones_habilitadas", nullable = false)
-    private Boolean notificacionesHabilitadas = true;
-
-    @Column(name = "preferencias_notificacion_json", columnDefinition = "JSON")
-    private String preferenciasNotificacionJson;
-
-    @Column(name = "vista_pos_predeterminada", nullable = false, length = 20)
-    private String vistaPosPredeterminada = "cuadricula";
-
-    @Column(name = "creado_en", insertable = false, updatable = false)
+    @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
 
-    @Column(name = "actualizado_en", insertable = false, updatable = false)
+    @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
     @Column(name = "eliminado_en")
     private LocalDateTime eliminadoEn;
 
-    // --- Generación de UUID (equivalente al cliente_id de la clase) ---
+    // --- Relaciones rescatadas de feature/angello-login ---
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "usuario_rol",
+        joinColumns = @JoinColumn(name = "usuario_id"),
+        inverseJoinColumns = @JoinColumn(name = "rol_id")
+    )
+    private Set<Rol> roles = new HashSet<>();
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "usuario_sede",
+        joinColumns = @JoinColumn(name = "usuario_id"),
+        inverseJoinColumns = @JoinColumn(name = "sede_id")
+    )
+    private Set<Sede> sedes = new HashSet<>();
+
+    // --- Ciclo de vida ---
     @PrePersist
     protected void onCreate() {
         if (this.uuid == null) {
             this.uuid = UUID.randomUUID().toString();
         }
+        this.creadoEn = LocalDateTime.now();
+        this.actualizadoEn = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.actualizadoEn = LocalDateTime.now();
     }
 
     /**
-     * Encriptar contraseña con BCrypt (equivalente a setLlave_secreta de la clase).
+     * Encriptar contraseña con BCrypt
      */
     public void setHashContrasena(String contrasenaPlana) {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         this.hashContrasena = encoder.encode(contrasenaPlana);
     }
 
-    /**
-     * Setter directo para hashContrasena sin encriptar (para carga desde BD).
-     */
-    public void setHashContrasenaDirecto(String hashContrasena) {
-        this.hashContrasena = hashContrasena;
-    }
-
     // --- Getters y Setters ---
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public String getUuid() { return uuid; }
+    public void setUuid(String uuid) { this.uuid = uuid; }
 
-    public String getUuid() {
-        return uuid;
-    }
+    public Long getNegocioId() { return negocioId; }
+    public void setNegocioId(Long negocioId) { this.negocioId = negocioId; }
 
-    public void setUuid(String uuid) {
-        this.uuid = uuid;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public Long getNegocioId() {
-        return negocioId;
-    }
+    public String getHashContrasena() { return hashContrasena; }
+    public void setHashContrasenaDirecto(String hash) { this.hashContrasena = hash; }
 
-    public void setNegocioId(Long negocioId) {
-        this.negocioId = negocioId;
-    }
+    public String getNombres() { return nombres; }
+    public void setNombres(String nombres) { this.nombres = nombres; }
 
-    public String getEmail() {
-        return email;
-    }
+    public String getApellidos() { return apellidos; }
+    public void setApellidos(String apellidos) { this.apellidos = apellidos; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public String getTelefono() { return telefono; }
+    public void setTelefono(String telefono) { this.telefono = telefono; }
 
-    public String getHashContrasena() {
-        return hashContrasena;
-    }
+    public String getUrlAvatar() { return urlAvatar; }
+    public void setUrlAvatar(String urlAvatar) { this.urlAvatar = urlAvatar; }
 
-    public String getNombres() {
-        return nombres;
-    }
+    public Boolean getEstaActivo() { return estaActivo; }
+    public void setEstaActivo(Boolean estaActivo) { this.estaActivo = estaActivo; }
 
-    public void setNombres(String nombres) {
-        this.nombres = nombres;
-    }
+    public LocalDateTime getUltimoAccesoEn() { return ultimoAccesoEn; }
+    public void setUltimoAccesoEn(LocalDateTime ultimoAccesoEn) { this.ultimoAccesoEn = ultimoAccesoEn; }
 
-    public String getApellidos() {
-        return apellidos;
-    }
+    public LocalDateTime getCreadoEn() { return creadoEn; }
+    public LocalDateTime getActualizadoEn() { return actualizadoEn; }
+    public LocalDateTime getEliminadoEn() { return eliminadoEn; }
 
-    public void setApellidos(String apellidos) {
-        this.apellidos = apellidos;
-    }
+    public Set<Rol> getRoles() { return roles; }
+    public void setRoles(Set<Rol> roles) { this.roles = roles; }
 
-    public String getTipoDocumento() {
-        return tipoDocumento;
-    }
+    public Set<Sede> getSedes() { return sedes; }
+    public void setSedes(Set<Sede> sedes) { this.sedes = sedes; }
 
-    public void setTipoDocumento(String tipoDocumento) {
-        this.tipoDocumento = tipoDocumento;
-    }
-
-    public String getNumeroDocumento() {
-        return numeroDocumento;
-    }
-
-    public void setNumeroDocumento(String numeroDocumento) {
-        this.numeroDocumento = numeroDocumento;
-    }
-
-    public String getTelefono() {
-        return telefono;
-    }
-
-    public void setTelefono(String telefono) {
-        this.telefono = telefono;
-    }
-
-    public String getUrlAvatar() {
-        return urlAvatar;
-    }
-
-    public void setUrlAvatar(String urlAvatar) {
-        this.urlAvatar = urlAvatar;
-    }
-
-    public Boolean getEstaActivo() {
-        return estaActivo;
-    }
-
-    public void setEstaActivo(Boolean estaActivo) {
-        this.estaActivo = estaActivo;
-    }
-
-    public LocalDateTime getEmailVerificadoEn() {
-        return emailVerificadoEn;
-    }
-
-    public void setEmailVerificadoEn(LocalDateTime emailVerificadoEn) {
-        this.emailVerificadoEn = emailVerificadoEn;
-    }
-
-    public LocalDateTime getUltimoAccesoEn() {
-        return ultimoAccesoEn;
-    }
-
-    public void setUltimoAccesoEn(LocalDateTime ultimoAccesoEn) {
-        this.ultimoAccesoEn = ultimoAccesoEn;
-    }
-
-    public String getIpUltimoAcceso() {
-        return ipUltimoAcceso;
-    }
-
-    public void setIpUltimoAcceso(String ipUltimoAcceso) {
-        this.ipUltimoAcceso = ipUltimoAcceso;
-    }
-
-    public LocalDateTime getContrasenaCambiadaEn() {
-        return contrasenaCambiadaEn;
-    }
-
-    public void setContrasenaCambiadaEn(LocalDateTime contrasenaCambiadaEn) {
-        this.contrasenaCambiadaEn = contrasenaCambiadaEn;
-    }
-
-    public Integer getIntentosFallidosAcceso() {
-        return intentosFallidosAcceso;
-    }
-
-    public void setIntentosFallidosAcceso(Integer intentosFallidosAcceso) {
-        this.intentosFallidosAcceso = intentosFallidosAcceso;
-    }
-
-    public LocalDateTime getBloqueadoHasta() {
-        return bloqueadoHasta;
-    }
-
-    public void setBloqueadoHasta(LocalDateTime bloqueadoHasta) {
-        this.bloqueadoHasta = bloqueadoHasta;
-    }
-
-    public Boolean getDebeCambiarContrasena() {
-        return debeCambiarContrasena;
-    }
-
-    public void setDebeCambiarContrasena(Boolean debeCambiarContrasena) {
-        this.debeCambiarContrasena = debeCambiarContrasena;
-    }
-
-    public String getIdioma() {
-        return idioma;
-    }
-
-    public void setIdioma(String idioma) {
-        this.idioma = idioma;
-    }
-
-    public String getFormatoFechaPreferido() {
-        return formatoFechaPreferido;
-    }
-
-    public void setFormatoFechaPreferido(String formatoFechaPreferido) {
-        this.formatoFechaPreferido = formatoFechaPreferido;
-    }
-
-    public String getZonaHorariaPreferida() {
-        return zonaHorariaPreferida;
-    }
-
-    public void setZonaHorariaPreferida(String zonaHorariaPreferida) {
-        this.zonaHorariaPreferida = zonaHorariaPreferida;
-    }
-
-    public Boolean getNotificacionesHabilitadas() {
-        return notificacionesHabilitadas;
-    }
-
-    public void setNotificacionesHabilitadas(Boolean notificacionesHabilitadas) {
-        this.notificacionesHabilitadas = notificacionesHabilitadas;
-    }
-
-    public String getPreferenciasNotificacionJson() {
-        return preferenciasNotificacionJson;
-    }
-
-    public void setPreferenciasNotificacionJson(String preferenciasNotificacionJson) {
-        this.preferenciasNotificacionJson = preferenciasNotificacionJson;
-    }
-
-    public String getVistaPosPredeterminada() {
-        return vistaPosPredeterminada;
-    }
-
-    public void setVistaPosPredeterminada(String vistaPosPredeterminada) {
-        this.vistaPosPredeterminada = vistaPosPredeterminada;
-    }
-
-    public LocalDateTime getCreadoEn() {
-        return creadoEn;
-    }
-
-    public LocalDateTime getActualizadoEn() {
-        return actualizadoEn;
-    }
-
-    public LocalDateTime getEliminadoEn() {
-        return eliminadoEn;
-    }
-
-    public void setEliminadoEn(LocalDateTime eliminadoEn) {
-        this.eliminadoEn = eliminadoEn;
+    // Métodos de utilidad
+    public String getNombreCompleto() {
+        return nombres + (apellidos != null ? " " + apellidos : "");
     }
 }

@@ -4,11 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * Entidad SesionUsuario - Mapea la tabla 'sesiones_usuario' de drinkgo_database.sql.
- * Almacena los tokens JWT activos (equivalente al campo access_token de la clase).
- *
- * En la CLASE_API_REFERENCIA.md, el token se guardaba en la tabla 'registros'.
- * En DrinkGo, se guarda en 'sesiones_usuario' para aprovechar el esquema existente.
+ * Entidad SesionUsuario - Tokens de sesión para autenticación
+ * Adaptada para MySQL (XAMPP)
  */
 @Entity
 @Table(name = "sesiones_usuario")
@@ -18,13 +15,14 @@ public class SesionUsuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "usuario_id")
+    @Column(name = "usuario_id", nullable = false)
     private Long usuarioId;
 
-    @Column(name = "usuario_plataforma_id")
-    private Long usuarioPlataformaId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", insertable = false, updatable = false)
+    private Usuario usuario;
 
-    @Column(name = "hash_token", nullable = false)
+    @Column(name = "hash_token", unique = true, nullable = false, length = 500)
     private String hashToken;
 
     @Column(name = "direccion_ip", length = 45)
@@ -45,11 +43,12 @@ public class SesionUsuario {
     @Column(name = "esta_activo", nullable = false)
     private Boolean estaActivo = true;
 
-    @Column(name = "creado_en", insertable = false, updatable = false)
+    @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
 
     @PrePersist
     protected void onCreate() {
+        creadoEn = LocalDateTime.now();
         if (this.ultimaActividadEn == null) {
             this.ultimaActividadEn = LocalDateTime.now();
         }
@@ -57,87 +56,38 @@ public class SesionUsuario {
 
     // --- Getters y Setters ---
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Long getUsuarioId() { return usuarioId; }
+    public void setUsuarioId(Long usuarioId) { this.usuarioId = usuarioId; }
 
-    public Long getUsuarioId() {
-        return usuarioId;
-    }
+    public Usuario getUsuario() { return usuario; }
 
-    public void setUsuarioId(Long usuarioId) {
-        this.usuarioId = usuarioId;
-    }
+    public String getHashToken() { return hashToken; }
+    public void setHashToken(String hashToken) { this.hashToken = hashToken; }
 
-    public Long getUsuarioPlataformaId() {
-        return usuarioPlataformaId;
-    }
+    public String getDireccionIp() { return direccionIp; }
+    public void setDireccionIp(String direccionIp) { this.direccionIp = direccionIp; }
 
-    public void setUsuarioPlataformaId(Long usuarioPlataformaId) {
-        this.usuarioPlataformaId = usuarioPlataformaId;
-    }
+    public String getAgenteUsuario() { return agenteUsuario; }
+    public void setAgenteUsuario(String agenteUsuario) { this.agenteUsuario = agenteUsuario; }
 
-    public String getHashToken() {
-        return hashToken;
-    }
+    public String getInfoDispositivo() { return infoDispositivo; }
+    public void setInfoDispositivo(String infoDispositivo) { this.infoDispositivo = infoDispositivo; }
 
-    public void setHashToken(String hashToken) {
-        this.hashToken = hashToken;
-    }
+    public LocalDateTime getExpiraEn() { return expiraEn; }
+    public void setExpiraEn(LocalDateTime expiraEn) { this.expiraEn = expiraEn; }
 
-    public String getDireccionIp() {
-        return direccionIp;
-    }
+    public LocalDateTime getUltimaActividadEn() { return ultimaActividadEn; }
+    public void setUltimaActividadEn(LocalDateTime ultimaActividadEn) { this.ultimaActividadEn = ultimaActividadEn; }
 
-    public void setDireccionIp(String direccionIp) {
-        this.direccionIp = direccionIp;
-    }
+    public Boolean getEstaActivo() { return estaActivo; }
+    public void setEstaActivo(Boolean estaActivo) { this.estaActivo = estaActivo; }
 
-    public String getAgenteUsuario() {
-        return agenteUsuario;
-    }
+    public LocalDateTime getCreadoEn() { return creadoEn; }
 
-    public void setAgenteUsuario(String agenteUsuario) {
-        this.agenteUsuario = agenteUsuario;
-    }
-
-    public String getInfoDispositivo() {
-        return infoDispositivo;
-    }
-
-    public void setInfoDispositivo(String infoDispositivo) {
-        this.infoDispositivo = infoDispositivo;
-    }
-
-    public LocalDateTime getExpiraEn() {
-        return expiraEn;
-    }
-
-    public void setExpiraEn(LocalDateTime expiraEn) {
-        this.expiraEn = expiraEn;
-    }
-
-    public LocalDateTime getUltimaActividadEn() {
-        return ultimaActividadEn;
-    }
-
-    public void setUltimaActividadEn(LocalDateTime ultimaActividadEn) {
-        this.ultimaActividadEn = ultimaActividadEn;
-    }
-
-    public Boolean getEstaActivo() {
-        return estaActivo;
-    }
-
-    public void setEstaActivo(Boolean estaActivo) {
-        this.estaActivo = estaActivo;
-    }
-
-    public LocalDateTime getCreadoEn() {
-        return creadoEn;
+    public boolean isExpirada() {
+        return LocalDateTime.now().isAfter(expiraEn);
     }
 }

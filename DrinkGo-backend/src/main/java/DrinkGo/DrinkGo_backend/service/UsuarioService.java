@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,7 +41,7 @@ public class UsuarioService {
     private JwtUtil jwtUtil;
 
     @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
 
     /**
      * Registrar un nuevo usuario.
@@ -79,7 +79,8 @@ public class UsuarioService {
         usuario.setEmail(request.getEmail());
         usuario.setNegocioId(request.getNegocioId());
 
-        // Encriptar contraseña con BCrypt (equivalente a llave_secreta)
+        // Encriptar contraseña con BCrypt (equivalente a llave_secreta).
+        // NOTA: Usuario.setHashContrasena() ya aplica BCrypt internamente.
         usuario.setHashContrasena(request.getLlaveSecreta());
 
         // El UUID se genera automáticamente en @PrePersist (equivalente a cliente_id)
@@ -122,7 +123,7 @@ public class UsuarioService {
         sesion.setUsuarioId(usuario.getId());
         sesion.setHashToken(token);
         sesion.setEstaActivo(true);
-        sesion.setExpiraEn(LocalDateTime.now().plusYears(1)); // 1 año (TIMESTAMP MySQL max 2038)
+        sesion.setExpiraEn(LocalDateTime.now().plusYears(1));
         sesionRepository.save(sesion);
 
         // Actualizar ultimo acceso
@@ -134,8 +135,7 @@ public class UsuarioService {
 
     /**
      * Obtener negocio_id a partir del UUID del usuario autenticado.
-     * Usado por los servicios del Bloque 5 para filtrar por tenant.
-     * Equivalente a obtenerNegocioId(clienteId) de RegistroService.
+     * Usado por todos los bloques para filtrar por tenant.
      */
     public Long obtenerNegocioId(String uuid) {
         Usuario usuario = usuarioRepository.findByUuid(uuid)
@@ -143,9 +143,9 @@ public class UsuarioService {
         return usuario.getNegocioId();
     }
 
-        /**
+    /**
      * Obtener el ID del usuario a partir de su UUID.
-     * Usado en Bloque 6 para registrar quién creó/aprobó órdenes de compra.
+     * Usado en Bloques 6 y 13 para registrar quién creó/aprobó recursos.
      */
     public Long obtenerUsuarioId(String uuid) {
         Usuario usuario = usuarioRepository.findByUuid(uuid)
@@ -187,7 +187,6 @@ public class UsuarioService {
             usuario.setApellidos(request.getApellidos());
         }
         if (request.getEmail() != null) {
-            // Verificar que el nuevo email no esté en uso por otro usuario
             if (!request.getEmail().equals(usuario.getEmail()) &&
                     usuarioRepository.existsByEmail(request.getEmail())) {
                 throw new RuntimeException("El email ya está en uso por otro usuario");

@@ -1,17 +1,17 @@
 package DrinkGo.DrinkGo_backend.entity;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Transferencias entre almacenes (RF-INV-005).
+ * NOTA: tabla transferencias_inventario NO tiene columna eliminado_en.
+ */
 @Entity
 @Table(name = "transferencias_inventario")
-@SQLDelete(sql = "UPDATE transferencias_inventario SET eliminado_en = NOW() WHERE id = ?")
-@SQLRestriction("eliminado_en IS NULL")
 public class TransferenciaInventario {
 
     public enum TransferenciaEstado {
@@ -31,8 +31,16 @@ public class TransferenciaInventario {
     @Column(name = "almacen_origen_id", nullable = false)
     private Long almacenOrigenId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "almacen_origen_id", insertable = false, updatable = false)
+    private Almacen almacenOrigen;
+
     @Column(name = "almacen_destino_id", nullable = false)
     private Long almacenDestinoId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "almacen_destino_id", insertable = false, updatable = false)
+    private Almacen almacenDestino;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false)
@@ -62,154 +70,88 @@ public class TransferenciaInventario {
     @Column(name = "recibido_en")
     private LocalDateTime recibidoEn;
 
-    @Column(name = "creado_en", insertable = false, updatable = false)
+    @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
 
-    @Column(name = "actualizado_en", insertable = false, updatable = false)
+    @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
-    @Column(name = "eliminado_en")
-    private LocalDateTime eliminadoEn;
-
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JoinColumn(name = "transferencia_id")
+    @OneToMany(mappedBy = "transferencia", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DetalleTransferenciaInventario> detalles = new ArrayList<>();
+
+    @PrePersist
+    protected void onCreate() {
+        this.creadoEn = LocalDateTime.now();
+        this.actualizadoEn = LocalDateTime.now();
+        if (this.solicitadoEn == null) this.solicitadoEn = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.actualizadoEn = LocalDateTime.now();
+    }
 
     // --- Getters y Setters ---
 
-    public Long getId() {
-        return id;
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Long getNegocioId() { return negocioId; }
+    public void setNegocioId(Long negocioId) { this.negocioId = negocioId; }
+
+    public String getNumeroTransferencia() { return numeroTransferencia; }
+    public void setNumeroTransferencia(String numeroTransferencia) { this.numeroTransferencia = numeroTransferencia; }
+
+    public Long getAlmacenOrigenId() { return almacenOrigenId; }
+    public void setAlmacenOrigenId(Long almacenOrigenId) { this.almacenOrigenId = almacenOrigenId; }
+
+    public Almacen getAlmacenOrigen() { return almacenOrigen; }
+    public void setAlmacenOrigen(Almacen almacenOrigen) {
+        this.almacenOrigen = almacenOrigen;
+        if (almacenOrigen != null) this.almacenOrigenId = almacenOrigen.getId();
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public Long getAlmacenDestinoId() { return almacenDestinoId; }
+    public void setAlmacenDestinoId(Long almacenDestinoId) { this.almacenDestinoId = almacenDestinoId; }
+
+    public Almacen getAlmacenDestino() { return almacenDestino; }
+    public void setAlmacenDestino(Almacen almacenDestino) {
+        this.almacenDestino = almacenDestino;
+        if (almacenDestino != null) this.almacenDestinoId = almacenDestino.getId();
     }
 
-    public Long getNegocioId() {
-        return negocioId;
-    }
+    public TransferenciaEstado getEstado() { return estado; }
+    public void setEstado(TransferenciaEstado estado) { this.estado = estado; }
 
-    public void setNegocioId(Long negocioId) {
-        this.negocioId = negocioId;
-    }
+    public Long getSolicitadoPor() { return solicitadoPor; }
+    public void setSolicitadoPor(Long solicitadoPor) { this.solicitadoPor = solicitadoPor; }
 
-    public String getNumeroTransferencia() {
-        return numeroTransferencia;
-    }
+    public Long getAprobadoPor() { return aprobadoPor; }
+    public void setAprobadoPor(Long aprobadoPor) { this.aprobadoPor = aprobadoPor; }
 
-    public void setNumeroTransferencia(String numeroTransferencia) {
-        this.numeroTransferencia = numeroTransferencia;
-    }
+    public Long getRecibidoPor() { return recibidoPor; }
+    public void setRecibidoPor(Long recibidoPor) { this.recibidoPor = recibidoPor; }
 
-    public Long getAlmacenOrigenId() {
-        return almacenOrigenId;
-    }
+    public String getNotas() { return notas; }
+    public void setNotas(String notas) { this.notas = notas; }
 
-    public void setAlmacenOrigenId(Long almacenOrigenId) {
-        this.almacenOrigenId = almacenOrigenId;
-    }
+    public LocalDateTime getSolicitadoEn() { return solicitadoEn; }
+    public void setSolicitadoEn(LocalDateTime solicitadoEn) { this.solicitadoEn = solicitadoEn; }
 
-    public Long getAlmacenDestinoId() {
-        return almacenDestinoId;
-    }
+    public LocalDateTime getAprobadoEn() { return aprobadoEn; }
+    public void setAprobadoEn(LocalDateTime aprobadoEn) { this.aprobadoEn = aprobadoEn; }
 
-    public void setAlmacenDestinoId(Long almacenDestinoId) {
-        this.almacenDestinoId = almacenDestinoId;
-    }
+    public LocalDateTime getDespachadoEn() { return despachadoEn; }
+    public void setDespachadoEn(LocalDateTime despachadoEn) { this.despachadoEn = despachadoEn; }
 
-    public TransferenciaEstado getEstado() {
-        return estado;
-    }
+    public LocalDateTime getRecibidoEn() { return recibidoEn; }
+    public void setRecibidoEn(LocalDateTime recibidoEn) { this.recibidoEn = recibidoEn; }
 
-    public void setEstado(TransferenciaEstado estado) {
-        this.estado = estado;
-    }
+    public LocalDateTime getCreadoEn() { return creadoEn; }
+    public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
 
-    public Long getSolicitadoPor() {
-        return solicitadoPor;
-    }
+    public LocalDateTime getActualizadoEn() { return actualizadoEn; }
 
-    public void setSolicitadoPor(Long solicitadoPor) {
-        this.solicitadoPor = solicitadoPor;
-    }
-
-    public Long getAprobadoPor() {
-        return aprobadoPor;
-    }
-
-    public void setAprobadoPor(Long aprobadoPor) {
-        this.aprobadoPor = aprobadoPor;
-    }
-
-    public Long getRecibidoPor() {
-        return recibidoPor;
-    }
-
-    public void setRecibidoPor(Long recibidoPor) {
-        this.recibidoPor = recibidoPor;
-    }
-
-    public String getNotas() {
-        return notas;
-    }
-
-    public void setNotas(String notas) {
-        this.notas = notas;
-    }
-
-    public LocalDateTime getSolicitadoEn() {
-        return solicitadoEn;
-    }
-
-    public void setSolicitadoEn(LocalDateTime solicitadoEn) {
-        this.solicitadoEn = solicitadoEn;
-    }
-
-    public LocalDateTime getAprobadoEn() {
-        return aprobadoEn;
-    }
-
-    public void setAprobadoEn(LocalDateTime aprobadoEn) {
-        this.aprobadoEn = aprobadoEn;
-    }
-
-    public LocalDateTime getDespachadoEn() {
-        return despachadoEn;
-    }
-
-    public void setDespachadoEn(LocalDateTime despachadoEn) {
-        this.despachadoEn = despachadoEn;
-    }
-
-    public LocalDateTime getRecibidoEn() {
-        return recibidoEn;
-    }
-
-    public void setRecibidoEn(LocalDateTime recibidoEn) {
-        this.recibidoEn = recibidoEn;
-    }
-
-    public LocalDateTime getCreadoEn() {
-        return creadoEn;
-    }
-
-    public LocalDateTime getActualizadoEn() {
-        return actualizadoEn;
-    }
-
-    public LocalDateTime getEliminadoEn() {
-        return eliminadoEn;
-    }
-
-    public void setEliminadoEn(LocalDateTime eliminadoEn) {
-        this.eliminadoEn = eliminadoEn;
-    }
-
-    public List<DetalleTransferenciaInventario> getDetalles() {
-        return detalles;
-    }
-
-    public void setDetalles(List<DetalleTransferenciaInventario> detalles) {
-        this.detalles = detalles;
-    }
+    public List<DetalleTransferenciaInventario> getDetalles() { return detalles; }
+    public void setDetalles(List<DetalleTransferenciaInventario> detalles) { this.detalles = detalles; }
 }

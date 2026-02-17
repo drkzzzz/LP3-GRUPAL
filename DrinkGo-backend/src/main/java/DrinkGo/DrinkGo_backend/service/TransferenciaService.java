@@ -383,8 +383,9 @@ public class TransferenciaService {
     }
 
     /**
-     * Eliminar transferencia (borrado lógico con @SQLDelete).
+     * Eliminar transferencia (borrado físico).
      * Solo si está en estado 'borrador' o 'cancelada'.
+     * NOTA: La tabla transferencias_inventario NO tiene columna eliminado_en.
      */
     @Transactional
     public void eliminarTransferencia(Long negocioId, Long transferenciaId) {

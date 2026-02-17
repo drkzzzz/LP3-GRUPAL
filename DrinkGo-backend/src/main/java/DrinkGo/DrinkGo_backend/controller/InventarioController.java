@@ -1,21 +1,12 @@
 package DrinkGo.DrinkGo_backend.controller;
 
-import DrinkGo.DrinkGo_backend.dto.LoteEntradaRequest;
-import DrinkGo.DrinkGo_backend.dto.LoteUpdateRequest;
-import DrinkGo.DrinkGo_backend.dto.MovimientoRequest;
-import DrinkGo.DrinkGo_backend.dto.MovimientoUpdateRequest;
-import DrinkGo.DrinkGo_backend.dto.StockCreateRequest;
-import DrinkGo.DrinkGo_backend.dto.StockUpdateRequest;
-import DrinkGo.DrinkGo_backend.entity.LoteInventario;
-import DrinkGo.DrinkGo_backend.entity.MovimientoInventario;
-import DrinkGo.DrinkGo_backend.entity.StockInventario;
-import DrinkGo.DrinkGo_backend.service.InventarioService;
-import DrinkGo.DrinkGo_backend.service.UsuarioService;
+import DrinkGo.DrinkGo_backend.dto.*;
+import DrinkGo.DrinkGo_backend.service.StockInventarioService;
+import DrinkGo.DrinkGo_backend.service.LoteInventarioService;
+import DrinkGo.DrinkGo_backend.service.MovimientoInventarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -24,34 +15,36 @@ import java.util.Map;
 
 /**
  * Controlador de Inventario - Bloque 5.
- * Todos los endpoints requieren JWT.
- * CRUD completo: GET, POST, PUT, DELETE (borrado lógico).
+ * Unificado: delega a Feature services (StockInventarioService, LoteInventarioService, MovimientoInventarioService).
+ * CRUD completo: GET, POST, PUT, DELETE.
  * Implementa RF-INV-001 a RF-INV-009.
+ * negocioId hardcoded = 1L (JWT eliminado para entorno de desarrollo).
  */
 @RestController
 @RequestMapping("/restful/inventario")
 public class InventarioController {
 
-    @Autowired
-    private InventarioService inventarioService;
+    private static final Long NEGOCIO_ID = 1L;
+    private static final Long USUARIO_ID = 1L;
 
     @Autowired
-    private UsuarioService usuarioService;
+    private StockInventarioService stockService;
+
+    @Autowired
+    private LoteInventarioService loteService;
+
+    @Autowired
+    private MovimientoInventarioService movimientoService;
 
     // ============================================================
     // STOCK (RF-INV-001) — GET, POST, PUT, DELETE
     // ============================================================
 
-    /**
-     * POST /restful/inventario/stock
-     * Crear un registro de stock manualmente.
-     */
+    /** POST /restful/inventario/stock — Crear registro de stock */
     @PostMapping("/stock")
-    public ResponseEntity<?> crearStock(@RequestBody StockCreateRequest request) {
+    public ResponseEntity<?> crearStock(@RequestBody StockInventarioRequest request) {
         try {
-            Long negocioId = obtenerNegocioId();
-            StockInventario stock = inventarioService.crearStock(negocioId, request);
-
+            StockInventarioResponse stock = stockService.crear(request, NEGOCIO_ID);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Stock creado exitosamente");
             response.put("stock", stock);
@@ -61,77 +54,67 @@ public class InventarioController {
         }
     }
 
-    /**
-     * GET /restful/inventario
-     * Listar todo el stock del negocio autenticado.
-     */
+    /** GET /restful/inventario — Listar todo el stock del negocio */
     @GetMapping
     public ResponseEntity<?> listarStock() {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<StockInventario> stock = inventarioService.listarStock(negocioId);
+            List<StockInventarioResponse> stock = stockService.listar(NEGOCIO_ID);
             return ResponseEntity.ok(stock);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * GET /restful/inventario/producto/{productoId}
-     * Listar stock de un producto en todos los almacenes.
-     */
+    /** GET /restful/inventario/producto/{productoId} — Stock de un producto en todos los almacenes */
     @GetMapping("/producto/{productoId}")
     public ResponseEntity<?> listarStockProducto(@PathVariable Long productoId) {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<StockInventario> stock = inventarioService.listarStockProducto(negocioId, productoId);
+            List<StockInventarioResponse> stock = stockService.listarPorProducto(NEGOCIO_ID, productoId);
             return ResponseEntity.ok(stock);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * GET /restful/inventario/producto/{productoId}/almacen/{almacenId}
-     * Obtener stock de un producto en un almacén específico.
-     */
+    /** GET /restful/inventario/producto/{productoId}/almacen/{almacenId} — Stock específico */
     @GetMapping("/producto/{productoId}/almacen/{almacenId}")
     public ResponseEntity<?> obtenerStockProductoAlmacen(
             @PathVariable Long productoId, @PathVariable Long almacenId) {
         try {
-            Long negocioId = obtenerNegocioId();
-            StockInventario stock = inventarioService.obtenerStockProductoAlmacen(negocioId, productoId, almacenId);
+            StockInventarioResponse stock = stockService.obtenerPorProductoAlmacen(NEGOCIO_ID, productoId, almacenId);
             return ResponseEntity.ok(stock);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * GET /restful/inventario/almacen/{almacenId}
-     * Listar stock de un almacén.
-     */
+    /** GET /restful/inventario/almacen/{almacenId} — Stock de un almacén */
     @GetMapping("/almacen/{almacenId}")
     public ResponseEntity<?> listarStockAlmacen(@PathVariable Long almacenId) {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<StockInventario> stock = inventarioService.listarStockAlmacen(negocioId, almacenId);
+            List<StockInventarioResponse> stock = stockService.listarPorAlmacen(NEGOCIO_ID, almacenId);
             return ResponseEntity.ok(stock);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * PUT /restful/inventario/stock/{id}
-     * Actualizar stock manualmente.
-     */
-    @PutMapping("/stock/{id}")
-    public ResponseEntity<?> actualizarStock(@PathVariable Long id, @RequestBody StockUpdateRequest request) {
+    /** GET /restful/inventario/stock/{id} — Obtener stock por ID */
+    @GetMapping("/stock/{id}")
+    public ResponseEntity<?> obtenerStock(@PathVariable Long id) {
         try {
-            Long negocioId = obtenerNegocioId();
-            StockInventario stock = inventarioService.actualizarStock(negocioId, id, request);
+            StockInventarioResponse stock = stockService.obtenerPorId(id, NEGOCIO_ID);
+            return ResponseEntity.ok(stock);
+        } catch (RuntimeException e) {
+            return errorResponse(e.getMessage());
+        }
+    }
 
+    /** PUT /restful/inventario/stock/{id} — Actualizar stock */
+    @PutMapping("/stock/{id}")
+    public ResponseEntity<?> actualizarStock(@PathVariable Long id, @RequestBody StockInventarioRequest request) {
+        try {
+            StockInventarioResponse stock = stockService.actualizar(id, request, NEGOCIO_ID);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Stock actualizado exitosamente");
             response.put("stock", stock);
@@ -141,18 +124,13 @@ public class InventarioController {
         }
     }
 
-    /**
-     * DELETE /restful/inventario/stock/{id}
-     * Eliminar stock (borrado lógico).
-     */
+    /** DELETE /restful/inventario/stock/{id} — Eliminar stock */
     @DeleteMapping("/stock/{id}")
     public ResponseEntity<?> eliminarStock(@PathVariable Long id) {
         try {
-            Long negocioId = obtenerNegocioId();
-            inventarioService.eliminarStock(negocioId, id);
-
+            stockService.eliminar(id, NEGOCIO_ID);
             Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Stock eliminado exitosamente (borrado lógico)");
+            response.put("mensaje", "Stock eliminado exitosamente");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
@@ -163,16 +141,11 @@ public class InventarioController {
     // LOTES (RF-INV-002, RF-INV-003) — GET, POST, PUT, DELETE
     // ============================================================
 
-    /**
-     * POST /restful/inventario/lotes
-     * Registrar entrada de un nuevo lote de inventario.
-     */
+    /** POST /restful/inventario/lotes — Registrar entrada de lote */
     @PostMapping("/lotes")
-    public ResponseEntity<?> registrarEntradaLote(@RequestBody LoteEntradaRequest request) {
+    public ResponseEntity<?> registrarEntradaLote(@RequestBody LoteInventarioRequest request) {
         try {
-            Long negocioId = obtenerNegocioId();
-            LoteInventario lote = inventarioService.registrarEntradaLote(negocioId, request);
-
+            LoteInventarioResponse lote = loteService.crear(request, NEGOCIO_ID, USUARIO_ID);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Lote registrado exitosamente");
             response.put("lote", lote);
@@ -182,63 +155,56 @@ public class InventarioController {
         }
     }
 
-    /**
-     * GET /restful/inventario/lotes
-     * Listar todos los lotes del negocio.
-     */
+    /** GET /restful/inventario/lotes — Listar todos los lotes */
     @GetMapping("/lotes")
     public ResponseEntity<?> listarLotes() {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<LoteInventario> lotes = inventarioService.listarLotes(negocioId);
+            List<LoteInventarioResponse> lotes = loteService.listar(NEGOCIO_ID);
             return ResponseEntity.ok(lotes);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * GET /restful/inventario/lotes/producto/{productoId}
-     * Listar lotes de un producto (orden FIFO).
-     */
+    /** GET /restful/inventario/lotes/{id} — Obtener lote por ID */
+    @GetMapping("/lotes/{id}")
+    public ResponseEntity<?> obtenerLote(@PathVariable Long id) {
+        try {
+            LoteInventarioResponse lote = loteService.obtenerPorId(id, NEGOCIO_ID);
+            return ResponseEntity.ok(lote);
+        } catch (RuntimeException e) {
+            return errorResponse(e.getMessage());
+        }
+    }
+
+    /** GET /restful/inventario/lotes/producto/{productoId} — Lotes de un producto (FIFO) */
     @GetMapping("/lotes/producto/{productoId}")
     public ResponseEntity<?> listarLotesProducto(@PathVariable Long productoId) {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<LoteInventario> lotes = inventarioService.listarLotesProducto(negocioId, productoId);
+            List<LoteInventarioResponse> lotes = loteService.listarPorProducto(NEGOCIO_ID, productoId);
             return ResponseEntity.ok(lotes);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * GET /restful/inventario/lotes/producto/{productoId}/almacen/{almacenId}
-     * Listar lotes de un producto en un almacén específico.
-     */
+    /** GET /restful/inventario/lotes/producto/{productoId}/almacen/{almacenId} — Lotes producto+almacén */
     @GetMapping("/lotes/producto/{productoId}/almacen/{almacenId}")
     public ResponseEntity<?> listarLotesProductoAlmacen(
             @PathVariable Long productoId, @PathVariable Long almacenId) {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<LoteInventario> lotes = inventarioService.listarLotesProductoAlmacen(
-                    negocioId, productoId, almacenId);
+            List<LoteInventarioResponse> lotes = loteService.listarPorProductoAlmacen(NEGOCIO_ID, productoId, almacenId);
             return ResponseEntity.ok(lotes);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * PUT /restful/inventario/lotes/{id}
-     * Actualizar un lote de inventario.
-     */
+    /** PUT /restful/inventario/lotes/{id} — Actualizar lote */
     @PutMapping("/lotes/{id}")
-    public ResponseEntity<?> actualizarLote(@PathVariable Long id, @RequestBody LoteUpdateRequest request) {
+    public ResponseEntity<?> actualizarLote(@PathVariable Long id, @RequestBody LoteInventarioRequest request) {
         try {
-            Long negocioId = obtenerNegocioId();
-            LoteInventario lote = inventarioService.actualizarLote(negocioId, id, request);
-
+            LoteInventarioResponse lote = loteService.actualizar(id, request, NEGOCIO_ID);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Lote actualizado exitosamente");
             response.put("lote", lote);
@@ -248,18 +214,13 @@ public class InventarioController {
         }
     }
 
-    /**
-     * DELETE /restful/inventario/lotes/{id}
-     * Eliminar lote (borrado lógico).
-     */
+    /** DELETE /restful/inventario/lotes/{id} — Eliminar lote (borrado lógico: estado→agotado) */
     @DeleteMapping("/lotes/{id}")
     public ResponseEntity<?> eliminarLote(@PathVariable Long id) {
         try {
-            Long negocioId = obtenerNegocioId();
-            inventarioService.eliminarLote(negocioId, id);
-
+            loteService.eliminar(id, NEGOCIO_ID);
             Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Lote eliminado exitosamente (borrado lógico)");
+            response.put("mensaje", "Lote eliminado exitosamente (borrado lógico: estado → agotado)");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
@@ -267,20 +228,14 @@ public class InventarioController {
     }
 
     // ============================================================
-    // MOVIMIENTOS (RF-INV-006) — GET, POST, PUT, DELETE
+    // MOVIMIENTOS (RF-INV-006) — GET, POST (inmutables: sin PUT/DELETE)
     // ============================================================
 
-    /**
-     * POST /restful/inventario/movimiento
-     * Registrar un movimiento de inventario (ajuste, merma, rotura, etc.).
-     */
+    /** POST /restful/inventario/movimiento — Registrar movimiento */
     @PostMapping("/movimiento")
-    public ResponseEntity<?> registrarMovimiento(@RequestBody MovimientoRequest request) {
+    public ResponseEntity<?> registrarMovimiento(@RequestBody MovimientoInventarioRequest request) {
         try {
-            Long negocioId = obtenerNegocioId();
-            MovimientoInventario movimiento = inventarioService.registrarMovimiento(
-                    negocioId, request, null);
-
+            MovimientoInventarioResponse movimiento = movimientoService.crear(request, NEGOCIO_ID, USUARIO_ID);
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Movimiento registrado exitosamente");
             response.put("movimiento", movimiento);
@@ -290,107 +245,53 @@ public class InventarioController {
         }
     }
 
-    /**
-     * GET /restful/inventario/movimientos
-     * Listar todos los movimientos del negocio.
-     */
+    /** GET /restful/inventario/movimientos — Listar todos los movimientos */
     @GetMapping("/movimientos")
     public ResponseEntity<?> listarMovimientos() {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<MovimientoInventario> movimientos = inventarioService.listarMovimientos(negocioId);
+            List<MovimientoInventarioResponse> movimientos = movimientoService.listar(NEGOCIO_ID);
             return ResponseEntity.ok(movimientos);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * GET /restful/inventario/movimientos/producto/{productoId}
-     * Listar movimientos de un producto (trazabilidad RF-INV-008).
-     */
+    /** GET /restful/inventario/movimientos/{id} — Obtener movimiento por ID */
+    @GetMapping("/movimientos/{id}")
+    public ResponseEntity<?> obtenerMovimiento(@PathVariable Long id) {
+        try {
+            MovimientoInventarioResponse movimiento = movimientoService.obtenerPorId(id, NEGOCIO_ID);
+            return ResponseEntity.ok(movimiento);
+        } catch (RuntimeException e) {
+            return errorResponse(e.getMessage());
+        }
+    }
+
+    /** GET /restful/inventario/movimientos/producto/{productoId} — Movimientos de un producto */
     @GetMapping("/movimientos/producto/{productoId}")
     public ResponseEntity<?> listarMovimientosProducto(@PathVariable Long productoId) {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<MovimientoInventario> movimientos = inventarioService.listarMovimientosProducto(
-                    negocioId, productoId);
+            List<MovimientoInventarioResponse> movimientos = movimientoService.listarPorProducto(NEGOCIO_ID, productoId);
             return ResponseEntity.ok(movimientos);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * GET /restful/inventario/movimientos/almacen/{almacenId}
-     * Listar movimientos de un almacén.
-     */
+    /** GET /restful/inventario/movimientos/almacen/{almacenId} — Movimientos de un almacén */
     @GetMapping("/movimientos/almacen/{almacenId}")
     public ResponseEntity<?> listarMovimientosAlmacen(@PathVariable Long almacenId) {
         try {
-            Long negocioId = obtenerNegocioId();
-            List<MovimientoInventario> movimientos = inventarioService.listarMovimientosAlmacen(
-                    negocioId, almacenId);
+            List<MovimientoInventarioResponse> movimientos = movimientoService.listarPorAlmacen(NEGOCIO_ID, almacenId);
             return ResponseEntity.ok(movimientos);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
         }
     }
 
-    /**
-     * PUT /restful/inventario/movimientos/{id}
-     * Actualizar un movimiento de inventario.
-     */
-    @PutMapping("/movimientos/{id}")
-    public ResponseEntity<?> actualizarMovimiento(@PathVariable Long id,
-                                                   @RequestBody MovimientoUpdateRequest request) {
-        try {
-            Long negocioId = obtenerNegocioId();
-            MovimientoInventario movimiento = inventarioService.actualizarMovimiento(negocioId, id, request);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("mensaje", "Movimiento actualizado exitosamente");
-            response.put("movimiento", movimiento);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return errorResponse(e.getMessage());
-        }
-    }
-
-    /**
-     * DELETE /restful/inventario/movimientos/{id}
-     * Eliminar movimiento (borrado lógico).
-     */
-    @DeleteMapping("/movimientos/{id}")
-    public ResponseEntity<?> eliminarMovimiento(@PathVariable Long id) {
-        try {
-            Long negocioId = obtenerNegocioId();
-            inventarioService.eliminarMovimiento(negocioId, id);
-
-            Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Movimiento eliminado exitosamente (borrado lógico)");
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return errorResponse(e.getMessage());
-        }
-    }
-
     // ============================================================
-    // MÉTODOS AUXILIARES
+    // MÉTODO AUXILIAR
     // ============================================================
-
-    /**
-     * Obtener el negocio_id del tenant autenticado.
-     * El UUID se extrae desde SecurityContextHolder (nunca del request).
-     */
-    private Long obtenerNegocioId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getPrincipal() == null) {
-            throw new RuntimeException("No se pudo obtener la autenticación del contexto de seguridad");
-        }
-        String uuid = auth.getPrincipal().toString();
-        return usuarioService.obtenerNegocioId(uuid);
-    }
 
     private ResponseEntity<?> errorResponse(String mensaje) {
         Map<String, String> error = new HashMap<>();
