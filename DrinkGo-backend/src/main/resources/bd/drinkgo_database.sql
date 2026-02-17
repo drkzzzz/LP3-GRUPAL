@@ -412,16 +412,17 @@ CREATE TABLE sedes (
     latitud DECIMAL(10,8) NULL,
     longitud DECIMAL(11,8) NULL,
     telefono VARCHAR(30) NULL,
-    email VARCHAR(150) NULL,
     usuario_gerente_id BIGINT UNSIGNED NULL,
     es_principal TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Sede principal',
-    modulo_mesas_habilitado TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'RF-ADM-010',
     delivery_habilitado TINYINT(1) NOT NULL DEFAULT 0,
     recojo_habilitado TINYINT(1) NOT NULL DEFAULT 0,
+    horario_config JSON NULL COMMENT 'Horarios por día: [{"dia": 1, "apertura": "08:00", "cierre": "20:00"}, {"dia": 7, "cerrado": true}]',
+    calendario_especial JSON NULL COMMENT 'Fechas especiales: [{"fecha": "2024-12-25", "motivo": "Navidad", "cerrado": true}, {"fecha": "2024-12-31", "horario": "08:00-13:00"}]',
+    configuracion JSON NULL COMMENT 'Políticas y configuraciones: {"edad_minima": 18, "pet_friendly": false, "codigo_vestimenta": "casual", "dias_restringidos": [0,6]}',
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    desactivado_en TIMESTAMP NULL,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    desactivado_en DATETIME NULL,
     CONSTRAINT fk_sede_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     CONSTRAINT fk_sede_gerente FOREIGN KEY (usuario_gerente_id) REFERENCES usuarios(id) ON DELETE SET NULL,
     UNIQUE KEY uk_sede_negocio_codigo (negocio_id, codigo),
@@ -453,14 +454,11 @@ CREATE TABLE almacenes (
     sede_id BIGINT UNSIGNED NOT NULL,
     codigo VARCHAR(20) NOT NULL,
     nombre VARCHAR(150) NOT NULL,
-    tipo_almacenamiento ENUM('ambiente','frio','congelado','mixto') NOT NULL DEFAULT 'ambiente',
-    temperatura_min DECIMAL(5,2) NULL COMMENT 'Temperatura mínima °C',
-    temperatura_max DECIMAL(5,2) NULL COMMENT 'Temperatura máxima °C',
-    descripcion_capacidad VARCHAR(300) NULL,
+    descripcion VARCHAR(300) NULL,
     es_predeterminado TINYINT(1) NOT NULL DEFAULT 0,
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_alm_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     CONSTRAINT fk_alm_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
     UNIQUE KEY uk_alm_negocio_codigo (negocio_id, codigo),
@@ -469,60 +467,11 @@ CREATE TABLE almacenes (
 ) ENGINE=InnoDB COMMENT='Almacenes por sede (RF-ADM-006)';
 
 -- ============================================================
--- 3.3 HORARIOS DE OPERACIÓN
+-- 3.3 HORARIOS Y RESTRICCIONES (Movidos a JSON en tabla sedes)
 -- ============================================================
-
-CREATE TABLE horarios_sede (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    sede_id BIGINT UNSIGNED NOT NULL,
-    dia_semana TINYINT UNSIGNED NOT NULL COMMENT '0=Domingo, 1=Lunes ... 6=Sábado',
-    hora_apertura TIME NOT NULL,
-    hora_cierre TIME NOT NULL,
-    esta_cerrado TINYINT(1) NOT NULL DEFAULT 0,
-    esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_horsede_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
-    UNIQUE KEY uk_horsede_sede_dia (sede_id, dia_semana),
-    INDEX idx_horsede_sede (sede_id)
-) ENGINE=InnoDB COMMENT='Horarios de operación por sede (RF-ADM-007)';
-
-CREATE TABLE horarios_especiales_sede (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    sede_id BIGINT UNSIGNED NOT NULL,
-    fecha DATE NOT NULL,
-    hora_apertura TIME NULL,
-    hora_cierre TIME NULL,
-    esta_cerrado TINYINT(1) NOT NULL DEFAULT 0,
-    motivo VARCHAR(200) NULL,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_horspecsede_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
-    UNIQUE KEY uk_horspecsede_sede_fecha (sede_id, fecha),
-    INDEX idx_horspecsede_sede (sede_id)
-) ENGINE=InnoDB COMMENT='Horarios especiales/feriados por sede';
-
--- ============================================================
--- 3.4 RESTRICCIONES DE VENTA DE ALCOHOL
--- ============================================================
-
-CREATE TABLE restricciones_venta_alcohol (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    negocio_id BIGINT UNSIGNED NOT NULL,
-    sede_id BIGINT UNSIGNED NULL COMMENT 'NULL aplica a todo el negocio',
-    tipo_restriccion ENUM('verificacion_edad','restriccion_horaria','restriccion_dia','evento_especial') NOT NULL,
-    edad_minima INT UNSIGNED NULL DEFAULT 18,
-    hora_permitida_desde TIME NULL,
-    hora_permitida_hasta TIME NULL,
-    dias_restringidos JSON NULL COMMENT 'Array de días restringidos [0,6]',
-    descripcion VARCHAR(300) NULL,
-    esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_rva_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    CONSTRAINT fk_rva_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
-    INDEX idx_rva_negocio (negocio_id),
-    INDEX idx_rva_sede (sede_id)
-) ENGINE=InnoDB COMMENT='Restricciones de venta de alcohol (RF-ADM-008)';
+-- Los horarios regulares ahora están en: sedes.horario_config
+-- Los horarios especiales ahora están en: sedes.calendario_especial
+-- Las restricciones de alcohol ahora están en: sedes.configuracion
 
 -- ============================================================
 -- 3.5 ZONAS DE DELIVERY
@@ -552,112 +501,32 @@ CREATE TABLE zonas_delivery (
 -- 3.6 MESAS (PARA CONSUMO EN LOCAL)
 -- ============================================================
 
-CREATE TABLE areas_mesas (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    negocio_id BIGINT UNSIGNED NOT NULL,
-    sede_id BIGINT UNSIGNED NOT NULL,
-    nombre VARCHAR(100) NOT NULL COMMENT 'Ej: Terraza, Salón Principal, Barra',
-    descripcion VARCHAR(300) NULL,
-    orden INT NOT NULL DEFAULT 0,
-    esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_armesa_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    CONSTRAINT fk_armesa_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
-    INDEX idx_armesa_sede (sede_id)
-) ENGINE=InnoDB COMMENT='Áreas/zonas de mesas por sede';
-
 CREATE TABLE mesas (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    negocio_id BIGINT UNSIGNED NOT NULL,
     sede_id BIGINT UNSIGNED NOT NULL,
-    area_id BIGINT UNSIGNED NULL,
-    numero_mesa VARCHAR(20) NOT NULL,
-    etiqueta VARCHAR(50) NULL COMMENT 'Nombre visible: Mesa VIP 1',
+    nombre VARCHAR(100) NOT NULL COMMENT 'Nombre/número de la mesa: Mesa 1, VIP 3, Terraza A',
     capacidad INT UNSIGNED NOT NULL DEFAULT 4,
-    codigo_qr VARCHAR(255) NULL UNIQUE,
-    estado ENUM('disponible','ocupada','reservada','mantenimiento','inactiva') NOT NULL DEFAULT 'disponible',
-    posicion_x INT NULL COMMENT 'Coordenada X en mapa visual',
-    posicion_y INT NULL COMMENT 'Coordenada Y en mapa visual',
-    forma ENUM('redonda','cuadrada','rectangular') NULL DEFAULT 'cuadrada',
-    esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_mesa_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
+    estado ENUM('disponible','ocupada','reservada','mantenimiento') NOT NULL DEFAULT 'disponible',
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_mesa_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
-    CONSTRAINT fk_mesa_area FOREIGN KEY (area_id) REFERENCES areas_mesas(id) ON DELETE SET NULL,
-    UNIQUE KEY uk_mesa_sede_numero (sede_id, numero_mesa),
-    INDEX idx_mesa_negocio (negocio_id),
+    UNIQUE KEY uk_mesa_sede_nombre (sede_id, nombre),
     INDEX idx_mesa_sede (sede_id),
     INDEX idx_mesa_estado (sede_id, estado)
-) ENGINE=InnoDB COMMENT='Mesas por sede (módulo de mesas RF-ADM-010)';
+) ENGINE=InnoDB COMMENT='Mesas por sede - Sistema minimalista (RF-ADM-010)';
 
 -- ============================================================
--- 3.7 CONFIGURACIÓN POR NEGOCIO
+-- 3.7 CONFIGURACIÓN POR NEGOCIO (Tabla eliminada)
 -- ============================================================
-
-CREATE TABLE configuracion_negocio (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    negocio_id BIGINT UNSIGNED NOT NULL,
-    clave_configuracion VARCHAR(150) NOT NULL,
-    valor_configuracion TEXT NOT NULL,
-    tipo_valor ENUM('texto','numero','booleano','json','fecha') NOT NULL DEFAULT 'texto',
-    categoria VARCHAR(100) NOT NULL DEFAULT 'general',
-    descripcion VARCHAR(500) NULL,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_cneg_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    UNIQUE KEY uk_cneg_negocio_clave (negocio_id, clave_configuracion),
-    INDEX idx_cneg_negocio (negocio_id),
-    INDEX idx_cneg_categoria (negocio_id, categoria)
-) ENGINE=InnoDB COMMENT='Parámetros de configuración por negocio (RF-ADM-022)';
+-- Tabla configuracion_negocio: ELIMINADA
+-- Nota: La configuración específica se maneja a nivel de plataforma o en campos JSON de otras tablas
 
 -- ============================================================
--- 3.8 NOTIFICACIONES
+-- 3.8 NOTIFICACIONES (Tablas eliminadas)
 -- ============================================================
-
-CREATE TABLE plantillas_notificacion (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    negocio_id BIGINT UNSIGNED NULL COMMENT 'NULL = plantilla global',
-    codigo VARCHAR(100) NOT NULL,
-    nombre VARCHAR(200) NOT NULL,
-    canal ENUM('email','sms','push','en_app','whatsapp') NOT NULL DEFAULT 'en_app',
-    asunto VARCHAR(300) NULL,
-    plantilla_cuerpo TEXT NOT NULL,
-    variables_json JSON NULL COMMENT 'Variables disponibles para la plantilla',
-    esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_plntf_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    INDEX idx_plntf_negocio (negocio_id),
-    INDEX idx_plntf_codigo (codigo)
-) ENGINE=InnoDB COMMENT='Plantillas de notificación (RF-ADM-024)';
-
-CREATE TABLE notificaciones (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    negocio_id BIGINT UNSIGNED NULL,
-    usuario_id BIGINT UNSIGNED NULL,
-    usuario_plataforma_id BIGINT UNSIGNED NULL,
-    plantilla_id BIGINT UNSIGNED NULL,
-    titulo VARCHAR(300) NOT NULL,
-    mensaje TEXT NOT NULL,
-    canal ENUM('email','sms','push','en_app','whatsapp') NOT NULL DEFAULT 'en_app',
-    datos_json JSON NULL,
-    esta_leido TINYINT(1) NOT NULL DEFAULT 0,
-    leido_en TIMESTAMP NULL,
-    enviado_en TIMESTAMP NULL,
-    estado_entrega ENUM('pendiente','enviada','entregada','fallida') NOT NULL DEFAULT 'pendiente',
-    prioridad ENUM('baja','normal','alta','urgente') NOT NULL DEFAULT 'normal',
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_notif_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    CONSTRAINT fk_notif_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    CONSTRAINT fk_notif_uplat FOREIGN KEY (usuario_plataforma_id) REFERENCES usuarios_plataforma(id) ON DELETE CASCADE,
-    CONSTRAINT fk_notif_plantilla FOREIGN KEY (plantilla_id) REFERENCES plantillas_notificacion(id) ON DELETE SET NULL,
-    INDEX idx_notif_usuario (usuario_id),
-    INDEX idx_notif_negocio (negocio_id),
-    INDEX idx_notif_leido (usuario_id, esta_leido),
-    INDEX idx_notif_creado (creado_en)
-) ENGINE=InnoDB COMMENT='Notificaciones del sistema (RF-ADM-024)';
+-- Tabla plantillas_notificacion: ELIMINADA
+-- Tabla notificaciones: ELIMINADA
+-- Nota: El sistema de notificaciones se implementará en un bloque específico futuro
 
 -- ============================================================
 -- 3.9 MÉTODOS DE PAGO POR NEGOCIO
@@ -669,16 +538,13 @@ CREATE TABLE metodos_pago (
     nombre VARCHAR(100) NOT NULL,
     codigo VARCHAR(50) NOT NULL,
     tipo ENUM('efectivo','tarjeta_credito','tarjeta_debito','transferencia_bancaria','billetera_digital','yape','plin','qr','otro') NOT NULL,
-    proveedor VARCHAR(100) NULL COMMENT 'Proveedor: Visa, Mastercard, Yape, etc.',
-    configuracion_json JSON NULL COMMENT 'Configuración del método (llaves, endpoints)',
-    requiere_referencia TINYINT(1) NOT NULL DEFAULT 0,
-    requiere_aprobacion TINYINT(1) NOT NULL DEFAULT 0,
+    configuracion_json JSON NULL COMMENT 'Config del método: {"api_key": "xxx", "endpoint": "url", "behavior": {"require_ref": true, "manual_approval": true, "require_photo": false}}',
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     disponible_pos TINYINT(1) NOT NULL DEFAULT 1,
     disponible_tienda_online TINYINT(1) NOT NULL DEFAULT 0,
     orden INT NOT NULL DEFAULT 0,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_mpago_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     UNIQUE KEY uk_mpago_negocio_codigo (negocio_id, codigo),
     INDEX idx_mpago_negocio (negocio_id),
@@ -1400,89 +1266,93 @@ CREATE TABLE movimientos_caja (
 
 CREATE TABLE ventas (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    negocio_id BIGINT UNSIGNED NOT NULL,
     sede_id BIGINT UNSIGNED NOT NULL,
     numero_venta VARCHAR(30) NOT NULL,
     tipo_venta ENUM('pos','tienda_online','mesa','telefono','otro') NOT NULL DEFAULT 'pos',
-    sesion_id BIGINT UNSIGNED NULL COMMENT 'Sesión de caja (ventas POS)',
+    
+    -- Relacionales
+    sesion_caja_id BIGINT UNSIGNED NULL COMMENT 'Sesión de caja para ventas POS',
     cliente_id BIGINT UNSIGNED NULL,
-    mesa_id BIGINT UNSIGNED NULL COMMENT 'Mesa (ventas en local)',
-    pedido_id BIGINT UNSIGNED NULL COMMENT 'Pedido asociado (tienda online)',
+    mesa_id BIGINT UNSIGNED NULL COMMENT 'Mesa para consumo en local',
     vendedor_id BIGINT UNSIGNED NULL,
 
     -- Montos
     subtotal DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     monto_descuento DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    porcentaje_descuento DECIMAL(5,2) NULL,
     razon_descuento VARCHAR(200) NULL,
     monto_impuesto DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    monto_propina DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    tarifa_delivery DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    costo_envio DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Tarifa de delivery/envío',
     total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     moneda VARCHAR(3) NOT NULL DEFAULT 'PEN',
 
     -- Estado
     estado ENUM('pendiente','completada','parcialmente_pagada','cancelada','reembolsada','anulada') NOT NULL DEFAULT 'pendiente',
+    
+    -- Estado de entrega (e-commerce)
+    estado_entrega ENUM('entregado','pendiente_envio','en_ruta','para_recoger') NULL COMMENT 'Estado logístico para tienda online',
+    direccion_entrega JSON NULL COMMENT 'Dirección de entrega: {"direccion": "...", "lat": 0.0, "lng": 0.0, "referencia": "..."}',
 
-    -- Info fiscal
-    requiere_factura TINYINT(1) NOT NULL DEFAULT 0,
-    ruc_cliente VARCHAR(20) NULL COMMENT 'RUC para factura',
-    razon_social_cliente VARCHAR(200) NULL,
+    -- Información fiscal consolidada (Boletas, Facturas, Notas de Venta)
+    tipo_comprobante ENUM('boleta','factura','nota_venta') NOT NULL DEFAULT 'boleta',
+    doc_cliente_numero VARCHAR(20) NULL COMMENT 'DNI, RUC, Pasaporte o CE del cliente',
+    doc_cliente_nombre VARCHAR(200) NULL COMMENT 'Nombre completo o Razón Social del cliente',
 
-    -- Verificación edad
-    edad_verificada TINYINT(1) NOT NULL DEFAULT 0,
-    edad_verificada_por BIGINT UNSIGNED NULL,
+    -- Descuentos y cupones (e-commerce)
+    codigo_cupon VARCHAR(50) NULL COMMENT 'Código de cupón aplicado',
 
-    notas TEXT NULL,
+    notas TEXT NULL COMMENT 'Notas del cliente o instrucciones especiales',
     notas_internas TEXT NULL,
-    completado_en TIMESTAMP NULL,
-    cancelado_en TIMESTAMP NULL,
+    completado_en DATETIME NULL,
+    cancelado_en DATETIME NULL,
     razon_cancelacion VARCHAR(500) NULL,
     cancelado_por BIGINT UNSIGNED NULL,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_ven_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     CONSTRAINT fk_ven_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
-    CONSTRAINT fk_ven_sesion FOREIGN KEY (sesion_id) REFERENCES sesiones_caja(id),
+    CONSTRAINT fk_ven_sesion_caja FOREIGN KEY (sesion_caja_id) REFERENCES sesiones_caja(id),
     CONSTRAINT fk_ven_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL,
     CONSTRAINT fk_ven_mesa FOREIGN KEY (mesa_id) REFERENCES mesas(id) ON DELETE SET NULL,
     CONSTRAINT fk_ven_vendedor FOREIGN KEY (vendedor_id) REFERENCES usuarios(id),
 
-    UNIQUE KEY uk_ven_negocio_numero (negocio_id, numero_venta),
-    INDEX idx_ven_negocio (negocio_id),
     INDEX idx_ven_sede (sede_id),
+    INDEX idx_ven_numero (sede_id, numero_venta),
     INDEX idx_ven_cliente (cliente_id),
-    INDEX idx_ven_estado (negocio_id, estado),
-    INDEX idx_ven_fecha (negocio_id, creado_en),
-    INDEX idx_ven_tipo (negocio_id, tipo_venta),
-    INDEX idx_ven_sesion (sesion_id)
-) ENGINE=InnoDB COMMENT='Ventas (RF-VEN-003..008)';
+    INDEX idx_ven_estado (sede_id, estado),
+    INDEX idx_ven_fecha (sede_id, creado_en),
+    INDEX idx_ven_tipo (sede_id, tipo_venta),
+    INDEX idx_ven_sesion (sesion_caja_id),
+    INDEX idx_ven_comprobante (tipo_comprobante, doc_cliente_numero)
+) ENGINE=InnoDB COMMENT='Ventas - Sistema híbrido POS + E-commerce (RF-VEN-003..008)';
 
 CREATE TABLE detalle_ventas (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     venta_id BIGINT UNSIGNED NOT NULL,
     producto_id BIGINT UNSIGNED NOT NULL,
-    lote_id BIGINT UNSIGNED NULL COMMENT 'Lote FIFO asignado',
+    lote_id BIGINT UNSIGNED NOT NULL COMMENT 'Lote FIFO obligatorio para trazabilidad',
     combo_id BIGINT UNSIGNED NULL COMMENT 'Si pertenece a un combo',
-    nombre_producto VARCHAR(250) NOT NULL COMMENT 'Snapshot del nombre',
-    sku_producto VARCHAR(50) NOT NULL COMMENT 'Snapshot del SKU',
+    
+    -- Snapshot histórico
+    nombre_producto VARCHAR(250) NOT NULL COMMENT 'Snapshot del nombre al momento de la venta',
+    sku_producto VARCHAR(50) NOT NULL COMMENT 'Snapshot del SKU al momento de la venta',
+    
+    -- Cantidades y montos
     cantidad INT NOT NULL,
-    precio_unitario DECIMAL(10,2) NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL COMMENT 'Precio unitario al momento de la venta',
     monto_descuento DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    porcentaje_descuento DECIMAL(5,2) NULL,
     tasa_impuesto DECIMAL(5,2) NOT NULL DEFAULT 18.00,
     monto_impuesto DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     subtotal DECIMAL(10,2) NOT NULL,
     total DECIMAL(10,2) NOT NULL,
-    notas VARCHAR(300) NULL,
+    
     CONSTRAINT fk_detven_venta FOREIGN KEY (venta_id) REFERENCES ventas(id) ON DELETE CASCADE,
     CONSTRAINT fk_detven_producto FOREIGN KEY (producto_id) REFERENCES productos(id),
     CONSTRAINT fk_detven_lote FOREIGN KEY (lote_id) REFERENCES lotes_inventario(id),
     CONSTRAINT fk_detven_combo FOREIGN KEY (combo_id) REFERENCES combos(id),
     INDEX idx_detven_venta (venta_id),
-    INDEX idx_detven_producto (producto_id)
-) ENGINE=InnoDB COMMENT='Items de venta';
+    INDEX idx_detven_producto (producto_id),
+    INDEX idx_detven_lote (lote_id)
+) ENGINE=InnoDB COMMENT='Detalle de ventas - Control FIFO de inventario';
 
 -- ============================================================
 -- 8.3 PAGOS DE VENTAS
@@ -1493,20 +1363,24 @@ CREATE TABLE pagos_venta (
     venta_id BIGINT UNSIGNED NOT NULL,
     metodo_pago_id BIGINT UNSIGNED NOT NULL,
     monto DECIMAL(12,2) NOT NULL,
-    monto_recibido DECIMAL(12,2) NULL COMMENT 'Monto recibido (para calcular vuelto)',
-    monto_cambio DECIMAL(12,2) NULL COMMENT 'Vuelto',
-    numero_referencia VARCHAR(100) NULL COMMENT 'Nro. operación, voucher, etc.',
-    codigo_autorizacion VARCHAR(100) NULL,
+    
+    -- Control de efectivo (para caja física)
+    monto_recibido DECIMAL(12,2) NULL COMMENT 'Monto recibido del cliente (para efectivo)',
+    monto_cambio DECIMAL(12,2) NULL COMMENT 'Vuelto entregado al cliente',
+    
+    -- Referencia consolidada (voucher, operación, auth code)
+    referencia_pago VARCHAR(100) NULL COMMENT 'Voucher, Nro. Operación, Auth Code o Transacción ID',
+    
+    -- Estado (para pagos asíncronos web)
     estado ENUM('pendiente','aprobado','rechazado','reembolsado') NOT NULL DEFAULT 'aprobado',
-    fecha_pago TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    procesado_por BIGINT UNSIGNED NULL,
-    notas VARCHAR(300) NULL,
+    fecha_pago DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
     CONSTRAINT fk_pven_venta FOREIGN KEY (venta_id) REFERENCES ventas(id) ON DELETE CASCADE,
     CONSTRAINT fk_pven_metodo FOREIGN KEY (metodo_pago_id) REFERENCES metodos_pago(id),
-    CONSTRAINT fk_pven_usuario FOREIGN KEY (procesado_por) REFERENCES usuarios(id),
     INDEX idx_pven_venta (venta_id),
-    INDEX idx_pven_metodo (metodo_pago_id)
-) ENGINE=InnoDB COMMENT='Pagos de ventas (soporta pago mixto)';
+    INDEX idx_pven_metodo (metodo_pago_id),
+    INDEX idx_pven_referencia (referencia_pago)
+) ENGINE=InnoDB COMMENT='Pagos de ventas - Soporta pagos mixtos (Efectivo + Digital)';
 
 -- ============================================================
 -- BLOQUE 9: PEDIDOS (TIENDA ONLINE, DELIVERY, RECOJO)
@@ -1984,49 +1858,54 @@ CREATE TABLE configuracion_tienda_online (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
     esta_habilitado TINYINT(1) NOT NULL DEFAULT 0,
+    
+    -- Identificación del storefront
     nombre_tienda VARCHAR(200) NULL,
-    slug_tienda VARCHAR(100) NULL UNIQUE,
-    dominio_personalizado VARCHAR(200) NULL,
-    mensaje_bienvenida TEXT NULL,
-    imagenes_banner JSON NULL COMMENT 'Array de URLs de banners',
-    categorias_destacadas JSON NULL COMMENT 'Array de IDs de categorías destacadas',
-    titulo_seo VARCHAR(200) NULL,
-    descripcion_seo VARCHAR(500) NULL,
-    palabras_clave_seo VARCHAR(300) NULL,
-    id_google_analytics VARCHAR(50) NULL,
-    id_pixel_facebook VARCHAR(50) NULL,
-    enlaces_sociales JSON NULL,
-    monto_minimo_pedido DECIMAL(10,2) NULL,
-    monto_maximo_pedido DECIMAL(12,2) NULL,
-    terminos_condiciones TEXT NULL,
-    politica_privacidad TEXT NULL,
-    politica_devoluciones TEXT NULL,
-    mostrar_precios_con_impuesto TINYINT(1) NOT NULL DEFAULT 1,
-    permitir_compra_invitado TINYINT(1) NOT NULL DEFAULT 0,
-    requiere_verificacion_edad TINYINT(1) NOT NULL DEFAULT 1,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    slug_tienda VARCHAR(100) NULL UNIQUE COMMENT 'URL amigable: mitienda.drinkgo.com',
+    dominio_personalizado VARCHAR(200) NULL COMMENT 'Dominio propio: www.mitienda.com',
+    
+    -- Configuración visual (banners, mensaje de bienvenida, colores)
+    config_visual JSON NULL COMMENT '{"banners": [{"url":"...", "orden":1}], "categorias_destacadas": [1,5,8], "mensaje_bienvenida": "...", "color_primario": "#FF5733"}',
+    
+    -- SEO (título, descripción, keywords)
+    config_seo JSON NULL COMMENT '{"titulo": "...", "descripcion": "...", "keywords": "licores, vinos, cerveza"}',
+    
+    -- Marketing (Analytics, Pixel, Redes Sociales)
+    config_marketing JSON NULL COMMENT '{"google_analytics": "UA-...", "pixel_facebook": "...", "redes_sociales": {"facebook": "...", "instagram": "..."}}',
+    
+    -- Reglas de negocio (montos, invitados, edad, impuestos)
+    config_reglas JSON NULL COMMENT '{"monto_minimo_pedido": 20.00, "monto_maximo_pedido": 5000.00, "permitir_compra_invitado": false, "requiere_verificacion_edad": true, "mostrar_precios_con_impuesto": true}',
+    
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
     CONSTRAINT fk_cfgtienda_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     UNIQUE KEY uk_cfgtienda_negocio (negocio_id),
     INDEX idx_cfgtienda_slug (slug_tienda)
-) ENGINE=InnoDB COMMENT='Configuración de la tienda online (RF-STF-001..003)';
+) ENGINE=InnoDB COMMENT='Configuración de la tienda online - Optimizada con JSON temáticos (RF-STF-001..003)';
 
 CREATE TABLE paginas_tienda_online (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
+    tipo ENUM('contenido','legal','sistema') NOT NULL DEFAULT 'contenido' COMMENT 'contenido=Sobre Nosotros, legal=Términos/Políticas, sistema=404/Mantenimiento',
     titulo VARCHAR(200) NOT NULL,
-    slug VARCHAR(200) NOT NULL,
+    slug VARCHAR(200) NOT NULL COMMENT 'URL amigable: terminos-y-condiciones, sobre-nosotros',
     contenido LONGTEXT NULL,
     esta_publicado TINYINT(1) NOT NULL DEFAULT 0,
     orden INT NOT NULL DEFAULT 0,
+    
+    -- SEO por página
     meta_titulo VARCHAR(200) NULL,
     meta_descripcion VARCHAR(500) NULL,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
     CONSTRAINT fk_pagtienda_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     UNIQUE KEY uk_pagtienda_negocio_slug (negocio_id, slug),
-    INDEX idx_pagtienda_negocio (negocio_id)
-) ENGINE=InnoDB COMMENT='Páginas personalizadas de la tienda online';
+    INDEX idx_pagtienda_negocio (negocio_id),
+    INDEX idx_pagtienda_tipo (negocio_id, tipo)
+) ENGINE=InnoDB COMMENT='Páginas del CMS - Contenido dinámico, legal y sistema';
 
 -- ============================================================
 -- BLOQUE 15: VISTAS DE CONSULTA Y RESUMEN
