@@ -186,7 +186,7 @@ public class MovimientoCajaController {
             throw new RuntimeException("No autorizado");
         }
         String uuid = auth.getPrincipal().toString();
-        return usuarioService.obtenerUsuarioIdPorUuid(uuid);
+        return usuarioService.obtenerUsuarioId(uuid);
     }
 
     /**
