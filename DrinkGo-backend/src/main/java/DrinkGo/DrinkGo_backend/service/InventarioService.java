@@ -6,7 +6,6 @@ import DrinkGo.DrinkGo_backend.dto.MovimientoRequest;
 import DrinkGo.DrinkGo_backend.dto.MovimientoUpdateRequest;
 import DrinkGo.DrinkGo_backend.dto.StockCreateRequest;
 import DrinkGo.DrinkGo_backend.dto.StockUpdateRequest;
-import DrinkGo.DrinkGo_backend.entity.AlertaInventario;
 import DrinkGo.DrinkGo_backend.entity.LoteInventario;
 import DrinkGo.DrinkGo_backend.entity.LoteInventario.LoteEstado;
 import DrinkGo.DrinkGo_backend.entity.MovimientoInventario;
@@ -204,9 +203,9 @@ public class InventarioService {
      */
     @Transactional
     public void consumirStockFIFO(Long negocioId, Long productoId, Long almacenId,
-                                   int cantidadAConsumir, TipoMovimiento tipoMov,
-                                   String motivo, String tipoReferencia,
-                                   Long referenciaId, Long realizadoPor) {
+            int cantidadAConsumir, TipoMovimiento tipoMov,
+            String motivo, String tipoReferencia,
+            Long referenciaId, Long realizadoPor) {
         if (cantidadAConsumir <= 0) {
             throw new RuntimeException("La cantidad a consumir debe ser mayor a 0");
         }
@@ -228,7 +227,8 @@ public class InventarioService {
         int restante = cantidadAConsumir;
 
         for (LoteInventario lote : lotesFIFO) {
-            if (restante <= 0) break;
+            if (restante <= 0)
+                break;
 
             int consumirDeLote = Math.min(restante, lote.getCantidadRestante());
 
@@ -443,7 +443,7 @@ public class InventarioService {
     }
 
     private MovimientoInventario crearMovimiento(Long negocioId, MovimientoRequest request,
-                                                  int cantidad, Long realizadoPor) {
+            int cantidad, Long realizadoPor) {
         MovimientoInventario movimiento = new MovimientoInventario();
         movimiento.setNegocioId(negocioId);
         movimiento.setProductoId(request.getProductoId());
@@ -603,7 +603,7 @@ public class InventarioService {
      */
     @Transactional
     public MovimientoInventario actualizarMovimiento(Long negocioId, Long movimientoId,
-                                                      MovimientoUpdateRequest request) {
+            MovimientoUpdateRequest request) {
         MovimientoInventario movimiento = movimientoRepository.findByIdAndNegocioId(movimientoId, negocioId)
                 .orElseThrow(() -> new RuntimeException("Movimiento no encontrado: " + movimientoId));
 
