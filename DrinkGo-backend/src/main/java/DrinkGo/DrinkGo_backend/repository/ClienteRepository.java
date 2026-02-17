@@ -8,27 +8,35 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repositorio para clientes (RF-CLI-001..005).
- * Bloque 7 - Gestionado en Bloque 8 por relación con ventas.
+ * Repositorio para la entidad Cliente (RF-CLI-001..005).
+ * Implementa seguridad multi-tenant mediante negocioId.
  */
 @Repository
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
-    /** Buscar cliente por ID y negocio (Seguridad multi-tenant) */
+    // --- Búsquedas Únicas ---
+    
     Optional<Cliente> findByIdAndNegocioId(Long id, Long negocioId);
 
-    /** Listar todos los clientes de un negocio */
-    List<Cliente> findByNegocioId(Long negocioId);
+    Optional<Cliente> findByUuid(String uuid);
 
-    /** Buscar cliente por documento en un negocio */
     Optional<Cliente> findByNegocioIdAndNumeroDocumento(Long negocioId, String numeroDocumento);
 
-    /** Buscar cliente por email en un negocio */
     Optional<Cliente> findByNegocioIdAndEmail(Long negocioId, String email);
 
-    /** Listar clientes activos de un negocio */
+    // --- Listados ---
+
+    List<Cliente> findByNegocioId(Long negocioId);
+
     List<Cliente> findByNegocioIdAndEstaActivo(Long negocioId, Boolean estaActivo);
 
-    /** Listar clientes por tipo */
-    List<Cliente> findByNegocioIdAndTipoCliente(Long negocioId, String tipoCliente);
+    // Nota: Usamos Cliente.TipoCliente porque es un Enum
+    List<Cliente> findByNegocioIdAndTipoCliente(Long negocioId, Cliente.TipoCliente tipoCliente);
+
+    // --- Validaciones de Existencia ---
+
+    boolean existsByNegocioIdAndTipoDocumentoAndNumeroDocumento(
+            Long negocioId, Cliente.TipoDocumento tipoDocumento, String numeroDocumento);
+
+    boolean existsByNegocioIdAndEmail(Long negocioId, String email);
 }

@@ -1,21 +1,33 @@
 package DrinkGo.DrinkGo_backend.service;
 
-import DrinkGo.DrinkGo_backend.dto.*;
-import DrinkGo.DrinkGo_backend.entity.*;
-import DrinkGo.DrinkGo_backend.repository.*;
-import DrinkGo.DrinkGo_backend.security.JwtUtil;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import DrinkGo.DrinkGo_backend.dto.RegistroRequest;
+import DrinkGo.DrinkGo_backend.dto.TokenRequest;
+import DrinkGo.DrinkGo_backend.dto.TokenResponse;
+import DrinkGo.DrinkGo_backend.dto.UsuarioUpdateRequest;
+import DrinkGo.DrinkGo_backend.entity.SesionUsuario;
+import DrinkGo.DrinkGo_backend.entity.Usuario;
+import DrinkGo.DrinkGo_backend.repository.SesionUsuarioRepository;
+import DrinkGo.DrinkGo_backend.repository.UsuarioRepository;
+import DrinkGo.DrinkGo_backend.security.JwtUtil;
 
+/**
+ * Servicio de autenticación - Reemplaza RegistroService.
+ * Usa la tabla 'usuarios' para registro y 'sesiones_usuario' para tokens JWT.
+ *
+ * Equivalencias con CLASE_API_REFERENCIA.md:
+ *   Registro       → Usuario (tabla 'usuarios')
+ *   cliente_id     → uuid (identificador único del usuario)
+ *   llave_secreta  → hash_contrasena (BCrypt)
+ *   access_token   → sesiones_usuario.hash_token
+ */
 @Service
 public class UsuarioService {
 
@@ -26,55 +38,87 @@ public class UsuarioService {
     private SesionUsuarioRepository sesionRepository;
 
     @Autowired
-    private RolRepository rolRepository;
-
-    @Autowired
-    private SedeRepository sedeRepository;
-
-    @Autowired
     private JwtUtil jwtUtil;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // ============================================================
-    // AUTENTICACIÓN Y SEGURIDAD
-    // ============================================================
-
+    /**
+     * Registrar un nuevo usuario.
+     * Crea el usuario en 'usuarios', genera UUID (equivalente a cliente_id),
+     * encripta contraseña con BCrypt, y devuelve los datos del registro.
+     */
     @Transactional
     public Usuario registrar(RegistroRequest request) {
+        // Validar campos obligatorios
+        if (request.getNombres() == null || request.getNombres().isBlank()) {
+            throw new RuntimeException("El campo 'nombres' es obligatorio");
+        }
+        if (request.getApellidos() == null || request.getApellidos().isBlank()) {
+            throw new RuntimeException("El campo 'apellidos' es obligatorio");
+        }
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new RuntimeException("El campo 'email' es obligatorio");
+        }
+        if (request.getLlaveSecreta() == null || request.getLlaveSecreta().isBlank()) {
+            throw new RuntimeException("El campo 'llaveSecreta' es obligatorio");
+        }
+        if (request.getNegocioId() == null) {
+            throw new RuntimeException("El campo 'negocioId' es obligatorio");
+        }
+
+        // Verificar que el email no esté registrado
         if (usuarioRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("El email ya está registrado");
         }
 
+        // Crear el usuario en la tabla 'usuarios'
         Usuario usuario = new Usuario();
         usuario.setNombres(request.getNombres());
         usuario.setApellidos(request.getApellidos());
         usuario.setEmail(request.getEmail());
         usuario.setNegocioId(request.getNegocioId());
 
-        // Encriptar contraseña
+        // Encriptar contraseña con BCrypt (equivalente a llave_secreta).
+        // NOTA: Usuario.setHashContrasena() ya aplica BCrypt internamente.
         usuario.setHashContrasena(request.getLlaveSecreta());
 
+        // El UUID se genera automáticamente en @PrePersist (equivalente a cliente_id)
         return usuarioRepository.save(usuario);
     }
 
+    /**
+     * Generar token JWT para un usuario registrado.
+     * Valida credenciales (UUID + contraseña), genera JWT,
+     * y lo almacena en 'sesiones_usuario' (equivalente a guardar access_token).
+     */
     @Transactional
     public TokenResponse generarToken(TokenRequest request) {
+        if (request.getClienteId() == null || request.getClienteId().isBlank()) {
+            throw new RuntimeException("El campo 'clienteId' es obligatorio");
+        }
+        if (request.getLlaveSecreta() == null || request.getLlaveSecreta().isBlank()) {
+            throw new RuntimeException("El campo 'llaveSecreta' es obligatorio");
+        }
+
+        // Buscar usuario por UUID (equivalente a buscar por cliente_id)
         Usuario usuario = usuarioRepository.findByUuid(request.getClienteId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
+        // Verificar que esté activo
         if (!usuario.getEstaActivo()) {
             throw new RuntimeException("El usuario está desactivado");
         }
 
+        // Validar contraseña con BCrypt (equivalente a validar llave_secreta)
         if (!passwordEncoder.matches(request.getLlaveSecreta(), usuario.getHashContrasena())) {
             throw new RuntimeException("Contraseña incorrecta");
         }
 
+        // Generar token JWT
         String token = jwtUtil.generarToken(usuario.getUuid());
 
-        // Guardar sesión
+        // Guardar token en sesiones_usuario (equivalente a guardar access_token)
         SesionUsuario sesion = new SesionUsuario();
         sesion.setUsuarioId(usuario.getId());
         sesion.setHashToken(token);
@@ -82,207 +126,91 @@ public class UsuarioService {
         sesion.setExpiraEn(LocalDateTime.now().plusYears(1));
         sesionRepository.save(sesion);
 
-        // Actualizar último acceso
+        // Actualizar ultimo acceso
         usuario.setUltimoAccesoEn(LocalDateTime.now());
         usuarioRepository.save(usuario);
 
         return new TokenResponse(token, usuario.getUuid());
     }
 
-    // ============================================================
-    // GESTIÓN DE USUARIOS (CRUD + ROLES/SEDES)
-    // ============================================================
-
-    @Transactional(readOnly = true)
-    public Page<Usuario> listarPaginado(Long negocioId, Pageable pageable) {
-        return usuarioRepository.findByNegocioIdAndEstaActivoTrue(negocioId, pageable);
-    }
-
-    @Transactional(readOnly = true)
-    public Usuario obtenerPorId(Long id, Long negocioId) {
-        return usuarioRepository.findByIdAndNegocioId(id, negocioId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-    }
-
-    @Transactional(readOnly = true)
-    public List<Usuario> buscar(Long negocioId, String busqueda) {
-        return usuarioRepository.buscarUsuarios(negocioId, busqueda);
-    }
-
-    @Transactional
-    public Usuario actualizarUsuario(Long id, Long negocioId, UsuarioUpdateRequest request) {
-        Usuario usuario = obtenerPorId(id, negocioId);
-
-        if (request.getEmail() != null && !request.getEmail().equals(usuario.getEmail())) {
-            if (usuarioRepository.existsByEmail(request.getEmail())) {
-                throw new RuntimeException("El email ya está en uso");
-            }
-            usuario.setEmail(request.getEmail());
-        }
-
-        if (request.getNombres() != null)
-            usuario.setNombres(request.getNombres());
-        if (request.getApellidos() != null)
-            usuario.setApellidos(request.getApellidos());
-        if (request.getTelefono() != null)
-            usuario.setTelefono(request.getTelefono());
-        if (request.getEstaActivo() != null)
-            usuario.setEstaActivo(request.getEstaActivo());
-
-        return usuarioRepository.save(usuario);
-    }
-
-    @Transactional
-    public Usuario asignarRolesYSedes(Long id, Long negocioId, Set<Long> rolesIds, Set<Long> sedesIds) {
-        Usuario usuario = obtenerPorId(id, negocioId);
-
-        if (rolesIds != null) {
-            Set<Rol> roles = new HashSet<>();
-            for (Long rolId : rolesIds) {
-                rolRepository.findById(rolId).ifPresent(roles::add);
-            }
-            usuario.setRoles(roles);
-        }
-
-        if (sedesIds != null) {
-            Set<Sede> sedes = new HashSet<>();
-            for (Long sedeId : sedesIds) {
-                sedeRepository.findByIdAndTenantId(sedeId, negocioId).ifPresent(sedes::add);
-            }
-            usuario.setSedes(sedes);
-        }
-
-        return usuarioRepository.save(usuario);
-    }
-
-    @Transactional
-    public void eliminarUsuario(Long id, Long negocioId) {
-        Usuario usuario = obtenerPorId(id, negocioId);
-        usuarioRepository.delete(usuario); // Borrado lógico vía @SQLDelete
-    }
-
+    /**
+     * Obtener negocio_id a partir del UUID del usuario autenticado.
+     * Usado por todos los bloques para filtrar por tenant.
+     */
     public Long obtenerNegocioId(String uuid) {
-        return usuarioRepository.findByUuid(uuid)
-                .orElseThrow(() -> new RuntimeException("UUID no válido"))
-                .getNegocioId();
+        Usuario usuario = usuarioRepository.findByUuid(uuid)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + uuid));
+        return usuario.getNegocioId();
     }
 
-    public Long obtenerUsuarioIdPorUuid(String uuid) {
-        return usuarioRepository.findByUuid(uuid)
-                .orElseThrow(() -> new RuntimeException("UUID no válido"))
-                .getId();
+    /**
+     * Obtener el ID del usuario a partir de su UUID.
+     * Usado en Bloques 6 y 13 para registrar quién creó/aprobó recursos.
+     */
+    public Long obtenerUsuarioId(String uuid) {
+        Usuario usuario = usuarioRepository.findByUuid(uuid)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + uuid));
+        return usuario.getId();
     }
 
     // ============================================================
-    // WRAPPERS PARA CONTROLADORES
+    // CRUD COMPLETO PARA USUARIOS (GET, PUT, DELETE)
     // ============================================================
 
-    /** Wrapper para AuthController.listarUsuarios */
-    @Transactional(readOnly = true)
+    /**
+     * Listar todos los usuarios del negocio autenticado.
+     */
     public List<Usuario> listarUsuarios(Long negocioId) {
         return usuarioRepository.findByNegocioId(negocioId);
     }
 
-    /** Wrapper para AuthController.obtenerUsuario */
-    @Transactional(readOnly = true)
+    /**
+     * Obtener un usuario por ID, validando que pertenezca al negocio.
+     */
     public Usuario obtenerUsuario(Long negocioId, Long id) {
-        return obtenerPorId(id, negocioId);
+        return usuarioRepository.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + id));
     }
 
-    /** Wrapper para UsuarioController.findByTenant */
-    @Transactional(readOnly = true)
-    public Page<Usuario> findByTenant(Long tenantId, Pageable pageable) {
-        return listarPaginado(tenantId, pageable);
-    }
-
-    /** Wrapper para UsuarioController.findById */
-    @Transactional(readOnly = true)
-    public Usuario findById(Long id, Long tenantId) {
-        return obtenerPorId(id, tenantId);
-    }
-
-    /** Wrapper para UsuarioController.findByRol */
-    @Transactional(readOnly = true)
-    public List<Usuario> findByRol(Long tenantId, String rolCodigo) {
-        return usuarioRepository.findByNegocioIdAndRol(tenantId, rolCodigo);
-    }
-
-    /** Wrapper para UsuarioController.findBySede */
-    @Transactional(readOnly = true)
-    public List<Usuario> findBySede(Long sedeId) {
-        return usuarioRepository.findBySedeId(sedeId);
-    }
-
-    /** Wrapper para UsuarioController.crear */
+    /**
+     * Actualizar un usuario existente.
+     */
     @Transactional
-    public Usuario crear(UsuarioDTO dto, Long tenantId) {
-        if (dto.getEmail() != null && usuarioRepository.existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("El email ya está registrado");
+    public Usuario actualizarUsuario(Long negocioId, Long id, UsuarioUpdateRequest request) {
+        Usuario usuario = usuarioRepository.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + id));
+
+        if (request.getNombres() != null) {
+            usuario.setNombres(request.getNombres());
         }
-        Usuario usuario = new Usuario();
-        usuario.setNegocioId(tenantId);
-        usuario.setNombres(dto.getNombres());
-        usuario.setApellidos(dto.getApellidos());
-        if (dto.getEmail() != null)
-            usuario.setEmail(dto.getEmail());
-        if (dto.getTelefono() != null)
-            usuario.setTelefono(dto.getTelefono());
-        if (dto.getContrasena() != null)
-            usuario.setHashContrasena(dto.getContrasena());
-        return usuarioRepository.save(usuario);
-    }
-
-    /** Wrapper para UsuarioController.actualizar */
-    @Transactional
-    public Usuario actualizar(Long id, UsuarioDTO dto, Long tenantId) {
-        Usuario usuario = obtenerPorId(id, tenantId);
-        if (dto.getNombres() != null)
-            usuario.setNombres(dto.getNombres());
-        if (dto.getApellidos() != null)
-            usuario.setApellidos(dto.getApellidos());
-        if (dto.getTelefono() != null)
-            usuario.setTelefono(dto.getTelefono());
-        if (dto.getEmail() != null && !dto.getEmail().equals(usuario.getEmail())) {
-            if (usuarioRepository.existsByEmail(dto.getEmail())) {
-                throw new RuntimeException("El email ya está en uso");
+        if (request.getApellidos() != null) {
+            usuario.setApellidos(request.getApellidos());
+        }
+        if (request.getEmail() != null) {
+            if (!request.getEmail().equals(usuario.getEmail()) &&
+                    usuarioRepository.existsByEmail(request.getEmail())) {
+                throw new RuntimeException("El email ya está en uso por otro usuario");
             }
-            usuario.setEmail(dto.getEmail());
+            usuario.setEmail(request.getEmail());
         }
+        if (request.getTelefono() != null) {
+            usuario.setTelefono(request.getTelefono());
+        }
+        if (request.getEstaActivo() != null) {
+            usuario.setEstaActivo(request.getEstaActivo());
+        }
+
         return usuarioRepository.save(usuario);
     }
 
-    /** Wrapper para UsuarioController.cambiarContrasena */
+    /**
+     * Eliminar usuario (borrado lógico con @SQLDelete).
+     */
     @Transactional
-    public void cambiarContrasena(Long id, String contrasenaActual, String contrasenaNueva, Long tenantId) {
-        Usuario usuario = obtenerPorId(id, tenantId);
-        if (!passwordEncoder.matches(contrasenaActual, usuario.getHashContrasena())) {
-            throw new RuntimeException("Contraseña actual incorrecta");
-        }
-        usuario.setHashContrasena(contrasenaNueva);
-        usuarioRepository.save(usuario);
-    }
+    public void eliminarUsuario(Long negocioId, Long id) {
+        Usuario usuario = usuarioRepository.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + id));
 
-    /** Wrapper para UsuarioController.asignarRoles */
-    @Transactional
-    public Usuario asignarRoles(Long id, Set<Long> rolesIds, Long tenantId) {
-        return asignarRolesYSedes(id, tenantId, rolesIds, null);
-    }
-
-    /** Wrapper para UsuarioController.asignarSedes */
-    @Transactional
-    public Usuario asignarSedes(Long id, Set<Long> sedesIds, Long tenantId) {
-        return asignarRolesYSedes(id, tenantId, null, sedesIds);
-    }
-
-    /** Wrapper para UsuarioController.desactivar */
-    @Transactional
-    public void desactivar(Long id, Long tenantId) {
-        eliminarUsuario(id, tenantId);
-    }
-
-    /** Wrapper para UsuarioController.loginPorPin (stub) */
-    @Transactional(readOnly = true)
-    public Usuario loginPorPin(Long tenantId, String pin) {
-        throw new RuntimeException("Login por PIN no implementado aún");
+        usuarioRepository.delete(usuario);
     }
 }
