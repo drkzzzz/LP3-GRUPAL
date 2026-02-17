@@ -52,7 +52,7 @@ public class UsuarioService {
         usuario.setApellidos(request.getApellidos());
         usuario.setEmail(request.getEmail());
         usuario.setNegocioId(request.getNegocioId());
-        
+
         // Encriptar contraseña
         usuario.setHashContrasena(request.getLlaveSecreta());
 
@@ -120,10 +120,14 @@ public class UsuarioService {
             usuario.setEmail(request.getEmail());
         }
 
-        if (request.getNombres() != null) usuario.setNombres(request.getNombres());
-        if (request.getApellidos() != null) usuario.setApellidos(request.getApellidos());
-        if (request.getTelefono() != null) usuario.setTelefono(request.getTelefono());
-        if (request.getEstaActivo() != null) usuario.setEstaActivo(request.getEstaActivo());
+        if (request.getNombres() != null)
+            usuario.setNombres(request.getNombres());
+        if (request.getApellidos() != null)
+            usuario.setApellidos(request.getApellidos());
+        if (request.getTelefono() != null)
+            usuario.setTelefono(request.getTelefono());
+        if (request.getEstaActivo() != null)
+            usuario.setEstaActivo(request.getEstaActivo());
 
         return usuarioRepository.save(usuario);
     }
@@ -161,6 +165,12 @@ public class UsuarioService {
         return usuarioRepository.findByUuid(uuid)
                 .orElseThrow(() -> new RuntimeException("UUID no válido"))
                 .getNegocioId();
+    }
+
+    public Long obtenerUsuarioIdPorUuid(String uuid) {
+        return usuarioRepository.findByUuid(uuid)
+                .orElseThrow(() -> new RuntimeException("UUID no válido"))
+                .getId();
     }
 
     // ============================================================
@@ -213,9 +223,12 @@ public class UsuarioService {
         usuario.setNegocioId(tenantId);
         usuario.setNombres(dto.getNombres());
         usuario.setApellidos(dto.getApellidos());
-        if (dto.getEmail() != null) usuario.setEmail(dto.getEmail());
-        if (dto.getTelefono() != null) usuario.setTelefono(dto.getTelefono());
-        if (dto.getContrasena() != null) usuario.setHashContrasena(dto.getContrasena());
+        if (dto.getEmail() != null)
+            usuario.setEmail(dto.getEmail());
+        if (dto.getTelefono() != null)
+            usuario.setTelefono(dto.getTelefono());
+        if (dto.getContrasena() != null)
+            usuario.setHashContrasena(dto.getContrasena());
         return usuarioRepository.save(usuario);
     }
 
@@ -223,9 +236,12 @@ public class UsuarioService {
     @Transactional
     public Usuario actualizar(Long id, UsuarioDTO dto, Long tenantId) {
         Usuario usuario = obtenerPorId(id, tenantId);
-        if (dto.getNombres() != null) usuario.setNombres(dto.getNombres());
-        if (dto.getApellidos() != null) usuario.setApellidos(dto.getApellidos());
-        if (dto.getTelefono() != null) usuario.setTelefono(dto.getTelefono());
+        if (dto.getNombres() != null)
+            usuario.setNombres(dto.getNombres());
+        if (dto.getApellidos() != null)
+            usuario.setApellidos(dto.getApellidos());
+        if (dto.getTelefono() != null)
+            usuario.setTelefono(dto.getTelefono());
         if (dto.getEmail() != null && !dto.getEmail().equals(usuario.getEmail())) {
             if (usuarioRepository.existsByEmail(dto.getEmail())) {
                 throw new RuntimeException("El email ya está en uso");
