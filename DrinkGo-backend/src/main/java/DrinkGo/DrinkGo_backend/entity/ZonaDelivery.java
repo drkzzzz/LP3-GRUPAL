@@ -1,8 +1,15 @@
 package DrinkGo.DrinkGo_backend.entity;
 
-import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 
 /**
  * Entidad ZonaDelivery - Zonas de cobertura para delivery
@@ -25,8 +32,8 @@ public class ZonaDelivery {
     @Column(name = "nombre", nullable = false, length = 80)
     private String nombre;
     
-    @Column(name = "distritos", columnDefinition = "text[]")
-    private String[] distritos;
+    @Column(name = "distritos", columnDefinition = "TEXT")
+    private String distritos; // Almacena como "distrito1,distrito2,distrito3"
     
     @Column(name = "costo_delivery", nullable = false, precision = 12, scale = 2)
     private BigDecimal costoDelivery = BigDecimal.ZERO;
@@ -37,7 +44,7 @@ public class ZonaDelivery {
     @Column(name = "pedido_minimo", precision = 12, scale = 2)
     private BigDecimal pedidoMinimo = BigDecimal.ZERO;
     
-    @Column(name = "poligono", columnDefinition = "jsonb")
+    @Column(name = "poligono", columnDefinition = "JSON")
     private String poligono; // GeoJSON
     
     @Column(name = "activo", nullable = false)
@@ -64,8 +71,8 @@ public class ZonaDelivery {
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
     
-    public String[] getDistritos() { return distritos; }
-    public void setDistritos(String[] distritos) { this.distritos = distritos; }
+    public String getDistritos() { return distritos; }
+    public void setDistritos(String distritos) { this.distritos = distritos; }
     
     public BigDecimal getCostoDelivery() { return costoDelivery; }
     public void setCostoDelivery(BigDecimal costoDelivery) { this.costoDelivery = costoDelivery; }

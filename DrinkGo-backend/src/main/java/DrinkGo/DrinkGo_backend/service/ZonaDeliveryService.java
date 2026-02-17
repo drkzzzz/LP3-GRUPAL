@@ -1,14 +1,15 @@
 package DrinkGo.DrinkGo_backend.service;
 
-import DrinkGo.DrinkGo_backend.dto.ZonaDeliveryDTO;
-import DrinkGo.DrinkGo_backend.entity.ZonaDelivery;
-import DrinkGo.DrinkGo_backend.repository.ZonaDeliveryRepository;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import DrinkGo.DrinkGo_backend.dto.ZonaDeliveryDTO;
+import DrinkGo.DrinkGo_backend.entity.ZonaDelivery;
+import DrinkGo.DrinkGo_backend.repository.ZonaDeliveryRepository;
 
 @Service
 @Transactional
@@ -96,7 +97,7 @@ public class ZonaDeliveryService {
     private void mapearDatos(ZonaDelivery zona, ZonaDeliveryDTO dto) {
         zona.setSedeId(dto.getSedeId());
         zona.setNombre(dto.getNombre());
-        zona.setDistritos(dto.getDistritos());
+        zona.setDistritos(convertirArrayAString(dto.getDistritos()));
         zona.setCostoDelivery(dto.getCostoDelivery());
         zona.setTiempoEstimadoMinutos(dto.getTiempoEstimadoMinutos());
         zona.setPedidoMinimo(dto.getPedidoMinimo());
@@ -111,12 +112,27 @@ public class ZonaDeliveryService {
         dto.setId(zona.getId());
         dto.setSedeId(zona.getSedeId());
         dto.setNombre(zona.getNombre());
-        dto.setDistritos(zona.getDistritos());
+        dto.setDistritos(convertirStringAArray(zona.getDistritos()));
         dto.setCostoDelivery(zona.getCostoDelivery());
         dto.setTiempoEstimadoMinutos(zona.getTiempoEstimadoMinutos());
         dto.setPedidoMinimo(zona.getPedidoMinimo());
         dto.setPoligono(zona.getPoligono());
         dto.setActivo(zona.getActivo());
         return dto;
+    }
+    
+    // Métodos helper para conversión String <-> Array
+    private String convertirArrayAString(String[] array) {
+        if (array == null || array.length == 0) {
+            return null;
+        }
+        return String.join(",", array);
+    }
+    
+    private String[] convertirStringAArray(String str) {
+        if (str == null || str.trim().isEmpty()) {
+            return new String[0];
+        }
+        return str.split(",");
     }
 }
