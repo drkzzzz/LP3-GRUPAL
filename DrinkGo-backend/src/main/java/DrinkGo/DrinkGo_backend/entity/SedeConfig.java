@@ -1,9 +1,19 @@
 package DrinkGo.DrinkGo_backend.entity;
 
-import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapsId;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 /**
  * Entidad SedeConfig - Configuración operativa de cada sede
@@ -39,8 +49,8 @@ public class SedeConfig {
     @Column(name = "hora_fin_venta_alcohol")
     private LocalTime horaFinVentaAlcohol;
     
-    @Column(name = "dias_sin_venta_alcohol", columnDefinition = "integer[]")
-    private int[] diasSinVentaAlcohol;
+    @Column(name = "dias_sin_venta_alcohol", columnDefinition = "VARCHAR(50)")
+    private String diasSinVentaAlcohol; // Almacena como "0,6" para domingo y sábado
     
     @Column(name = "ley_seca_activa", nullable = false)
     private Boolean leySecaActiva = false;
@@ -89,8 +99,8 @@ public class SedeConfig {
     public LocalTime getHoraFinVentaAlcohol() { return horaFinVentaAlcohol; }
     public void setHoraFinVentaAlcohol(LocalTime horaFinVentaAlcohol) { this.horaFinVentaAlcohol = horaFinVentaAlcohol; }
     
-    public int[] getDiasSinVentaAlcohol() { return diasSinVentaAlcohol; }
-    public void setDiasSinVentaAlcohol(int[] diasSinVentaAlcohol) { this.diasSinVentaAlcohol = diasSinVentaAlcohol; }
+    public String getDiasSinVentaAlcohol() { return diasSinVentaAlcohol; }
+    public void setDiasSinVentaAlcohol(String diasSinVentaAlcohol) { this.diasSinVentaAlcohol = diasSinVentaAlcohol; }
     
     public Boolean getLeySecaActiva() { return leySecaActiva; }
     public void setLeySecaActiva(Boolean leySecaActiva) { this.leySecaActiva = leySecaActiva; }
