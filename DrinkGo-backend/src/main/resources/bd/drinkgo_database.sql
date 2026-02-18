@@ -984,21 +984,11 @@ CREATE TABLE proveedores (
     razon_social VARCHAR(200) NOT NULL,
     nombre_comercial VARCHAR(200) NULL,
     ruc VARCHAR(20) NULL COMMENT 'RUC del proveedor',
-    nombre_contacto VARCHAR(150) NULL,
-    telefono_contacto VARCHAR(30) NULL,
-    email_contacto VARCHAR(150) NULL,
     direccion VARCHAR(300) NULL,
-    ciudad VARCHAR(100) NULL,
-    departamento VARCHAR(100) NULL,
-    pais VARCHAR(3) NOT NULL DEFAULT 'PE',
-    plazo_pago_dias INT UNSIGNED NOT NULL DEFAULT 30 COMMENT 'Plazo de pago en días',
-    limite_credito DECIMAL(12,2) NULL,
-    nombre_banco VARCHAR(100) NULL,
-    numero_cuenta_bancaria VARCHAR(50) NULL,
-    cci_bancario VARCHAR(50) NULL,
-    calificacion TINYINT UNSIGNED NULL COMMENT 'Calificación 1-5',
-    notas TEXT NULL,
+    telefono VARCHAR(30) NULL,
+    email VARCHAR(150) NULL,
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
+    rubro TEXT NULL COMMENT 'Rubro o giro del proveedor',
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_prov_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
@@ -1140,18 +1130,10 @@ CREATE TABLE clientes (
     numero_documento VARCHAR(20) NULL,
     email VARCHAR(150) NULL,
     telefono VARCHAR(30) NULL,
-    telefono_secundario VARCHAR(30) NULL,
-    fecha_nacimiento DATE NULL,
-    genero ENUM('M','F','OTRO','NO_ESPECIFICADO') NULL,
-    -- Credenciales para tienda online
-    hash_contrasena VARCHAR(255) NULL COMMENT 'Para login en tienda online',
-    email_verificado_en TIMESTAMP NULL,
+    direccion VARCHAR(500) NULL,
     -- Estadísticas
     total_compras DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     total_pedidos INT UNSIGNED NOT NULL DEFAULT 0,
-    -- Marketing
-    acepta_marketing TINYINT(1) NOT NULL DEFAULT 0,
-    canal_marketing VARCHAR(50) NULL COMMENT 'Canal de captación',
     -- Estado
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     notas TEXT NULL,
@@ -1167,28 +1149,6 @@ CREATE TABLE clientes (
     INDEX idx_cli_uuid (uuid),
     INDEX idx_cli_activo (negocio_id, esta_activo)
 ) ENGINE=InnoDB COMMENT='Clientes del negocio (RF-CLI-001..005)';
-
-CREATE TABLE direcciones_cliente (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    cliente_id BIGINT UNSIGNED NOT NULL,
-    etiqueta VARCHAR(50) NULL COMMENT 'Casa, Oficina, etc.',
-    direccion VARCHAR(300) NOT NULL,
-    direccion_2 VARCHAR(300) NULL,
-    ciudad VARCHAR(100) NULL,
-    departamento VARCHAR(100) NULL,
-    pais VARCHAR(3) NOT NULL DEFAULT 'PE',
-    codigo_postal VARCHAR(20) NULL,
-    latitud DECIMAL(10,8) NULL,
-    longitud DECIMAL(11,8) NULL,
-    referencia VARCHAR(300) NULL,
-    telefono_contacto VARCHAR(30) NULL,
-    es_predeterminado TINYINT(1) NOT NULL DEFAULT 0,
-    esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_dircli_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE,
-    INDEX idx_dircli_cliente (cliente_id)
-) ENGINE=InnoDB COMMENT='Direcciones de clientes (RF-CLI-001)';
 
 -- ============================================================
 -- BLOQUE 8: VENTAS, POS Y CAJAS
@@ -1447,7 +1407,7 @@ CREATE TABLE pedidos (
     CONSTRAINT fk_ped_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     CONSTRAINT fk_ped_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
     CONSTRAINT fk_ped_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id),
-    CONSTRAINT fk_ped_direccion FOREIGN KEY (direccion_entrega_id) REFERENCES direcciones_cliente(id) ON DELETE SET NULL,
+    -- FK fk_ped_direccion eliminada: tabla direcciones_cliente fue removida (Bloque 7 simplificado)
     CONSTRAINT fk_ped_zona FOREIGN KEY (zona_delivery_id) REFERENCES zonas_delivery(id) ON DELETE SET NULL,
 
     UNIQUE KEY uk_ped_negocio_numero (negocio_id, numero_pedido),
