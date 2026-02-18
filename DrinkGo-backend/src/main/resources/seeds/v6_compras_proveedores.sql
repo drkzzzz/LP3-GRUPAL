@@ -18,75 +18,48 @@ USE drinkgo_db;
 
 INSERT INTO proveedores (
     negocio_id, codigo, razon_social, nombre_comercial, ruc,
-    nombre_contacto, telefono_contacto, email_contacto,
-    direccion, ciudad, departamento, pais,
-    plazo_pago_dias, limite_credito,
-    nombre_banco, numero_cuenta_bancaria, cci_bancario,
-    calificacion, notas, esta_activo, creado_en, actualizado_en
+    direccion, telefono, email,
+    esta_activo, rubro, creado_en, actualizado_en
 ) VALUES
 -- Proveedor 1: Distribuidora de vinos
 (1, 'PROV-001', 'Distribuidora de Vinos del Sur S.A.C.', 'Vinos del Sur', '20456789012',
- 'Carlos Mendoza Ríos', '951234567', 'cmendoza@vinosdelsur.pe',
- 'Av. La Marina 1520, Pueblo Libre', 'Lima', 'Lima', 'PE',
- 30, 50000.00,
- 'BCP', '191-2345678-0-12', '00219100234567801234',
- 5, 'Proveedor principal de vinos importados y nacionales. Excelente servicio.', 1, NOW(), NOW()),
+ 'Av. La Marina 1520, Pueblo Libre', '951234567', 'cmendoza@vinosdelsur.pe',
+ 1, 'Proveedor principal de vinos importados y nacionales. Excelente servicio.', NOW(), NOW()),
 
 -- Proveedor 2: Distribuidora de cervezas
 (1, 'PROV-002', 'Cervecerías Peruanas Unidas S.A.', 'CPU Distribuciones', '20301234567',
- 'María Elena Torres', '952345678', 'mtorres@cpudist.pe',
- 'Jr. Lampa 250, Cercado de Lima', 'Lima', 'Lima', 'PE',
- 15, 80000.00,
- 'BBVA', '0011-0234-0200123456', '01100234020012345678',
- 4, 'Distribuidor oficial de cervezas artesanales e industriales.', 1, NOW(), NOW()),
+ 'Jr. Lampa 250, Cercado de Lima', '952345678', 'mtorres@cpudist.pe',
+ 1, 'Distribuidor oficial de cervezas artesanales e industriales.', NOW(), NOW()),
 
 -- Proveedor 3: Licores importados
 (1, 'PROV-003', 'Importaciones Premium Licores E.I.R.L.', 'Premium Licores', '20567890123',
- 'Jorge Luis Paredes', '953456789', 'jparedes@premiumlicores.pe',
- 'Calle Los Álamos 340, San Isidro', 'Lima', 'Lima', 'PE',
- 45, 120000.00,
- 'Interbank', '200-3012345678-01', '00320003012345678012',
- 5, 'Importador directo de whisky, vodka, gin y ron premium.', 1, NOW(), NOW()),
+ 'Calle Los Álamos 340, San Isidro', '953456789', 'jparedes@premiumlicores.pe',
+ 1, 'Importador directo de whisky, vodka, gin y ron premium.', NOW(), NOW()),
 
 -- Proveedor 4: Bebidas no alcohólicas
 (1, 'PROV-004', 'Refrescos y Complementos S.A.C.', 'RefreshPeru', '20612345678',
- 'Ana Lucía Vega Soto', '954567890', 'avega@refreshperu.pe',
- 'Av. Argentina 2150, Carmen de la Legua', 'Callao', 'Callao', 'PE',
- 15, 30000.00,
- 'BCP', '191-5678901-0-45', '00219100567890104567',
- 3, 'Proveedor de gaseosas, aguas, jugos y mixers para coctelería.', 1, NOW(), NOW()),
+ 'Av. Argentina 2150, Carmen de la Legua', '954567890', 'avega@refreshperu.pe',
+ 1, 'Proveedor de gaseosas, aguas, jugos y mixers para coctelería.', NOW(), NOW()),
 
 -- Proveedor 5: Pisco y destilados nacionales
 (1, 'PROV-005', 'Destilería Nacional del Perú S.A.', 'Piscos del Perú', '20498765432',
- 'Roberto Quispe Mamani', '955678901', 'rquispe@piscosdelperu.pe',
- 'Fundo Viña Grande Km 42, Ica', 'Ica', 'Ica', 'PE',
- 30, 60000.00,
- 'Scotiabank', '000-7654321', '00900000765432100012',
- 4, 'Bodega artesanal de piscos quebranta, italia, acholado y mosto verde.', 1, NOW(), NOW()),
+ 'Fundo Viña Grande Km 42, Ica', '955678901', 'rquispe@piscosdelperu.pe',
+ 1, 'Bodega artesanal de piscos quebranta, italia, acholado y mosto verde.', NOW(), NOW()),
 
 -- Proveedor 6: Inactivo (borrado lógico)
 (1, 'PROV-006', 'Licorería Mayorista Lima Norte S.R.L.', 'Licores Lima Norte', '20345678901',
- 'Pedro Sánchez López', '956789012', 'psanchez@licoleslimanorte.pe',
- 'Av. Túpac Amaru 5400, Comas', 'Lima', 'Lima', 'PE',
- 60, 25000.00,
- 'BCP', '191-9876543-0-78', '00219100987654307890',
- 2, 'Proveedor dado de baja por incumplimiento reiterado en plazos de entrega.', 0, NOW(), NOW()),
+ 'Av. Túpac Amaru 5400, Comas', '956789012', 'psanchez@licoleslimanorte.pe',
+ 0, 'Proveedor dado de baja por incumplimiento reiterado en plazos de entrega.', NOW(), NOW()),
 
 -- Proveedor 7: Snacks y acompañamientos
 (1, 'PROV-007', 'Distribuidora de Snacks Andinos S.A.C.', 'SnackAndes', '20723456789',
- 'Lucía Fernández Gutiérrez', '957890123', 'lfernandez@snackandes.pe',
- 'Av. Benavides 3580, Surco', 'Lima', 'Lima', 'PE',
- 15, 15000.00,
- 'BCP', '191-1122334-0-56', '00219100112233405678',
- 4, 'Snacks, frutos secos y acompañamientos para licorería.', 1, NOW(), NOW()),
+ 'Av. Benavides 3580, Surco', '957890123', 'lfernandez@snackandes.pe',
+ 1, 'Snacks, frutos secos y acompañamientos para licorería.', NOW(), NOW()),
 
 -- Proveedor 8: Envases y descartables
 (1, 'PROV-008', 'Envases y Empaques del Pacífico S.A.C.', 'EmpaPack', '20834567890',
- 'Diego Ramírez Huanca', '958901234', 'dramirez@empapack.pe',
- 'Calle Industrial 120, Ate', 'Lima', 'Lima', 'PE',
- 30, 20000.00,
- 'BBVA', '0011-0345-0200567890', '01100345020056789012',
- 3, 'Vasos, copas descartables, bolsas y empaques para delivery.', 1, NOW(), NOW());
+ 'Calle Industrial 120, Ate', '958901234', 'dramirez@empapack.pe',
+ 1, 'Vasos, copas descartables, bolsas y empaques para delivery.', NOW(), NOW());
 
 -- ============================================================
 -- 6.1.1 PRODUCTOS POR PROVEEDOR (productos_proveedor)
