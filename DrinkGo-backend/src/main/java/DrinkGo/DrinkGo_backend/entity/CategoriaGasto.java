@@ -24,11 +24,19 @@ public class CategoriaGasto {
     @Column(name = "codigo", nullable = false, length = 20)
     private String codigo;
 
-    @Column(name = "padre_id")
-    private Long padreId;
+    @Column(name = "tipo", length = 50)
+    @Enumerated(EnumType.STRING)
+    private TipoCategoria tipo;
 
     @Column(name = "descripcion", length = 300)
     private String descripcion;
+
+    // ── Enums ──
+
+    public enum TipoCategoria {
+        operativo, administrativo, servicio, personal, 
+        marketing, mantenimiento, tecnologia, otro
+    }
 
     @Column(name = "esta_activo", nullable = false)
     private Boolean estaActivo = true;
@@ -82,12 +90,12 @@ public class CategoriaGasto {
         this.codigo = codigo;
     }
 
-    public Long getPadreId() {
-        return padreId;
+    public TipoCategoria getTipo() {
+        return tipo;
     }
 
-    public void setPadreId(Long padreId) {
-        this.padreId = padreId;
+    public void setTipo(TipoCategoria tipo) {
+        this.tipo = tipo;
     }
 
     public String getDescripcion() {

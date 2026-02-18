@@ -77,8 +77,6 @@ public class SuscripcionService {
             request.getFinPeriodoActual() : fin);
 
         suscripcion.setProximaFechaFacturacion(fin);
-        suscripcion.setPrecioPeriodoActual(request.getPrecioPeriodoActual() != null ? 
-            request.getPrecioPeriodoActual() : plan.getPrecio());
 
         return suscripcionRepository.save(suscripcion);
     }
@@ -118,7 +116,6 @@ public class SuscripcionService {
 
         // Cambiar plan
         suscripcion.setPlanId(nuevoPlanId);
-        suscripcion.setPrecioPeriodoActual(nuevoPlan.getPrecio());
 
         return suscripcionRepository.save(suscripcion);
     }

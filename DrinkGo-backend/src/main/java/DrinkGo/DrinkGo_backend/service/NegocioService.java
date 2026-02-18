@@ -121,14 +121,6 @@ public class NegocioService {
         negocio.setPais(request.getPais() != null ? request.getPais() : "PE");
         negocio.setCodigoPostal(request.getCodigoPostal());
         negocio.setUrlLogo(request.getUrlLogo());
-        negocio.setUrlFavicon(request.getUrlFavicon());
-        negocio.setColorPrimario(request.getColorPrimario());
-        negocio.setColorSecundario(request.getColorSecundario());
-        negocio.setColorAcento(request.getColorAcento());
-        negocio.setMonedaPredeterminada(request.getMonedaPredeterminada() != null ? request.getMonedaPredeterminada() : "PEN");
-        negocio.setIdiomaPredeterminado(request.getIdiomaPredeterminado() != null ? request.getIdiomaPredeterminado() : "es");
-        negocio.setZonaHoraria(request.getZonaHoraria() != null ? request.getZonaHoraria() : "America/Lima");
-        negocio.setFormatoFecha(request.getFormatoFecha() != null ? request.getFormatoFecha() : "DD/MM/YYYY");
         
         if (request.getEstado() != null) {
             negocio.setEstado(Negocio.EstadoNegocio.valueOf(request.getEstado()));
@@ -158,14 +150,6 @@ public class NegocioService {
         response.setPais(negocio.getPais());
         response.setCodigoPostal(negocio.getCodigoPostal());
         response.setUrlLogo(negocio.getUrlLogo());
-        response.setUrlFavicon(negocio.getUrlFavicon());
-        response.setColorPrimario(negocio.getColorPrimario());
-        response.setColorSecundario(negocio.getColorSecundario());
-        response.setColorAcento(negocio.getColorAcento());
-        response.setMonedaPredeterminada(negocio.getMonedaPredeterminada());
-        response.setIdiomaPredeterminado(negocio.getIdiomaPredeterminado());
-        response.setZonaHoraria(negocio.getZonaHoraria());
-        response.setFormatoFecha(negocio.getFormatoFecha());
         response.setEstado(negocio.getEstado() != null ? negocio.getEstado().name() : null);
         response.setEstaActivo(negocio.getEstaActivo());
         response.setCreadoEn(negocio.getCreadoEn());

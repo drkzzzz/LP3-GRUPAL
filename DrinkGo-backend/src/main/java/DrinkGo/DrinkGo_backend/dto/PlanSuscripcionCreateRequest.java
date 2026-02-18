@@ -8,7 +8,6 @@ import java.math.BigDecimal;
 public class PlanSuscripcionCreateRequest {
 
     private String nombre;
-    private String slug;
     private String descripcion;
     private BigDecimal precio;
     private String moneda;
@@ -36,14 +35,6 @@ public class PlanSuscripcionCreateRequest {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
-    }
-
-    public String getSlug() {
-        return slug;
-    }
-
-    public void setSlug(String slug) {
-        this.slug = slug;
     }
 
     public String getDescripcion() {

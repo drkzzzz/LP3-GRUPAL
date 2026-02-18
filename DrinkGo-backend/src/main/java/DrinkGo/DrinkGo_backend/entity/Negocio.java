@@ -70,30 +70,6 @@ public class Negocio {
     @Column(name = "url_logo", length = 500)
     private String urlLogo;
 
-    @Column(name = "url_favicon", length = 500)
-    private String urlFavicon;
-
-    @Column(name = "color_primario", length = 7)
-    private String colorPrimario = "#1A1A2E";
-
-    @Column(name = "color_secundario", length = 7)
-    private String colorSecundario = "#E94560";
-
-    @Column(name = "color_acento", length = 7)
-    private String colorAcento;
-
-    @Column(name = "moneda_predeterminada", nullable = false, length = 3)
-    private String monedaPredeterminada = "PEN";
-
-    @Column(name = "idioma_predeterminado", nullable = false, length = 5)
-    private String idiomaPredeterminado = "es";
-
-    @Column(name = "zona_horaria", nullable = false, length = 50)
-    private String zonaHoraria = "America/Lima";
-
-    @Column(name = "formato_fecha", nullable = false, length = 20)
-    private String formatoFecha = "DD/MM/YYYY";
-
     @Column(name = "estado", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private EstadoNegocio estado = EstadoNegocio.pendiente;
@@ -188,30 +164,6 @@ public class Negocio {
 
     public String getUrlLogo() { return urlLogo; }
     public void setUrlLogo(String urlLogo) { this.urlLogo = urlLogo; }
-
-    public String getUrlFavicon() { return urlFavicon; }
-    public void setUrlFavicon(String urlFavicon) { this.urlFavicon = urlFavicon; }
-
-    public String getColorPrimario() { return colorPrimario; }
-    public void setColorPrimario(String colorPrimario) { this.colorPrimario = colorPrimario; }
-
-    public String getColorSecundario() { return colorSecundario; }
-    public void setColorSecundario(String colorSecundario) { this.colorSecundario = colorSecundario; }
-
-    public String getColorAcento() { return colorAcento; }
-    public void setColorAcento(String colorAcento) { this.colorAcento = colorAcento; }
-
-    public String getMonedaPredeterminada() { return monedaPredeterminada; }
-    public void setMonedaPredeterminada(String monedaPredeterminada) { this.monedaPredeterminada = monedaPredeterminada; }
-
-    public String getIdiomaPredeterminado() { return idiomaPredeterminado; }
-    public void setIdiomaPredeterminado(String idiomaPredeterminado) { this.idiomaPredeterminado = idiomaPredeterminado; }
-
-    public String getZonaHoraria() { return zonaHoraria; }
-    public void setZonaHoraria(String zonaHoraria) { this.zonaHoraria = zonaHoraria; }
-
-    public String getFormatoFecha() { return formatoFecha; }
-    public void setFormatoFecha(String formatoFecha) { this.formatoFecha = formatoFecha; }
 
     public EstadoNegocio getEstado() { return estado; }
     public void setEstado(EstadoNegocio estado) { this.estado = estado; }

@@ -141,8 +141,6 @@ public class FacturaSuscripcionService {
         response.setMetodoPago(factura.getMetodoPago());
         response.setReferenciaPago(factura.getReferenciaPago());
         response.setPagadoEn(factura.getPagadoEn());
-        response.setIntentosReintento(factura.getIntentosReintento());
-        response.setProximoReintentoEn(factura.getProximoReintentoEn());
         response.setNotas(factura.getNotas());
         response.setEmitidoEn(factura.getEmitidoEn());
         response.setFechaVencimiento(factura.getFechaVencimiento());

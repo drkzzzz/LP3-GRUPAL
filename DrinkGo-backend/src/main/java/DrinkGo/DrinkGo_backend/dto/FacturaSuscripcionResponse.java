@@ -24,8 +24,6 @@ public class FacturaSuscripcionResponse {
     private String metodoPago;
     private String referenciaPago;
     private LocalDateTime pagadoEn;
-    private Integer intentosReintento;
-    private LocalDateTime proximoReintentoEn;
     private String notas;
     private LocalDateTime emitidoEn;
     private LocalDate fechaVencimiento;
@@ -78,12 +76,6 @@ public class FacturaSuscripcionResponse {
 
     public LocalDateTime getPagadoEn() { return pagadoEn; }
     public void setPagadoEn(LocalDateTime pagadoEn) { this.pagadoEn = pagadoEn; }
-
-    public Integer getIntentosReintento() { return intentosReintento; }
-    public void setIntentosReintento(Integer intentosReintento) { this.intentosReintento = intentosReintento; }
-
-    public LocalDateTime getProximoReintentoEn() { return proximoReintentoEn; }
-    public void setProximoReintentoEn(LocalDateTime proximoReintentoEn) { this.proximoReintentoEn = proximoReintentoEn; }
 
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }

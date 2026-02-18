@@ -14,8 +14,4 @@ import java.util.Optional;
 public interface PlanSuscripcionRepository extends JpaRepository<PlanSuscripcion, Long> {
 
     List<PlanSuscripcion> findByEstaActivoOrderByOrdenAsc(Boolean estaActivo);
-
-    Optional<PlanSuscripcion> findBySlug(String slug);
-
-    boolean existsBySlug(String slug);
 }

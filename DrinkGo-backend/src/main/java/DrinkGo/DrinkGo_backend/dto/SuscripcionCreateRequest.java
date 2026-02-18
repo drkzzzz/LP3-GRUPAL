@@ -12,7 +12,6 @@ public class SuscripcionCreateRequest {
     private Long planId;
     private LocalDate inicioPeriodoActual;
     private LocalDate finPeriodoActual;
-    private BigDecimal precioPeriodoActual;
 
     // --- Getters y Setters ---
 
@@ -46,13 +45,5 @@ public class SuscripcionCreateRequest {
 
     public void setFinPeriodoActual(LocalDate finPeriodoActual) {
         this.finPeriodoActual = finPeriodoActual;
-    }
-
-    public BigDecimal getPrecioPeriodoActual() {
-        return precioPeriodoActual;
-    }
-
-    public void setPrecioPeriodoActual(BigDecimal precioPeriodoActual) {
-        this.precioPeriodoActual = precioPeriodoActual;
     }
 }
