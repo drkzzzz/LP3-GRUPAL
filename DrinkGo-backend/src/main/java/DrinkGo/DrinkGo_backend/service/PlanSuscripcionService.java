@@ -29,22 +29,13 @@ public class PlanSuscripcionService {
         if (request.getNombre() == null || request.getNombre().isBlank()) {
             throw new RuntimeException("El nombre del plan es obligatorio");
         }
-        if (request.getSlug() == null || request.getSlug().isBlank()) {
-            throw new RuntimeException("El slug del plan es obligatorio");
-        }
         if (request.getPrecio() == null) {
             throw new RuntimeException("El precio del plan es obligatorio");
-        }
-
-        // Verificar slug único
-        if (planRepository.existsBySlug(request.getSlug())) {
-            throw new RuntimeException("Ya existe un plan con el slug: " + request.getSlug());
         }
 
         // Crear plan
         PlanSuscripcion plan = new PlanSuscripcion();
         plan.setNombre(request.getNombre());
-        plan.setSlug(request.getSlug());
         plan.setDescripcion(request.getDescripcion());
         plan.setPrecio(request.getPrecio());
         plan.setMoneda(request.getMoneda() != null ? request.getMoneda() : "PEN");
@@ -161,9 +152,6 @@ public class PlanSuscripcionService {
         if (request.getOrden() != null) {
             plan.setOrden(request.getOrden());
         }
-
-        // Incrementar versión
-        plan.setVersion(plan.getVersion() + 1);
 
         return planRepository.save(plan);
     }

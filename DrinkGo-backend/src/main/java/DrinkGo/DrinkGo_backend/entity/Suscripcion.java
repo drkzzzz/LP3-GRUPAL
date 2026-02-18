@@ -36,9 +36,6 @@ public class Suscripcion {
     @Column(name = "proxima_fecha_facturacion")
     private LocalDate proximaFechaFacturacion;
 
-    @Column(name = "precio_periodo_actual", precision = 10, scale = 2)
-    private BigDecimal precioPeriodoActual;
-
     @Column(name = "cancelada_en")
     private LocalDateTime canceladaEn;
 
@@ -111,14 +108,6 @@ public class Suscripcion {
 
     public void setProximaFechaFacturacion(LocalDate proximaFechaFacturacion) {
         this.proximaFechaFacturacion = proximaFechaFacturacion;
-    }
-
-    public BigDecimal getPrecioPeriodoActual() {
-        return precioPeriodoActual;
-    }
-
-    public void setPrecioPeriodoActual(BigDecimal precioPeriodoActual) {
-        this.precioPeriodoActual = precioPeriodoActual;
     }
 
     public LocalDateTime getCanceladaEn() {

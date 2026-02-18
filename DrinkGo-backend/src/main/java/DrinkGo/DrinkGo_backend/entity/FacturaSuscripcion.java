@@ -60,12 +60,6 @@ public class FacturaSuscripcion {
     @Column(name = "pagado_en")
     private LocalDateTime pagadoEn;
 
-    @Column(name = "intentos_reintento", nullable = false)
-    private Integer intentosReintento = 0;
-
-    @Column(name = "proximo_reintento_en")
-    private LocalDateTime proximoReintentoEn;
-
     @Column(name = "notas", columnDefinition = "TEXT")
     private String notas;
 
@@ -149,12 +143,6 @@ public class FacturaSuscripcion {
 
     public LocalDateTime getPagadoEn() { return pagadoEn; }
     public void setPagadoEn(LocalDateTime pagadoEn) { this.pagadoEn = pagadoEn; }
-
-    public Integer getIntentosReintento() { return intentosReintento; }
-    public void setIntentosReintento(Integer intentosReintento) { this.intentosReintento = intentosReintento; }
-
-    public LocalDateTime getProximoReintentoEn() { return proximoReintentoEn; }
-    public void setProximoReintentoEn(LocalDateTime proximoReintentoEn) { this.proximoReintentoEn = proximoReintentoEn; }
 
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }

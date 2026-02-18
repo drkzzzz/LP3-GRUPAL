@@ -24,9 +24,6 @@ public class PlanSuscripcion {
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
 
-    @Column(name = "slug", nullable = false, unique = true, length = 100)
-    private String slug;
-
     @Column(name = "descripcion", columnDefinition = "TEXT")
     private String descripcion;
 
@@ -82,9 +79,6 @@ public class PlanSuscripcion {
     @Column(name = "esta_activo", nullable = false)
     private Boolean estaActivo = true;
 
-    @Column(name = "version", nullable = false)
-    private Integer version = 1;
-
     @Column(name = "orden", nullable = false)
     private Integer orden = 0;
 
@@ -114,14 +108,6 @@ public class PlanSuscripcion {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
-    }
-
-    public String getSlug() {
-        return slug;
-    }
-
-    public void setSlug(String slug) {
-        this.slug = slug;
     }
 
     public String getDescripcion() {
@@ -266,14 +252,6 @@ public class PlanSuscripcion {
 
     public void setEstaActivo(Boolean estaActivo) {
         this.estaActivo = estaActivo;
-    }
-
-    public Integer getVersion() {
-        return version;
-    }
-
-    public void setVersion(Integer version) {
-        this.version = version;
     }
 
     public Integer getOrden() {

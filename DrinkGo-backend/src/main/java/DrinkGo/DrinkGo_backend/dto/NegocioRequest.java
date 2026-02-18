@@ -20,14 +20,6 @@ public class NegocioRequest {
     private String pais;
     private String codigoPostal;
     private String urlLogo;
-    private String urlFavicon;
-    private String colorPrimario;
-    private String colorSecundario;
-    private String colorAcento;
-    private String monedaPredeterminada;
-    private String idiomaPredeterminado;
-    private String zonaHoraria;
-    private String formatoFecha;
     private String estado; // activo, suspendido, cancelado, pendiente
     private Boolean estaActivo;
 
@@ -77,30 +69,6 @@ public class NegocioRequest {
 
     public String getUrlLogo() { return urlLogo; }
     public void setUrlLogo(String urlLogo) { this.urlLogo = urlLogo; }
-
-    public String getUrlFavicon() { return urlFavicon; }
-    public void setUrlFavicon(String urlFavicon) { this.urlFavicon = urlFavicon; }
-
-    public String getColorPrimario() { return colorPrimario; }
-    public void setColorPrimario(String colorPrimario) { this.colorPrimario = colorPrimario; }
-
-    public String getColorSecundario() { return colorSecundario; }
-    public void setColorSecundario(String colorSecundario) { this.colorSecundario = colorSecundario; }
-
-    public String getColorAcento() { return colorAcento; }
-    public void setColorAcento(String colorAcento) { this.colorAcento = colorAcento; }
-
-    public String getMonedaPredeterminada() { return monedaPredeterminada; }
-    public void setMonedaPredeterminada(String monedaPredeterminada) { this.monedaPredeterminada = monedaPredeterminada; }
-
-    public String getIdiomaPredeterminado() { return idiomaPredeterminado; }
-    public void setIdiomaPredeterminado(String idiomaPredeterminado) { this.idiomaPredeterminado = idiomaPredeterminado; }
-
-    public String getZonaHoraria() { return zonaHoraria; }
-    public void setZonaHoraria(String zonaHoraria) { this.zonaHoraria = zonaHoraria; }
-
-    public String getFormatoFecha() { return formatoFecha; }
-    public void setFormatoFecha(String formatoFecha) { this.formatoFecha = formatoFecha; }
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }

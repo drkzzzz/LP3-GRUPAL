@@ -18,7 +18,6 @@ USE drinkgo_db;
 CREATE TABLE planes_suscripcion (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    slug VARCHAR(100) NOT NULL UNIQUE,
     descripcion TEXT NULL,
     precio DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     moneda VARCHAR(3) NOT NULL DEFAULT 'PEN',
@@ -37,25 +36,11 @@ CREATE TABLE planes_suscripcion (
     permite_acceso_api TINYINT(1) NOT NULL DEFAULT 0,
     funcionalidades_json JSON NULL COMMENT 'Funcionalidades extra en formato JSON',
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-    version INT UNSIGNED NOT NULL DEFAULT 1,
     orden INT NOT NULL DEFAULT 0,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_plsus_activo (esta_activo),
-    INDEX idx_plsus_slug (slug)
+    INDEX idx_plsus_activo (esta_activo)
 ) ENGINE=InnoDB COMMENT='Planes de suscripción de la plataforma (RF-PLT-002..005)';
-
-CREATE TABLE versiones_planes_suscripcion (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    plan_id BIGINT UNSIGNED NOT NULL,
-    version INT UNSIGNED NOT NULL,
-    snapshot_json JSON NOT NULL COMMENT 'Snapshot completo del plan en esta versión',
-    cambiado_por BIGINT UNSIGNED NULL,
-    razon_cambio VARCHAR(500) NULL,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_vplsus_plan FOREIGN KEY (plan_id) REFERENCES planes_suscripcion(id),
-    UNIQUE KEY uk_vplsus_plan_version (plan_id, version)
-) ENGINE=InnoDB COMMENT='Versionado de planes (RF-PLT-003)';
 
 -- ============================================================
 -- 1.2 NEGOCIOS (LICORERÍAS / TENANTS)
@@ -79,14 +64,6 @@ CREATE TABLE negocios (
     pais VARCHAR(3) NOT NULL DEFAULT 'PE',
     codigo_postal VARCHAR(20) NULL,
     url_logo VARCHAR(500) NULL,
-    url_favicon VARCHAR(500) NULL,
-    color_primario VARCHAR(7) NULL DEFAULT '#1A1A2E' COMMENT 'Color corporativo HEX',
-    color_secundario VARCHAR(7) NULL DEFAULT '#E94560',
-    color_acento VARCHAR(7) NULL,
-    moneda_predeterminada VARCHAR(3) NOT NULL DEFAULT 'PEN',
-    idioma_predeterminado VARCHAR(5) NOT NULL DEFAULT 'es',
-    zona_horaria VARCHAR(50) NOT NULL DEFAULT 'America/Lima',
-    formato_fecha VARCHAR(20) NOT NULL DEFAULT 'DD/MM/YYYY',
     estado ENUM('activo','suspendido','cancelado','pendiente') NOT NULL DEFAULT 'pendiente',
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -105,7 +82,6 @@ CREATE TABLE suscripciones (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
     plan_id BIGINT UNSIGNED NOT NULL,
-    version_plan INT UNSIGNED NOT NULL DEFAULT 1,
     estado ENUM('activa','vencida','suspendida','cancelada','expirada') NOT NULL DEFAULT 'activa',
     inicio_periodo_actual DATE NOT NULL,
     fin_periodo_actual DATE NOT NULL,
@@ -141,8 +117,6 @@ CREATE TABLE facturas_suscripcion (
     metodo_pago VARCHAR(50) NULL,
     referencia_pago VARCHAR(255) NULL,
     pagado_en TIMESTAMP NULL,
-    intentos_reintento INT UNSIGNED NOT NULL DEFAULT 0,
-    proximo_reintento_en TIMESTAMP NULL,
     notas TEXT NULL,
     emitido_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_vencimiento DATE NOT NULL,
@@ -154,38 +128,6 @@ CREATE TABLE facturas_suscripcion (
     INDEX idx_fsusc_estado (estado),
     INDEX idx_fsusc_vencimiento (fecha_vencimiento)
 ) ENGINE=InnoDB COMMENT='Facturas de suscripción plataforma (RF-FAC-001)';
-
--- ============================================================
--- 1.4 CONFIGURACIÓN GLOBAL DE PLATAFORMA
--- ============================================================
-
-CREATE TABLE configuracion_global_plataforma (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    clave_configuracion VARCHAR(150) NOT NULL UNIQUE,
-    valor_configuracion TEXT NOT NULL,
-    tipo_valor ENUM('texto','numero','booleano','json','fecha') NOT NULL DEFAULT 'texto',
-    categoria VARCHAR(100) NOT NULL DEFAULT 'general',
-    descripcion VARCHAR(500) NULL,
-    es_editable TINYINT(1) NOT NULL DEFAULT 1,
-    version INT UNSIGNED NOT NULL DEFAULT 1,
-    actualizado_por BIGINT UNSIGNED NULL,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_cgp_categoria (categoria),
-    INDEX idx_cgp_clave (clave_configuracion)
-) ENGINE=InnoDB COMMENT='Parámetros globales de la plataforma (RF-CGL-001)';
-
-CREATE TABLE historial_configuracion_plataforma (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    configuracion_id BIGINT UNSIGNED NOT NULL,
-    valor_anterior TEXT NULL,
-    valor_nuevo TEXT NOT NULL,
-    cambiado_por BIGINT UNSIGNED NULL,
-    razon_cambio VARCHAR(500) NULL,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hcp_config FOREIGN KEY (configuracion_id) REFERENCES configuracion_global_plataforma(id),
-    INDEX idx_hcp_config (configuracion_id)
-) ENGINE=InnoDB COMMENT='Historial de cambios de configuración global';
 
 -- ============================================================
 -- BLOQUE 2: USUARIOS, ROLES, PERMISOS Y SEGURIDAD
@@ -1710,14 +1652,14 @@ CREATE TABLE categorias_gasto (
     negocio_id BIGINT UNSIGNED NOT NULL,
     nombre VARCHAR(150) NOT NULL,
     codigo VARCHAR(20) NOT NULL,
-    padre_id BIGINT UNSIGNED NULL,
+    tipo ENUM('operativo','administrativo','servicio','personal','marketing','mantenimiento','tecnologia','otro') NULL COMMENT 'Tipo de categoría para agrupación',
     descripcion VARCHAR(300) NULL,
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_catgas_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    CONSTRAINT fk_catgas_padre FOREIGN KEY (padre_id) REFERENCES categorias_gasto(id),
     UNIQUE KEY uk_catgas_negocio_codigo (negocio_id, codigo),
-    INDEX idx_catgas_negocio (negocio_id)
+    INDEX idx_catgas_negocio (negocio_id),
+    INDEX idx_catgas_tipo (negocio_id, tipo)
 ) ENGINE=InnoDB COMMENT='Categorías de gastos (RF-GAS-001)';
 
 CREATE TABLE gastos (
