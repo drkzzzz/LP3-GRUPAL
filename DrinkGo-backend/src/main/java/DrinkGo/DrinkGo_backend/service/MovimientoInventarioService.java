@@ -40,20 +40,17 @@ public class MovimientoInventarioService {
     private final LoteInventarioRepository loteRepository;
     private final ProductoRepository productoRepository;
     private final AlmacenRepository almacenRepository;
-    private final AlertaInventarioService alertaService;
 
     public MovimientoInventarioService(MovimientoInventarioRepository movimientoRepository,
                                         StockInventarioRepository stockRepository,
                                         LoteInventarioRepository loteRepository,
                                         ProductoRepository productoRepository,
-                                        AlmacenRepository almacenRepository,
-                                        AlertaInventarioService alertaService) {
+                                        AlmacenRepository almacenRepository) {
         this.movimientoRepository = movimientoRepository;
         this.stockRepository = stockRepository;
         this.loteRepository = loteRepository;
         this.productoRepository = productoRepository;
         this.almacenRepository = almacenRepository;
-        this.alertaService = alertaService;
     }
 
     /** Listar todos los movimientos del negocio */
@@ -153,9 +150,6 @@ public class MovimientoInventarioService {
         movimiento.setCreadoEn(LocalDateTime.now());
 
         MovimientoInventario guardado = movimientoRepository.save(movimiento);
-
-        // Verificar alertas automáticas
-        alertaService.verificarAlertas(negocioId, producto, almacen);
 
         return convertirAResponse(guardado);
     }

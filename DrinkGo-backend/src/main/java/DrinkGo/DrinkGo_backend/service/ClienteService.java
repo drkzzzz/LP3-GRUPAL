@@ -8,15 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import DrinkGo.DrinkGo_backend.dto.ClienteCreateRequest;
 import DrinkGo.DrinkGo_backend.dto.ClienteUpdateRequest;
-import DrinkGo.DrinkGo_backend.dto.DireccionClienteCreateRequest;
-import DrinkGo.DrinkGo_backend.dto.DireccionClienteUpdateRequest;
 import DrinkGo.DrinkGo_backend.entity.Cliente;
 import DrinkGo.DrinkGo_backend.entity.Cliente.Genero;
 import DrinkGo.DrinkGo_backend.entity.Cliente.TipoCliente;
 import DrinkGo.DrinkGo_backend.entity.Cliente.TipoDocumento;
-import DrinkGo.DrinkGo_backend.entity.DireccionCliente;
 import DrinkGo.DrinkGo_backend.repository.ClienteRepository;
-import DrinkGo.DrinkGo_backend.repository.DireccionClienteRepository;
 
 /**
  * Servicio de Clientes - Bloque 7.
@@ -31,9 +27,6 @@ public class ClienteService {
 
     @Autowired
     private ClienteRepository clienteRepository;
-
-    @Autowired
-    private DireccionClienteRepository direccionRepository;
 
     // ============================================================
     // CLIENTES
@@ -171,94 +164,6 @@ public class ClienteService {
     public void eliminarCliente(Long negocioId, Long id) {
         Cliente cliente = obtenerCliente(negocioId, id);
         clienteRepository.delete(cliente);
-    }
-
-    // ============================================================
-    // DIRECCIONES DE CLIENTE
-    // ============================================================
-
-    /**
-     * Listar direcciones de un cliente.
-     */
-    public List<DireccionCliente> listarDirecciones(Long negocioId, Long clienteId) {
-        // Validar que el cliente pertenezca al negocio
-        obtenerCliente(negocioId, clienteId);
-        return direccionRepository.findByClienteId(clienteId);
-    }
-
-    /**
-     * Obtener una dirección por ID.
-     */
-    public DireccionCliente obtenerDireccion(Long negocioId, Long clienteId, Long direccionId) {
-        obtenerCliente(negocioId, clienteId);
-        return direccionRepository.findByIdAndClienteId(direccionId, clienteId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Dirección no encontrada con id " + direccionId + " para el cliente " + clienteId));
-    }
-
-    /**
-     * Crear una dirección para un cliente.
-     */
-    @Transactional
-    public DireccionCliente crearDireccion(Long negocioId, Long clienteId,
-                                            DireccionClienteCreateRequest request) {
-        obtenerCliente(negocioId, clienteId);
-
-        if (request.getDireccion() == null || request.getDireccion().isBlank()) {
-            throw new RuntimeException("La dirección es obligatoria");
-        }
-
-        DireccionCliente direccion = new DireccionCliente();
-        direccion.setClienteId(clienteId);
-        direccion.setEtiqueta(request.getEtiqueta());
-        direccion.setDireccion(request.getDireccion());
-        direccion.setDireccion2(request.getDireccion2());
-        direccion.setCiudad(request.getCiudad());
-        direccion.setDepartamento(request.getDepartamento());
-        if (request.getPais() != null) direccion.setPais(request.getPais());
-        direccion.setCodigoPostal(request.getCodigoPostal());
-        direccion.setLatitud(request.getLatitud());
-        direccion.setLongitud(request.getLongitud());
-        direccion.setReferencia(request.getReferencia());
-        direccion.setTelefonoContacto(request.getTelefonoContacto());
-        if (request.getEsPredeterminado() != null) {
-            direccion.setEsPredeterminado(request.getEsPredeterminado());
-        }
-
-        return direccionRepository.save(direccion);
-    }
-
-    /**
-     * Actualizar una dirección de un cliente.
-     */
-    @Transactional
-    public DireccionCliente actualizarDireccion(Long negocioId, Long clienteId, Long direccionId,
-                                                 DireccionClienteUpdateRequest request) {
-        DireccionCliente direccion = obtenerDireccion(negocioId, clienteId, direccionId);
-
-        if (request.getEtiqueta() != null) direccion.setEtiqueta(request.getEtiqueta());
-        if (request.getDireccion() != null) direccion.setDireccion(request.getDireccion());
-        if (request.getDireccion2() != null) direccion.setDireccion2(request.getDireccion2());
-        if (request.getCiudad() != null) direccion.setCiudad(request.getCiudad());
-        if (request.getDepartamento() != null) direccion.setDepartamento(request.getDepartamento());
-        if (request.getPais() != null) direccion.setPais(request.getPais());
-        if (request.getCodigoPostal() != null) direccion.setCodigoPostal(request.getCodigoPostal());
-        if (request.getLatitud() != null) direccion.setLatitud(request.getLatitud());
-        if (request.getLongitud() != null) direccion.setLongitud(request.getLongitud());
-        if (request.getReferencia() != null) direccion.setReferencia(request.getReferencia());
-        if (request.getTelefonoContacto() != null) direccion.setTelefonoContacto(request.getTelefonoContacto());
-        if (request.getEsPredeterminado() != null) direccion.setEsPredeterminado(request.getEsPredeterminado());
-
-        return direccionRepository.save(direccion);
-    }
-
-    /**
-     * Eliminar dirección (borrado lógico vía @SQLDelete).
-     */
-    @Transactional
-    public void eliminarDireccion(Long negocioId, Long clienteId, Long direccionId) {
-        DireccionCliente direccion = obtenerDireccion(negocioId, clienteId, direccionId);
-        direccionRepository.delete(direccion);
     }
 
     // ============================================================

@@ -32,22 +32,19 @@ public class TransferenciaInventarioService {
     private final MovimientoInventarioRepository movimientoRepository;
     private final ProductoRepository productoRepository;
     private final AlmacenRepository almacenRepository;
-    private final AlertaInventarioService alertaService;
 
     public TransferenciaInventarioService(TransferenciaInventarioRepository transferenciaRepository,
                                            StockInventarioRepository stockRepository,
                                            LoteInventarioRepository loteRepository,
                                            MovimientoInventarioRepository movimientoRepository,
                                            ProductoRepository productoRepository,
-                                           AlmacenRepository almacenRepository,
-                                           AlertaInventarioService alertaService) {
+                                           AlmacenRepository almacenRepository) {
         this.transferenciaRepository = transferenciaRepository;
         this.stockRepository = stockRepository;
         this.loteRepository = loteRepository;
         this.movimientoRepository = movimientoRepository;
         this.productoRepository = productoRepository;
         this.almacenRepository = almacenRepository;
-        this.alertaService = alertaService;
     }
 
     /** Listar todas las transferencias del negocio */
@@ -176,12 +173,6 @@ public class TransferenciaInventarioService {
         trans.setDespachadoEn(LocalDateTime.now());
 
         TransferenciaInventario guardada = transferenciaRepository.save(trans);
-
-        // Verificar alertas en almacén origen
-        Almacen origen = trans.getAlmacenOrigen();
-        for (DetalleTransferenciaInventario detalle : trans.getDetalles()) {
-            alertaService.verificarAlertas(negocioId, detalle.getProducto(), origen);
-        }
 
         return convertirAResponse(guardada);
     }
