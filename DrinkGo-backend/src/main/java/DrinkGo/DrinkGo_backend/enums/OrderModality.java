@@ -2,7 +2,7 @@ package DrinkGo.DrinkGo_backend.enums;
 
 /**
  * Enum para modalidad de pedido
- * Tipo PostgreSQL: drinkgo.order_modality
+ * Corresponde al campo tipo_pedido en tabla pedidos
  */
 public enum OrderModality {
     delivery,
