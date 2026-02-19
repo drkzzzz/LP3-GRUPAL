@@ -2,7 +2,7 @@ package DrinkGo.DrinkGo_backend.enums;
 
 /**
  * Enum para método de pago
- * Tipo PostgreSQL: drinkgo.payment_method
+ * Usado en pagos de ventas y pedidos
  */
 public enum PaymentMethod {
     efectivo,

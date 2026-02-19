@@ -270,6 +270,24 @@ CREATE TABLE usuarios_roles (
     INDEX idx_usrrol_usuario (usuario_id)
 ) ENGINE=InnoDB COMMENT='Roles asignados a usuarios (RF-ADM-014)';
 
+CREATE TABLE sesiones_usuario (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    usuario_id BIGINT UNSIGNED NOT NULL,
+    hash_token VARCHAR(500) NOT NULL UNIQUE COMMENT 'Token JWT hasheado',
+    direccion_ip VARCHAR(45) NULL,
+    agente_usuario VARCHAR(500) NULL,
+    info_dispositivo VARCHAR(200) NULL,
+    expira_en TIMESTAMP NOT NULL,
+    ultima_actividad_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    esta_activo TINYINT(1) NOT NULL DEFAULT 1,
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sesus_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    INDEX idx_sesus_usuario (usuario_id),
+    INDEX idx_sesus_token (hash_token),
+    INDEX idx_sesus_activo (esta_activo),
+    INDEX idx_sesus_expira (expira_en)
+) ENGINE=InnoDB COMMENT='Sesiones de usuario para autenticación JWT (RF-ADM-020)';
+
 -- ============================================================
 -- 2.5 AUDITORÍA
 -- ============================================================
