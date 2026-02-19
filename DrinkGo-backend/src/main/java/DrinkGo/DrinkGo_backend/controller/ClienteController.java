@@ -20,10 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import DrinkGo.DrinkGo_backend.dto.ClienteCreateRequest;
 import DrinkGo.DrinkGo_backend.dto.ClienteUpdateRequest;
-import DrinkGo.DrinkGo_backend.dto.DireccionClienteCreateRequest;
-import DrinkGo.DrinkGo_backend.dto.DireccionClienteUpdateRequest;
 import DrinkGo.DrinkGo_backend.entity.Cliente;
-import DrinkGo.DrinkGo_backend.entity.DireccionCliente;
 import DrinkGo.DrinkGo_backend.service.ClienteService;
 import DrinkGo.DrinkGo_backend.service.UsuarioService;
 
@@ -31,7 +28,6 @@ import DrinkGo.DrinkGo_backend.service.UsuarioService;
  * Controlador de Clientes - Bloque 7.
  * Todos los endpoints requieren JWT.
  * CRUD completo: GET, POST, PUT, DELETE (borrado lógico).
- * Incluye sub-recurso de direcciones.
  * Implementa RF-CLI-001 a RF-CLI-005.
  */
 @RestController
@@ -129,98 +125,6 @@ public class ClienteController {
 
             Map<String, String> response = new HashMap<>();
             response.put("mensaje", "Cliente eliminado exitosamente (borrado lógico)");
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return errorResponse(e.getMessage());
-        }
-    }
-
-    // ============================================================
-    // CRUD DIRECCIONES DE CLIENTE (sub-recurso)
-    // ============================================================
-
-    /**
-     * GET /restful/clientes/{clienteId}/direcciones
-     * Listar direcciones de un cliente.
-     */
-    @GetMapping("/{clienteId}/direcciones")
-    public ResponseEntity<?> listarDirecciones(@PathVariable Long clienteId) {
-        try {
-            Long negocioId = obtenerNegocioId();
-            List<DireccionCliente> direcciones = clienteService.listarDirecciones(negocioId, clienteId);
-            return ResponseEntity.ok(direcciones);
-        } catch (RuntimeException e) {
-            return errorResponse(e.getMessage());
-        }
-    }
-
-    /**
-     * GET /restful/clientes/{clienteId}/direcciones/{id}
-     * Obtener una dirección específica.
-     */
-    @GetMapping("/{clienteId}/direcciones/{id}")
-    public ResponseEntity<?> obtenerDireccion(@PathVariable Long clienteId, @PathVariable Long id) {
-        try {
-            Long negocioId = obtenerNegocioId();
-            DireccionCliente direccion = clienteService.obtenerDireccion(negocioId, clienteId, id);
-            return ResponseEntity.ok(direccion);
-        } catch (RuntimeException e) {
-            return errorResponse(e.getMessage());
-        }
-    }
-
-    /**
-     * POST /restful/clientes/{clienteId}/direcciones
-     * Crear una dirección para un cliente.
-     */
-    @PostMapping("/{clienteId}/direcciones")
-    public ResponseEntity<?> crearDireccion(@PathVariable Long clienteId,
-                                             @RequestBody DireccionClienteCreateRequest request) {
-        try {
-            Long negocioId = obtenerNegocioId();
-            DireccionCliente direccion = clienteService.crearDireccion(negocioId, clienteId, request);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("mensaje", "Dirección creada exitosamente");
-            response.put("direccion", direccion);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (RuntimeException e) {
-            return errorResponse(e.getMessage());
-        }
-    }
-
-    /**
-     * PUT /restful/clientes/{clienteId}/direcciones/{id}
-     * Actualizar una dirección de un cliente.
-     */
-    @PutMapping("/{clienteId}/direcciones/{id}")
-    public ResponseEntity<?> actualizarDireccion(@PathVariable Long clienteId, @PathVariable Long id,
-                                                  @RequestBody DireccionClienteUpdateRequest request) {
-        try {
-            Long negocioId = obtenerNegocioId();
-            DireccionCliente direccion = clienteService.actualizarDireccion(negocioId, clienteId, id, request);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("mensaje", "Dirección actualizada exitosamente");
-            response.put("direccion", direccion);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return errorResponse(e.getMessage());
-        }
-    }
-
-    /**
-     * DELETE /restful/clientes/{clienteId}/direcciones/{id}
-     * Eliminar dirección (borrado lógico).
-     */
-    @DeleteMapping("/{clienteId}/direcciones/{id}")
-    public ResponseEntity<?> eliminarDireccion(@PathVariable Long clienteId, @PathVariable Long id) {
-        try {
-            Long negocioId = obtenerNegocioId();
-            clienteService.eliminarDireccion(negocioId, clienteId, id);
-
-            Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Dirección eliminada exitosamente (borrado lógico)");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());

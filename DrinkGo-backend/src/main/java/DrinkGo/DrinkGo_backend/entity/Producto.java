@@ -25,6 +25,9 @@ public class Producto {
     @Column(name = "nombre", nullable = false)
     private String nombre;
 
+    @Column(name = "url_imagen", length = 500)
+    private String urlImagen;
+
     @Column(name = "stock_minimo", nullable = false)
     private Integer stockMinimo;
 
@@ -62,6 +65,9 @@ public class Producto {
 
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
+
+    public String getUrlImagen() { return urlImagen; }
+    public void setUrlImagen(String urlImagen) { this.urlImagen = urlImagen; }
 
     public Integer getStockMinimo() { return stockMinimo; }
     public void setStockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; }

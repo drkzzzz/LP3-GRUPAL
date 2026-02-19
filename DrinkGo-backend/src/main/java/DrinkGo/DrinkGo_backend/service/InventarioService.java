@@ -42,9 +42,6 @@ public class InventarioService {
     @Autowired
     private MovimientoInventarioRepository movimientoRepository;
 
-    @Autowired
-    private AlertaInventarioService alertaService;
-
     // ============================================================
     // STOCK (RF-INV-001)
     // ============================================================
@@ -170,9 +167,6 @@ public class InventarioService {
         movimiento.setMotivo("Entrada de lote: " + request.getNumeroLote());
         movimientoRepository.save(movimiento);
 
-        // Verificar alertas después de la entrada
-        alertaService.verificarAlertasProducto(negocioId, request.getProductoId(), request.getAlmacenId());
-
         return loteGuardado;
     }
 
@@ -268,9 +262,6 @@ public class InventarioService {
 
         stock.setUltimoMovimientoEn(LocalDateTime.now());
         stockRepository.save(stock);
-
-        // Verificar alertas después del consumo
-        alertaService.verificarAlertasProducto(negocioId, productoId, almacenId);
     }
 
     // ============================================================
@@ -344,7 +335,6 @@ public class InventarioService {
                 MovimientoInventario movimiento = crearMovimiento(negocioId, request, -cantidadAbsoluta, realizadoPor);
                 movimiento = movimientoRepository.save(movimiento);
 
-                alertaService.verificarAlertasProducto(negocioId, request.getProductoId(), request.getAlmacenId());
                 return movimiento;
 
             } else {
@@ -389,7 +379,6 @@ public class InventarioService {
             MovimientoInventario movimiento = crearMovimiento(negocioId, request, cantidadAbsoluta, realizadoPor);
             movimiento = movimientoRepository.save(movimiento);
 
-            alertaService.verificarAlertasProducto(negocioId, request.getProductoId(), request.getAlmacenId());
             return movimiento;
 
         } else {

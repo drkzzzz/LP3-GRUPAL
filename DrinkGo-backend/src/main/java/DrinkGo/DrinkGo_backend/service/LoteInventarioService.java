@@ -31,20 +31,17 @@ public class LoteInventarioService {
     private final MovimientoInventarioRepository movimientoRepository;
     private final ProductoRepository productoRepository;
     private final AlmacenRepository almacenRepository;
-    private final AlertaInventarioService alertaService;
 
     public LoteInventarioService(LoteInventarioRepository loteRepository,
                                   StockInventarioRepository stockRepository,
                                   MovimientoInventarioRepository movimientoRepository,
                                   ProductoRepository productoRepository,
-                                  AlmacenRepository almacenRepository,
-                                  AlertaInventarioService alertaService) {
+                                  AlmacenRepository almacenRepository) {
         this.loteRepository = loteRepository;
         this.stockRepository = stockRepository;
         this.movimientoRepository = movimientoRepository;
         this.productoRepository = productoRepository;
         this.almacenRepository = almacenRepository;
-        this.alertaService = alertaService;
     }
 
     /** Listar todos los lotes del negocio */
@@ -110,9 +107,6 @@ public class LoteInventarioService {
                 request.getCantidadInicial(), request.getPrecioCompra(),
                 "lote_inventario", guardado.getId(),
                 "Entrada de lote " + request.getNumeroLote(), usuarioId);
-
-        // Verificar alertas automáticas
-        alertaService.verificarAlertas(negocioId, producto, almacen);
 
         return convertirAResponse(guardado);
     }
