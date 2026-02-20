@@ -411,9 +411,6 @@ CREATE TABLE zonas_delivery (
     descripcion VARCHAR(300) NULL,
     tarifa_delivery DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     monto_minimo_pedido DECIMAL(10,2) NULL,
-    minutos_estimados_entrega INT UNSIGNED NULL,
-    coordenadas_poligono JSON NULL COMMENT 'Coordenadas GeoJSON del polígono',
-    radio_km DECIMAL(6,2) NULL COMMENT 'Radio en km si es circular',
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -440,19 +437,6 @@ CREATE TABLE mesas (
     INDEX idx_mesa_sede (sede_id),
     INDEX idx_mesa_estado (sede_id, estado)
 ) ENGINE=InnoDB COMMENT='Mesas por sede - Sistema minimalista (RF-ADM-010)';
-
--- ============================================================
--- 3.7 CONFIGURACIÓN POR NEGOCIO (Tabla eliminada)
--- ============================================================
--- Tabla configuracion_negocio: ELIMINADA
--- Nota: La configuración específica se maneja a nivel de plataforma o en campos JSON de otras tablas
-
--- ============================================================
--- 3.8 NOTIFICACIONES (Tablas eliminadas)
--- ============================================================
--- Tabla plantillas_notificacion: ELIMINADA
--- Tabla notificaciones: ELIMINADA
--- Nota: El sistema de notificaciones se implementará en un bloque específico futuro
 
 -- ============================================================
 -- 3.9 MÉTODOS DE PAGO POR NEGOCIO
@@ -594,7 +578,6 @@ CREATE TABLE productos (
     peso_kg DECIMAL(8,3) NULL,
     alto_cm DECIMAL(6,2) NULL,
     ancho_cm DECIMAL(6,2) NULL,
-    profundidad_cm DECIMAL(6,2) NULL,
 
     -- Visibilidad y flags
     visible_pos TINYINT(1) NOT NULL DEFAULT 1,
@@ -603,12 +586,6 @@ CREATE TABLE productos (
     requiere_verificacion_edad TINYINT(1) NOT NULL DEFAULT 0,
     permite_descuento TINYINT(1) NOT NULL DEFAULT 1,
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-
-    -- SEO Tienda online
-    meta_titulo VARCHAR(200) NULL,
-    meta_descripcion VARCHAR(500) NULL,
-    meta_palabras_clave VARCHAR(300) NULL,
-
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     eliminado_en TIMESTAMP NULL,
@@ -830,7 +807,6 @@ CREATE TABLE ordenes_compra (
     monto_impuesto DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     monto_descuento DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-    moneda VARCHAR(3) NOT NULL DEFAULT 'PEN',
     fecha_entrega_esperada DATE NULL,
     fecha_entrega_real DATE NULL,
     plazo_pago_dias INT UNSIGNED NULL,
@@ -866,6 +842,8 @@ CREATE TABLE detalle_ordenes_compra (
     producto_id BIGINT UNSIGNED NOT NULL,
     cantidad_ordenada INT NOT NULL,
     cantidad_recibida INT NOT NULL DEFAULT 0,
+    cantidad_rechazada INT NOT NULL DEFAULT 0 COMMENT 'Productos rechazados por daños o defectos',
+    razon_rechazo VARCHAR(300) NULL COMMENT 'Motivo del rechazo de productos',
     precio_unitario DECIMAL(10,2) NOT NULL,
     tasa_impuesto DECIMAL(5,2) NOT NULL DEFAULT 18.00,
     monto_impuesto DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -877,40 +855,7 @@ CREATE TABLE detalle_ordenes_compra (
     CONSTRAINT fk_detordcom_producto FOREIGN KEY (producto_id) REFERENCES productos(id),
     INDEX idx_detordcom_orden (orden_compra_id),
     INDEX idx_detordcom_producto (producto_id)
-) ENGINE=InnoDB COMMENT='Items de orden de compra';
-
-CREATE TABLE recepciones_compra (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    negocio_id BIGINT UNSIGNED NOT NULL,
-    orden_compra_id BIGINT UNSIGNED NOT NULL,
-    numero_recepcion VARCHAR(30) NOT NULL,
-    recibido_por BIGINT UNSIGNED NULL,
-    fecha_recepcion DATE NOT NULL,
-    notas TEXT NULL,
-    estado ENUM('pendiente','parcial','completada') NOT NULL DEFAULT 'pendiente',
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_reccom_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    CONSTRAINT fk_reccom_orden FOREIGN KEY (orden_compra_id) REFERENCES ordenes_compra(id),
-    CONSTRAINT fk_reccom_usuario FOREIGN KEY (recibido_por) REFERENCES usuarios(id),
-    UNIQUE KEY uk_reccom_negocio_numero (negocio_id, numero_recepcion),
-    INDEX idx_reccom_orden (orden_compra_id)
-) ENGINE=InnoDB COMMENT='Recepciones de mercadería';
-
-CREATE TABLE detalle_recepciones_compra (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    recepcion_id BIGINT UNSIGNED NOT NULL,
-    detalle_orden_compra_id BIGINT UNSIGNED NOT NULL,
-    producto_id BIGINT UNSIGNED NOT NULL,
-    lote_id BIGINT UNSIGNED NULL,
-    cantidad_recibida INT NOT NULL,
-    cantidad_rechazada INT NOT NULL DEFAULT 0,
-    razon_rechazo VARCHAR(300) NULL,
-    CONSTRAINT fk_detreccom_recepcion FOREIGN KEY (recepcion_id) REFERENCES recepciones_compra(id) ON DELETE CASCADE,
-    CONSTRAINT fk_detreccom_detorden FOREIGN KEY (detalle_orden_compra_id) REFERENCES detalle_ordenes_compra(id),
-    CONSTRAINT fk_detreccom_producto FOREIGN KEY (producto_id) REFERENCES productos(id),
-    CONSTRAINT fk_detreccom_lote FOREIGN KEY (lote_id) REFERENCES lotes_inventario(id),
-    INDEX idx_detreccom_recepcion (recepcion_id)
-) ENGINE=InnoDB COMMENT='Items recibidos por recepción';
+) ENGINE=InnoDB COMMENT='Items de orden de compra con recepción con recepción';
 
 -- ============================================================
 -- BLOQUE 7: CLIENTES
@@ -934,8 +879,6 @@ CREATE TABLE clientes (
     total_pedidos INT UNSIGNED NOT NULL DEFAULT 0,
     -- Estado
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
-    notas TEXT NULL,
-    ultima_compra_en TIMESTAMP NULL,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_cli_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
@@ -1041,7 +984,6 @@ CREATE TABLE ventas (
     monto_impuesto DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     costo_envio DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Tarifa de delivery/envío',
     total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-    moneda VARCHAR(3) NOT NULL DEFAULT 'PEN',
 
     -- Estado
     estado ENUM('pendiente','completada','parcialmente_pagada','cancelada','reembolsada','anulada') NOT NULL DEFAULT 'pendiente',
@@ -1055,11 +997,6 @@ CREATE TABLE ventas (
     doc_cliente_numero VARCHAR(20) NULL COMMENT 'DNI, RUC, Pasaporte o CE del cliente',
     doc_cliente_nombre VARCHAR(200) NULL COMMENT 'Nombre completo o Razón Social del cliente',
 
-    -- Descuentos y cupones (e-commerce)
-    codigo_cupon VARCHAR(50) NULL COMMENT 'Código de cupón aplicado',
-
-    notas TEXT NULL COMMENT 'Notas del cliente o instrucciones especiales',
-    notas_internas TEXT NULL,
     completado_en DATETIME NULL,
     cancelado_en DATETIME NULL,
     razon_cancelacion VARCHAR(500) NULL,
@@ -1553,14 +1490,6 @@ CREATE TABLE condiciones_promocion (
     INDEX idx_condpromo_promocion (promocion_id),
     INDEX idx_condpromo_entidad (tipo_entidad, entidad_id)
 ) ENGINE=InnoDB COMMENT='Condiciones de aplicación de promociones';
-
-CREATE TABLE promociones_sedes (
-    promocion_id BIGINT UNSIGNED NOT NULL,
-    sede_id BIGINT UNSIGNED NOT NULL,
-    PRIMARY KEY (promocion_id, sede_id),
-    CONSTRAINT fk_promosede_promocion FOREIGN KEY (promocion_id) REFERENCES promociones(id) ON DELETE CASCADE,
-    CONSTRAINT fk_promosede_sede FOREIGN KEY (sede_id) REFERENCES sedes(id)
-) ENGINE=InnoDB COMMENT='Sedes donde aplica la promoción';
 
 -- ============================================================
 -- BLOQUE 14: TIENDA ONLINE (STOREFRONT)
