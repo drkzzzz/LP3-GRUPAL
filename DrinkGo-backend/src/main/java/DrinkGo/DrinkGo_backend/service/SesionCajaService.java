@@ -150,6 +150,28 @@ public class SesionCajaService {
         sesionRepository.save(sesion);
         return convertirADTO(sesion);
     }
+    
+    /** Actualizar sesión de caja (solo si está abierta) */
+    @Transactional
+    public SesionCajaDTO actualizar(Long sesionId, AbrirSesionCajaRequest request, Long negocioId) {
+        SesionCaja sesion = sesionRepository.findByIdAndNegocioId(sesionId, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Sesión de caja", sesionId));
+
+        if (!sesion.getEstaAbierta()) {
+            throw new OperacionInvalidaException("Solo se pueden actualizar sesiones abiertas");
+        }
+
+        // Actualizar campos permitidos
+        if (request.getMontoInicial() != null) {
+            sesion.setMontoInicial(request.getMontoInicial());
+        }
+        if (request.getObservacionesApertura() != null) {
+            sesion.setObservacionesApertura(request.getObservacionesApertura());
+        }
+
+        sesionRepository.save(sesion);
+        return convertirADTO(sesion);
+    }
 
     /** Eliminar sesión (soft delete) - solo si no tiene ventas */
     @Transactional

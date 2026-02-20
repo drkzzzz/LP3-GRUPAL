@@ -26,6 +26,12 @@ public class UsuarioSedeController {
         this.usuarioService = usuarioService;
     }
 
+    @GetMapping
+    public ResponseEntity<List<UsuarioSede>> listarTodos() {
+        verificarAutenticacion();
+        return ResponseEntity.ok(usuarioSedeService.findAll());
+    }
+
     @GetMapping("/usuario/{usuarioId}")
     public ResponseEntity<List<UsuarioSede>> listarPorUsuario(@PathVariable Long usuarioId) {
         verificarAutenticacion();
@@ -48,6 +54,12 @@ public class UsuarioSedeController {
     public ResponseEntity<UsuarioSede> crear(@RequestBody UsuarioSede usuarioSede) {
         verificarAutenticacion();
         return ResponseEntity.ok(usuarioSedeService.crear(usuarioSede));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UsuarioSede> actualizar(@PathVariable Long id, @RequestBody UsuarioSede usuarioSede) {
+        verificarAutenticacion();
+        return ResponseEntity.ok(usuarioSedeService.actualizar(id, usuarioSede));
     }
 
     @PutMapping("/establecer-predeterminada")

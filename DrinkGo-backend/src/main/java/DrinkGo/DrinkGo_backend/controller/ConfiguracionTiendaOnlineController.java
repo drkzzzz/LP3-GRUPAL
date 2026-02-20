@@ -24,6 +24,20 @@ public class ConfiguracionTiendaOnlineController {
     }
 
     /**
+     * GET /api/tienda-online/configuracion/{id}
+     * Obtener configuración de tienda online por ID
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<ConfiguracionTiendaOnline> obtenerPorId(@PathVariable Long id) {
+        try {
+            ConfiguracionTiendaOnline configuracion = configuracionService.obtenerPorId(id);
+            return ResponseEntity.ok(configuracion);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+    /**
      * GET /api/tienda-online/configuracion?negocioId={negocioId}
      * Obtener configuración de la tienda online por negocio
      */
@@ -107,5 +121,20 @@ public class ConfiguracionTiendaOnlineController {
     public ResponseEntity<Map<String, Boolean>> existeConfiguracion(@RequestParam Long negocioId) {
         boolean existe = configuracionService.existeConfiguracion(negocioId);
         return ResponseEntity.ok(Map.of("existe", existe));
+    }
+
+    /**
+     * DELETE /api/tienda-online/configuracion/{id}
+     * Eliminar configuración de tienda online
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminar(@PathVariable Long id, @RequestParam Long negocioId) {
+        try {
+            configuracionService.eliminar(id, negocioId);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }

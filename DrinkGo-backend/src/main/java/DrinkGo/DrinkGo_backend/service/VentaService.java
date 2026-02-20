@@ -249,6 +249,47 @@ public class VentaService {
 
         return convertirADTO(venta);
     }
+    
+    /** Actualizar venta completa */
+    @Transactional
+    public VentaDTO actualizar(Long negocioId, Long id, VentaCreateRequest request) {
+        Venta venta = ventaRepository.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Venta", id));
+        
+        // Actualizar campos permitidos
+        if (request.getClienteId() != null) {
+            venta.setClienteId(request.getClienteId());
+        }
+        if (request.getObservaciones() != null) {
+            venta.setObservaciones(request.getObservaciones());
+        }
+        if (request.getTipoComprobante() != null) {
+            venta.setTipoComprobante(request.getTipoComprobante());
+        }
+        if (request.getDireccionEntrega() != null) {
+            venta.setDireccionEntrega(request.getDireccionEntrega());
+        }
+        if (request.getTelefonoEntrega() != null) {
+            venta.setTelefonoEntrega(request.getTelefonoEntrega());
+        }
+        
+        ventaRepository.save(venta);
+        return convertirADTO(venta);
+    }
+    
+    /** Eliminar venta (soft delete) */
+    @Transactional
+    public void eliminar(Long negocioId, Long id) {
+        Venta venta = ventaRepository.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Venta", id));
+        
+        if (!"PENDIENTE".equals(venta.getEstado())) {
+            throw new OperacionInvalidaException("Solo se pueden eliminar ventas en estado PENDIENTE");
+        }
+        
+        venta.setEstado("ELIMINADO");
+        ventaRepository.save(venta);
+    }
 
     // ============================================================
     // WRAPPERS PARA CONTROLADORES

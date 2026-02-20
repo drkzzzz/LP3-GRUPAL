@@ -28,6 +28,11 @@ public class DetalleComboService {
     }
 
     @Transactional(readOnly = true)
+    public List<DetalleCombo> findAll() {
+        return detalleComboRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
     public Optional<DetalleCombo> findById(Long id) {
         return detalleComboRepository.findById(id);
     }

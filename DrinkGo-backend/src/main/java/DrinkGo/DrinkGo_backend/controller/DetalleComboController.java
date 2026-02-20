@@ -19,6 +19,11 @@ public class DetalleComboController {
         this.detalleComboService = detalleComboService;
     }
 
+    @GetMapping
+    public ResponseEntity<List<DetalleCombo>> listarTodos() {
+        return ResponseEntity.ok(detalleComboService.findAll());
+    }
+
     @GetMapping("/combo/{comboId}")
     public ResponseEntity<List<DetalleCombo>> listarPorCombo(@PathVariable Long comboId) {
         return ResponseEntity.ok(detalleComboService.findByCombo(comboId));

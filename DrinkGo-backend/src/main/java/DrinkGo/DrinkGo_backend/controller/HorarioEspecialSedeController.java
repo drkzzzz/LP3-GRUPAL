@@ -28,6 +28,12 @@ public class HorarioEspecialSedeController {
         this.usuarioService = usuarioService;
     }
 
+    @GetMapping
+    public ResponseEntity<List<HorarioEspecialSede>> listarTodos() {
+        verificarAutenticacion();
+        return ResponseEntity.ok(horarioEspecialService.findAll());
+    }
+
     @GetMapping("/sede/{sedeId}")
     public ResponseEntity<List<HorarioEspecialSede>> listarPorSede(@PathVariable Long sedeId) {
         verificarAutenticacion();

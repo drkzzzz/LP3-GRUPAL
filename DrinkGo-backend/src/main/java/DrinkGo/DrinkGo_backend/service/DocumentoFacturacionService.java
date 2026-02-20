@@ -634,6 +634,57 @@ public class DocumentoFacturacionService {
     public DocumentoFacturacionResponse consultarEstado(Long id, Long negocioId) {
         return obtenerPorId(id, negocioId);
     }
+    
+    /**
+     * Actualizar documento de facturación (solo en estado borrador).
+     */
+    @Transactional
+    public DocumentoFacturacionResponse actualizar(Long id, Long negocioId, CreateDocumentoFacturacionRequest request) {
+        DocumentoFacturacion documento = documentoRepository.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Documento de facturación", id));
+        
+        // Solo se pueden editar documentos en estado borrador
+        if (documento.getEstado() != DocumentoFacturacion.EstadoDocumento.borrador) {
+            throw new OperacionInvalidaException("Solo se pueden editar documentos en estado borrador");
+        }
+        
+        // Actualizar campos permitidos
+        if (request.getNombreReceptor() != null) {
+            documento.setNombreReceptor(request.getNombreReceptor());
+        }
+        if (request.getNumeroDocumentoReceptor() != null) {
+            documento.setNumeroDocumentoReceptor(request.getNumeroDocumentoReceptor());
+        }
+        if (request.getDireccionReceptor() != null) {
+            documento.setDireccionReceptor(request.getDireccionReceptor());
+        }
+        
+        documentoRepository.save(documento);
+        
+        List<DetalleDocumentoFacturacion> detalles = 
+                detalleRepository.findByDocumentoIdOrderByNumeroItemAsc(documento.getId());
+        return convertirAResponse(documento, detalles);
+    }
+    
+    /**
+     * Eliminar documento de facturación (solo en estado borrador).
+     */
+    @Transactional
+    public void eliminar(Long id, Long negocioId) {
+        DocumentoFacturacion documento = documentoRepository.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Documento de facturación", id));
+        
+        // Solo se pueden eliminar documentos en estado borrador
+        if (documento.getEstado() != DocumentoFacturacion.EstadoDocumento.borrador) {
+            throw new OperacionInvalidaException("Solo se pueden eliminar documentos en estado borrador");
+        }
+        
+        // Eliminar detalles primero
+        detalleRepository.deleteByDocumentoId(documento.getId());
+        
+        // Eliminar documento
+        documentoRepository.delete(documento);
+    }
 
     // ==================================================================================
     // REIMPRESIÓN / PDF SIMULADO

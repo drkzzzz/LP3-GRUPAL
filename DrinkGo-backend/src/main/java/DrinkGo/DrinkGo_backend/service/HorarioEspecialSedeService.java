@@ -27,6 +27,11 @@ public class HorarioEspecialSedeService {
         return horarioEspecialRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Horario especial no encontrado"));
     }
+    
+    @Transactional(readOnly = true)
+    public List<HorarioEspecialSede> findAll() {
+        return horarioEspecialRepository.findAll();
+    }
 
     @Transactional(readOnly = true)
     public List<HorarioEspecialSede> findBySedeEnRango(Long sedeId, LocalDate inicio, LocalDate fin) {

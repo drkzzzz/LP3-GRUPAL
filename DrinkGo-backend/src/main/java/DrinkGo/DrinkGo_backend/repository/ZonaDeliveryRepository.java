@@ -12,6 +12,8 @@ import java.util.Optional;
 @Repository
 public interface ZonaDeliveryRepository extends JpaRepository<ZonaDelivery, Long> {
     
+    List<ZonaDelivery> findByTenantId(Long tenantId);
+    
     List<ZonaDelivery> findByTenantIdAndSedeIdAndActivoTrue(Long tenantId, Long sedeId);
     
     List<ZonaDelivery> findByTenantIdAndSedeId(Long tenantId, Long sedeId);

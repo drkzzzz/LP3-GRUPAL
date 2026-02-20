@@ -147,6 +147,26 @@ public class SesionCajaController {
     }
 
     /**
+     * PUT /api/sesiones/{id} - Actualizar sesión de caja
+     * Permite actualizar montos y observaciones de una sesión abierta
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizar(@PathVariable Long id, @RequestBody AbrirSesionCajaRequest request) {
+        try {
+            Long negocioId = obtenerNegocioId();
+            SesionCajaDTO sesion = sesionService.actualizar(id, request, negocioId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("mensaje", "Sesión de caja actualizada exitosamente");
+            response.put("sesion", sesion);
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return errorResponse(e.getMessage());
+        }
+    }
+
+    /**
      * DELETE /api/sesiones/{id} - Eliminar sesión (solo si no está cerrada)
      */
     @DeleteMapping("/{id}")

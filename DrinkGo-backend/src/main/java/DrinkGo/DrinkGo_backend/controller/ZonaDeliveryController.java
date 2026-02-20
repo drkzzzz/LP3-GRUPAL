@@ -17,6 +17,13 @@ public class ZonaDeliveryController {
     @Autowired
     private ZonaDeliveryService zonaDeliveryService;
     
+    // Listar todas las zonas del negocio
+    @GetMapping
+    public ResponseEntity<List<ZonaDeliveryDTO>> listarTodasZonas(@PathVariable Long tenantId) {
+        List<ZonaDeliveryDTO> zonas = zonaDeliveryService.listarZonasPorNegocio(tenantId);
+        return ResponseEntity.ok(zonas);
+    }
+    
     // Crear zona de delivery
     @PostMapping
     public ResponseEntity<ZonaDeliveryDTO> crearZona(

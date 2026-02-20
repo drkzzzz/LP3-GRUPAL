@@ -224,6 +224,53 @@ public class DocumentoFacturacionController {
     }
 
     /**
+     * PUT /restful/facturacion/{id} - Actualizar documento de facturación
+     * Solo se pueden editar documentos en estado 'borrador'
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarDocumento(
+            @PathVariable Long id,
+            @RequestParam(name = "negocioId", required = true) Long negocioId,
+            @RequestBody CreateDocumentoFacturacionRequest request) {
+        try {
+            DocumentoFacturacionResponse documento = documentoService.actualizar(id, negocioId, request);
+            return ResponseEntity.ok(documento);
+        } catch (RecursoNoEncontradoException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (OperacionInvalidaException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al actualizar documento de facturación"));
+        }
+    }
+
+    /**
+     * DELETE /restful/facturacion/{id} - Eliminar documento de facturación
+     * Solo se pueden eliminar documentos en estado 'borrador'
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarDocumento(
+            @PathVariable Long id,
+            @RequestParam(name = "negocioId", required = true) Long negocioId) {
+        try {
+            documentoService.eliminar(id, negocioId);
+            return ResponseEntity.noContent().build();
+        } catch (RecursoNoEncontradoException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (OperacionInvalidaException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al eliminar documento de facturación"));
+        }
+    }
+
+    /**
      * Generar/obtener PDF simulado del documento.
      * Retorna URL simulada de descarga.
      */
