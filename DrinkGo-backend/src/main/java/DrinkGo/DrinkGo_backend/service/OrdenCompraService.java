@@ -272,6 +272,7 @@ public class OrdenCompraService {
 
     /**
      * Crear un DetalleOrdenCompra a partir del DTO y calcular montos.
+     * Incluye mapeo de campos de recepción simplificados.
      */
     private DetalleOrdenCompra crearDetalleItem(Long ordenId, DetalleOrdenCompraRequest itemReq) {
         if (itemReq.getProductoId() == null) {
@@ -288,6 +289,17 @@ public class OrdenCompraService {
         item.setOrdenCompraId(ordenId);
         item.setProductoId(itemReq.getProductoId());
         item.setCantidadOrdenada(itemReq.getCantidadOrdenada());
+
+        // Mapeo de campos de recepción (opcionales)
+        if (itemReq.getCantidadRecibida() != null) {
+            item.setCantidadRecibida(itemReq.getCantidadRecibida());
+        }
+        if (itemReq.getCantidadRechazada() != null) {
+            item.setCantidadRechazada(itemReq.getCantidadRechazada());
+        }
+        if (itemReq.getRazonRechazo() != null) {
+            item.setRazonRechazo(itemReq.getRazonRechazo());
+        }
 
         BigDecimal precioUnitario = itemReq.getPrecioUnitario();
         item.setPrecioUnitario(precioUnitario);

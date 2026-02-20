@@ -33,6 +33,12 @@ public class DetalleOrdenCompra {
     @Column(name = "cantidad_recibida", nullable = false)
     private Integer cantidadRecibida = 0;
 
+    @Column(name = "cantidad_rechazada", nullable = false)
+    private Integer cantidadRechazada = 0;
+
+    @Column(name = "razon_rechazo", length = 300)
+    private String razonRechazo;
+
     @Column(name = "precio_unitario", nullable = false, precision = 10, scale = 2)
     private BigDecimal precioUnitario;
 
@@ -70,6 +76,12 @@ public class DetalleOrdenCompra {
 
     public Integer getCantidadRecibida() { return cantidadRecibida; }
     public void setCantidadRecibida(Integer cantidadRecibida) { this.cantidadRecibida = cantidadRecibida; }
+
+    public Integer getCantidadRechazada() { return cantidadRechazada; }
+    public void setCantidadRechazada(Integer cantidadRechazada) { this.cantidadRechazada = cantidadRechazada; }
+
+    public String getRazonRechazo() { return razonRechazo; }
+    public void setRazonRechazo(String razonRechazo) { this.razonRechazo = razonRechazo; }
 
     public BigDecimal getPrecioUnitario() { return precioUnitario; }
     public void setPrecioUnitario(BigDecimal precioUnitario) { this.precioUnitario = precioUnitario; }
