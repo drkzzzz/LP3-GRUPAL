@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
  * - Boletas: prefijo debe empezar con 'B' (ej: B001)
  * - Facturas: prefijo debe empezar con 'F' (ej: F001)
  * - Notas crédito/débito: prefijo debe empezar con 'B' o 'F'
- * - Guías de remisión: prefijo debe empezar con 'T' (ej: T001)
  * - No se permite cambiar el prefijo si la serie ya tiene documentos emitidos
  */
 @Service
@@ -51,7 +50,7 @@ public class SerieFacturacionService {
             tipoDoc = SerieFacturacion.TipoDocumento.valueOf(request.getTipoDocumento());
         } catch (IllegalArgumentException e) {
             throw new OperacionInvalidaException("Tipo de documento inválido: " + request.getTipoDocumento()
-                    + ". Valores permitidos: boleta, factura, nota_credito, nota_debito, guia_remision");
+                    + ". Valores permitidos: boleta, factura, nota_credito, nota_debito");
         }
 
         // Validar formato de prefijo
@@ -196,11 +195,6 @@ public class SerieFacturacionService {
                 if (!"F".equals(primeraLetra))
                     throw new OperacionInvalidaException(
                             "Las series de facturas deben comenzar con 'F' (ej: F001). Prefijo: " + prefijo);
-                break;
-            case guia_remision:
-                if (!"T".equals(primeraLetra))
-                    throw new OperacionInvalidaException(
-                            "Las series de guías de remisión deben comenzar con 'T' (ej: T001). Prefijo: " + prefijo);
                 break;
             case nota_credito:
             case nota_debito:

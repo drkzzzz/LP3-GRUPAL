@@ -6,6 +6,9 @@ import java.util.List;
 
 /**
  * Request para crear un documento de facturación electrónica.
+ * No incluye campos de emisor (ruc_emisor, razon_social_emisor, direccion_emisor)
+ * ni campos de referencia (documento_referenciado_id, motivo_referencia)
+ * porque no existen en la tabla documentos_facturacion.
  */
 public class CreateDocumentoFacturacionRequest {
 
@@ -14,12 +17,7 @@ public class CreateDocumentoFacturacionRequest {
     private Long serieId;
     private Long ventaId;
     private Long pedidoId;
-    private String tipoDocumento; // boleta, factura, nota_credito, nota_debito, guia_remision
-
-    // --- Emisor (snapshot del negocio) ---
-    private String rucEmisor;
-    private String razonSocialEmisor;
-    private String direccionEmisor;
+    private String tipoDocumento; // boleta, factura, nota_credito, nota_debito
 
     // --- Receptor ---
     private String tipoDocumentoReceptor; // 1=DNI, 6=RUC, etc.
@@ -36,10 +34,6 @@ public class CreateDocumentoFacturacionRequest {
     // --- Fechas ---
     private LocalDate fechaEmision;
     private LocalDate fechaVencimiento;
-
-    // --- Referencia para notas crédito/débito ---
-    private Long documentoReferenciadoId;
-    private String motivoReferencia;
 
     // --- Creador ---
     private Long creadoPor;
@@ -66,15 +60,6 @@ public class CreateDocumentoFacturacionRequest {
 
     public String getTipoDocumento() { return tipoDocumento; }
     public void setTipoDocumento(String tipoDocumento) { this.tipoDocumento = tipoDocumento; }
-
-    public String getRucEmisor() { return rucEmisor; }
-    public void setRucEmisor(String rucEmisor) { this.rucEmisor = rucEmisor; }
-
-    public String getRazonSocialEmisor() { return razonSocialEmisor; }
-    public void setRazonSocialEmisor(String razonSocialEmisor) { this.razonSocialEmisor = razonSocialEmisor; }
-
-    public String getDireccionEmisor() { return direccionEmisor; }
-    public void setDireccionEmisor(String direccionEmisor) { this.direccionEmisor = direccionEmisor; }
 
     public String getTipoDocumentoReceptor() { return tipoDocumentoReceptor; }
     public void setTipoDocumentoReceptor(String tipoDocumentoReceptor) { this.tipoDocumentoReceptor = tipoDocumentoReceptor; }
@@ -105,12 +90,6 @@ public class CreateDocumentoFacturacionRequest {
 
     public LocalDate getFechaVencimiento() { return fechaVencimiento; }
     public void setFechaVencimiento(LocalDate fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
-
-    public Long getDocumentoReferenciadoId() { return documentoReferenciadoId; }
-    public void setDocumentoReferenciadoId(Long documentoReferenciadoId) { this.documentoReferenciadoId = documentoReferenciadoId; }
-
-    public String getMotivoReferencia() { return motivoReferencia; }
-    public void setMotivoReferencia(String motivoReferencia) { this.motivoReferencia = motivoReferencia; }
 
     public Long getCreadoPor() { return creadoPor; }
     public void setCreadoPor(Long creadoPor) { this.creadoPor = creadoPor; }

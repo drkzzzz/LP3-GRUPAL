@@ -7,6 +7,7 @@ import java.util.List;
 
 /**
  * Response completo para documentos de facturación.
+ * Alineado con la tabla documentos_facturacion de la BD.
  */
 public class DocumentoFacturacionResponse {
 
@@ -21,11 +22,6 @@ public class DocumentoFacturacionResponse {
     private Integer numeroCorrelativo;
     private String numeroCompleto;
 
-    // --- Emisor ---
-    private String rucEmisor;
-    private String razonSocialEmisor;
-    private String direccionEmisor;
-
     // --- Receptor ---
     private String tipoDocumentoReceptor;
     private String numeroDocumentoReceptor;
@@ -33,13 +29,16 @@ public class DocumentoFacturacionResponse {
     private String direccionReceptor;
     private String emailReceptor;
 
+    // --- Emisor (datos del Negocio, obtenidos al consultar, NO almacenados en documento) ---
+    private String rucEmisor;
+    private String razonSocialEmisor;
+    private String direccionEmisor;
+
     // --- Montos ---
     private BigDecimal subtotal;
     private BigDecimal totalDescuento;
     private BigDecimal totalGravado;
     private BigDecimal totalIgv;
-    private BigDecimal totalIsc;
-    private BigDecimal tasaIgv;
     private BigDecimal totalOtrosImpuestos;
     private BigDecimal total;
     private String moneda;
@@ -57,10 +56,6 @@ public class DocumentoFacturacionResponse {
     private String urlPdfSunat;
     private LocalDateTime enviadoSunatEn;
     private LocalDateTime aceptadoSunatEn;
-
-    // --- Referencia ---
-    private Long documentoReferenciadoId;
-    private String motivoReferencia;
 
     // --- Fechas/Estado ---
     private LocalDate fechaEmision;
@@ -108,15 +103,6 @@ public class DocumentoFacturacionResponse {
     public String getNumeroCompleto() { return numeroCompleto; }
     public void setNumeroCompleto(String numeroCompleto) { this.numeroCompleto = numeroCompleto; }
 
-    public String getRucEmisor() { return rucEmisor; }
-    public void setRucEmisor(String rucEmisor) { this.rucEmisor = rucEmisor; }
-
-    public String getRazonSocialEmisor() { return razonSocialEmisor; }
-    public void setRazonSocialEmisor(String razonSocialEmisor) { this.razonSocialEmisor = razonSocialEmisor; }
-
-    public String getDireccionEmisor() { return direccionEmisor; }
-    public void setDireccionEmisor(String direccionEmisor) { this.direccionEmisor = direccionEmisor; }
-
     public String getTipoDocumentoReceptor() { return tipoDocumentoReceptor; }
     public void setTipoDocumentoReceptor(String tipoDocumentoReceptor) { this.tipoDocumentoReceptor = tipoDocumentoReceptor; }
 
@@ -132,6 +118,15 @@ public class DocumentoFacturacionResponse {
     public String getEmailReceptor() { return emailReceptor; }
     public void setEmailReceptor(String emailReceptor) { this.emailReceptor = emailReceptor; }
 
+    public String getRucEmisor() { return rucEmisor; }
+    public void setRucEmisor(String rucEmisor) { this.rucEmisor = rucEmisor; }
+
+    public String getRazonSocialEmisor() { return razonSocialEmisor; }
+    public void setRazonSocialEmisor(String razonSocialEmisor) { this.razonSocialEmisor = razonSocialEmisor; }
+
+    public String getDireccionEmisor() { return direccionEmisor; }
+    public void setDireccionEmisor(String direccionEmisor) { this.direccionEmisor = direccionEmisor; }
+
     public BigDecimal getSubtotal() { return subtotal; }
     public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
 
@@ -143,12 +138,6 @@ public class DocumentoFacturacionResponse {
 
     public BigDecimal getTotalIgv() { return totalIgv; }
     public void setTotalIgv(BigDecimal totalIgv) { this.totalIgv = totalIgv; }
-
-    public BigDecimal getTotalIsc() { return totalIsc; }
-    public void setTotalIsc(BigDecimal totalIsc) { this.totalIsc = totalIsc; }
-
-    public BigDecimal getTasaIgv() { return tasaIgv; }
-    public void setTasaIgv(BigDecimal tasaIgv) { this.tasaIgv = tasaIgv; }
 
     public BigDecimal getTotalOtrosImpuestos() { return totalOtrosImpuestos; }
     public void setTotalOtrosImpuestos(BigDecimal totalOtrosImpuestos) { this.totalOtrosImpuestos = totalOtrosImpuestos; }
@@ -194,12 +183,6 @@ public class DocumentoFacturacionResponse {
 
     public LocalDateTime getAceptadoSunatEn() { return aceptadoSunatEn; }
     public void setAceptadoSunatEn(LocalDateTime aceptadoSunatEn) { this.aceptadoSunatEn = aceptadoSunatEn; }
-
-    public Long getDocumentoReferenciadoId() { return documentoReferenciadoId; }
-    public void setDocumentoReferenciadoId(Long documentoReferenciadoId) { this.documentoReferenciadoId = documentoReferenciadoId; }
-
-    public String getMotivoReferencia() { return motivoReferencia; }
-    public void setMotivoReferencia(String motivoReferencia) { this.motivoReferencia = motivoReferencia; }
 
     public LocalDate getFechaEmision() { return fechaEmision; }
     public void setFechaEmision(LocalDate fechaEmision) { this.fechaEmision = fechaEmision; }

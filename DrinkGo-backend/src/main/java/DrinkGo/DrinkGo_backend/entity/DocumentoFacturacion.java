@@ -11,7 +11,10 @@ import java.time.LocalDateTime;
  * RF-FACT-001..005: Facturación electrónica SUNAT
  */
 @Entity
-@Table(name = "documentos_facturacion")
+@Table(name = "documentos_facturacion",
+       uniqueConstraints = @UniqueConstraint(
+               name = "uk_docfac_numero_completo",
+               columnNames = {"negocio_id", "numero_completo"}))
 public class DocumentoFacturacion {
 
     @Id
@@ -46,18 +49,7 @@ public class DocumentoFacturacion {
     @Column(name = "numero_completo", nullable = false, length = 30)
     private String numeroCompleto;
 
-    // --- Snapshot Emisor ---
-
-    @Column(name = "ruc_emisor", nullable = false, length = 20)
-    private String rucEmisor;
-
-    @Column(name = "razon_social_emisor", nullable = false, length = 200)
-    private String razonSocialEmisor;
-
-    @Column(name = "direccion_emisor", length = 300)
-    private String direccionEmisor;
-
-    // --- Receptor ---
+    // --- Receptor (Snapshot para historial) ---
 
     @Column(name = "tipo_documento_receptor", length = 5)
     private String tipoDocumentoReceptor;
@@ -74,7 +66,7 @@ public class DocumentoFacturacion {
     @Column(name = "email_receptor", length = 150)
     private String emailReceptor;
 
-    // --- Montos ---
+    // --- Montos e Impuestos ---
 
     @Column(name = "subtotal", precision = 12, scale = 2, nullable = false)
     private BigDecimal subtotal;
@@ -88,12 +80,6 @@ public class DocumentoFacturacion {
     @Column(name = "total_igv", precision = 10, scale = 2, nullable = false)
     private BigDecimal totalIgv = BigDecimal.ZERO;
 
-    @Column(name = "total_isc", precision = 10, scale = 2, nullable = false)
-    private BigDecimal totalIsc = BigDecimal.ZERO;
-
-    @Column(name = "tasa_igv", precision = 5, scale = 2)
-    private BigDecimal tasaIgv;
-
     @Column(name = "total_otros_impuestos", precision = 10, scale = 2, nullable = false)
     private BigDecimal totalOtrosImpuestos = BigDecimal.ZERO;
 
@@ -106,7 +92,7 @@ public class DocumentoFacturacion {
     @Column(name = "tipo_cambio", precision = 10, scale = 6)
     private BigDecimal tipoCambio;
 
-    // --- SUNAT ---
+    // --- Integración Técnica PSE (SUNAT) ---
 
     @Column(name = "estado_sunat", nullable = false)
     @Enumerated(EnumType.STRING)
@@ -139,15 +125,11 @@ public class DocumentoFacturacion {
     @Column(name = "aceptado_sunat_en")
     private LocalDateTime aceptadoSunatEn;
 
-    // --- Referencia (notas crédito/débito) ---
+    // --- Control de Estados del Documento ---
 
-    @Column(name = "documento_referenciado_id")
-    private Long documentoReferenciadoId;
-
-    @Column(name = "motivo_referencia", length = 300)
-    private String motivoReferencia;
-
-    // --- Fechas/Estado ---
+    @Column(name = "estado", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private EstadoDocumento estado = EstadoDocumento.borrador;
 
     @Column(name = "fecha_emision", nullable = false)
     private LocalDate fechaEmision;
@@ -155,9 +137,7 @@ public class DocumentoFacturacion {
     @Column(name = "fecha_vencimiento")
     private LocalDate fechaVencimiento;
 
-    @Column(name = "estado", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private EstadoDocumento estado = EstadoDocumento.borrador;
+    // --- Auditoría ---
 
     @Column(name = "creado_por")
     private Long creadoPor;
@@ -177,14 +157,13 @@ public class DocumentoFacturacion {
     @Column(name = "actualizado_en", nullable = false)
     private LocalDateTime actualizadoEn;
 
-    // --- ENUMS ---
+    // --- ENUMS (según BD) ---
 
     public enum TipoDocumento {
         boleta,
         factura,
         nota_credito,
-        nota_debito,
-        guia_remision
+        nota_debito
     }
 
     public enum EstadoSunat {
@@ -207,8 +186,7 @@ public class DocumentoFacturacion {
 
     // --- Constructores ---
 
-    public DocumentoFacturacion() {
-    }
+    public DocumentoFacturacion() {}
 
     // --- PrePersist & PreUpdate ---
 
@@ -255,15 +233,6 @@ public class DocumentoFacturacion {
     public String getNumeroCompleto() { return numeroCompleto; }
     public void setNumeroCompleto(String numeroCompleto) { this.numeroCompleto = numeroCompleto; }
 
-    public String getRucEmisor() { return rucEmisor; }
-    public void setRucEmisor(String rucEmisor) { this.rucEmisor = rucEmisor; }
-
-    public String getRazonSocialEmisor() { return razonSocialEmisor; }
-    public void setRazonSocialEmisor(String razonSocialEmisor) { this.razonSocialEmisor = razonSocialEmisor; }
-
-    public String getDireccionEmisor() { return direccionEmisor; }
-    public void setDireccionEmisor(String direccionEmisor) { this.direccionEmisor = direccionEmisor; }
-
     public String getTipoDocumentoReceptor() { return tipoDocumentoReceptor; }
     public void setTipoDocumentoReceptor(String tipoDocumentoReceptor) { this.tipoDocumentoReceptor = tipoDocumentoReceptor; }
 
@@ -290,12 +259,6 @@ public class DocumentoFacturacion {
 
     public BigDecimal getTotalIgv() { return totalIgv; }
     public void setTotalIgv(BigDecimal totalIgv) { this.totalIgv = totalIgv; }
-
-    public BigDecimal getTotalIsc() { return totalIsc; }
-    public void setTotalIsc(BigDecimal totalIsc) { this.totalIsc = totalIsc; }
-
-    public BigDecimal getTasaIgv() { return tasaIgv; }
-    public void setTasaIgv(BigDecimal tasaIgv) { this.tasaIgv = tasaIgv; }
 
     public BigDecimal getTotalOtrosImpuestos() { return totalOtrosImpuestos; }
     public void setTotalOtrosImpuestos(BigDecimal totalOtrosImpuestos) { this.totalOtrosImpuestos = totalOtrosImpuestos; }
@@ -339,20 +302,14 @@ public class DocumentoFacturacion {
     public LocalDateTime getAceptadoSunatEn() { return aceptadoSunatEn; }
     public void setAceptadoSunatEn(LocalDateTime aceptadoSunatEn) { this.aceptadoSunatEn = aceptadoSunatEn; }
 
-    public Long getDocumentoReferenciadoId() { return documentoReferenciadoId; }
-    public void setDocumentoReferenciadoId(Long documentoReferenciadoId) { this.documentoReferenciadoId = documentoReferenciadoId; }
-
-    public String getMotivoReferencia() { return motivoReferencia; }
-    public void setMotivoReferencia(String motivoReferencia) { this.motivoReferencia = motivoReferencia; }
+    public EstadoDocumento getEstado() { return estado; }
+    public void setEstado(EstadoDocumento estado) { this.estado = estado; }
 
     public LocalDate getFechaEmision() { return fechaEmision; }
     public void setFechaEmision(LocalDate fechaEmision) { this.fechaEmision = fechaEmision; }
 
     public LocalDate getFechaVencimiento() { return fechaVencimiento; }
     public void setFechaVencimiento(LocalDate fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
-
-    public EstadoDocumento getEstado() { return estado; }
-    public void setEstado(EstadoDocumento estado) { this.estado = estado; }
 
     public Long getCreadoPor() { return creadoPor; }
     public void setCreadoPor(Long creadoPor) { this.creadoPor = creadoPor; }

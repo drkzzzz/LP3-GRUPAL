@@ -46,16 +46,12 @@ public class DetalleDocumentoFacturacion {
     @Column(name = "monto_igv", precision = 10, scale = 2, nullable = false)
     private BigDecimal montoIgv = BigDecimal.ZERO;
 
-    @Column(name = "monto_isc", precision = 10, scale = 2, nullable = false)
-    private BigDecimal montoIsc = BigDecimal.ZERO;
-
     @Column(name = "total", precision = 10, scale = 2, nullable = false)
     private BigDecimal total;
 
     // --- Constructores ---
 
-    public DetalleDocumentoFacturacion() {
-    }
+    public DetalleDocumentoFacturacion() {}
 
     // --- Getters y Setters ---
 
@@ -91,9 +87,6 @@ public class DetalleDocumentoFacturacion {
 
     public BigDecimal getMontoIgv() { return montoIgv; }
     public void setMontoIgv(BigDecimal montoIgv) { this.montoIgv = montoIgv; }
-
-    public BigDecimal getMontoIsc() { return montoIsc; }
-    public void setMontoIsc(BigDecimal montoIsc) { this.montoIsc = montoIsc; }
 
     public BigDecimal getTotal() { return total; }
     public void setTotal(BigDecimal total) { this.total = total; }

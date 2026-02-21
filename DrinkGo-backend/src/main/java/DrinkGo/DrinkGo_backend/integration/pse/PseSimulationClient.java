@@ -1,6 +1,7 @@
 package DrinkGo.DrinkGo_backend.integration.pse;
 
 import DrinkGo.DrinkGo_backend.entity.DocumentoFacturacion;
+import DrinkGo.DrinkGo_backend.entity.Negocio;
 import org.springframework.stereotype.Component;
 
 import java.security.MessageDigest;
@@ -32,12 +33,12 @@ public class PseSimulationClient implements PseClient {
     private static final Random random = new Random();
 
     @Override
-    public PseResponse enviarDocumento(DocumentoFacturacion documento) {
+    public PseResponse enviarDocumento(DocumentoFacturacion documento, Negocio negocio) {
         // Simular tiempo de procesamiento
         simularLatencia();
 
-        // Generar hash simulado del documento
-        String hashSimulado = generarHashSimulado(documento);
+        // Generar hash simulado del documento (usa RUC del negocio emisor)
+        String hashSimulado = generarHashSimulado(documento, negocio);
 
         // Generar ticket simulado
         String ticketSimulado = generarTicketSimulado();
@@ -126,7 +127,7 @@ public class PseSimulationClient implements PseClient {
     }
 
     @Override
-    public PseResponse anularDocumento(DocumentoFacturacion documento, String motivo) {
+    public PseResponse anularDocumento(DocumentoFacturacion documento, Negocio negocio, String motivo) {
         simularLatencia();
 
         // Facturas: Comunicación de Baja. Boletas: Resumen Diario de Baja.
@@ -184,12 +185,15 @@ public class PseSimulationClient implements PseClient {
     }
 
     /**
-     * Genera un hash SHA-256 simulado basado en datos del documento.
+     * Genera un hash SHA-256 simulado basado en datos del documento y del emisor.
+     * En un PSE real, el hash se genera con el XML firmado digitalmente.
      */
-    private String generarHashSimulado(DocumentoFacturacion documento) {
+    private String generarHashSimulado(DocumentoFacturacion documento, Negocio negocio) {
         try {
+            // Incluye RUC del emisor (negocio) como haría SUNAT realmente
+            String rucEmisor = negocio.getRuc() != null ? negocio.getRuc() : "SIN-RUC";
             String datos = documento.getNumeroCompleto() + "|"
-                    + documento.getRucEmisor() + "|"
+                    + rucEmisor + "|"
                     + documento.getTotal() + "|"
                     + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 

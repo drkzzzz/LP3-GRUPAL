@@ -15,8 +15,10 @@ import DrinkGo.DrinkGo_backend.repository.DocumentoFacturacionRepository;
 import DrinkGo.DrinkGo_backend.repository.PedidoItemRepository;
 import DrinkGo.DrinkGo_backend.repository.PedidoRepository;
 import DrinkGo.DrinkGo_backend.repository.SerieFacturacionRepository;
+import DrinkGo.DrinkGo_backend.repository.NegocioRepository;
 import DrinkGo.DrinkGo_backend.repository.ConfiguracionGlobalPlataformaRepository;
 import DrinkGo.DrinkGo_backend.entity.ConfiguracionGlobalPlataforma;
+import DrinkGo.DrinkGo_backend.entity.Negocio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +38,7 @@ import java.util.stream.Collectors;
  * Responsabilidades:
  * - Emisión de documentos (boletas, facturas, notas de crédito/débito)
  * - Generación de documentos desde pedidos (asociación con ventas)
- * - Cálculo de impuestos: IGV (18%) + ISC (bebidas alcohólicas)
+ * - Cálculo de impuestos: IGV (configurable desde plataforma)
  * - Generación de número correlativo atómico (con bloqueo pesimista)
  * - Envío simulado a SUNAT vía PSE desacoplado
  * - Anulación de documentos (Comunicación de Baja / Resumen Diario vía PSE)
@@ -45,15 +47,13 @@ import java.util.stream.Collectors;
  *
  * REGLAS LEGALES SUNAT APLICADAS:
  * - Series: B* para boletas, F* para facturas, BC*FC* para notas crédito, etc.
- * - Boletas >= S/ 700: requieren documento de identidad del receptor (DNI)
- * - Notas crédito/débito: solo pueden referenciar documentos del mismo tipo (boleta→boleta, factura→factura)
+ * - Boletas: SIEMPRE requieren DNI del receptor (negocio de licorería, verificación de mayoría de edad)
  * - Facturas: requieren RUC del receptor (11 dígitos)
  * - Anulación de documentos aceptados por SUNAT: requiere Comunicación de Baja vía PSE
- * - ISC: campo explícito por ítem para bebidas alcohólicas, se suma a la base IGV
- * - Precio unitario: sin IGV ni ISC (base imponible), debe ser > 0
+ * - Precio unitario: sin IGV (base imponible), debe ser > 0
  * - IGV configurable desde configuración global de plataforma (clave: TASA_IGV, default: 18%)
  *   Cumple RF-CGL-001 y RF-ADM-022: impuestos configurables a nivel global/negocio
- * - Códigos SUNAT: 01=factura, 03=boleta, 07=NC, 08=ND, 09=guía remisión
+ * - Códigos SUNAT: 01=factura, 03=boleta, 07=NC, 08=ND
  * - Boletas se envían vía Resumen Diario (simulado), facturas individualmente
  */
 @Service
@@ -62,7 +62,7 @@ public class DocumentoFacturacionService {
     /** Tasa IGV por defecto si no hay configuración global definida */
     private static final BigDecimal TASA_IGV_DEFAULT = new BigDecimal("0.18");
     private static final String CLAVE_TASA_IGV = "TASA_IGV";
-    private static final BigDecimal UMBRAL_BOLETA_DNI = new BigDecimal("700.00");
+    // En licorerías el DNI es SIEMPRE obligatorio para boletas (verificación de mayoría de edad)
 
     @Autowired
     private DocumentoFacturacionRepository documentoRepository;
@@ -83,6 +83,9 @@ public class DocumentoFacturacionService {
     private PseClient pseClient;
 
     @Autowired
+    private NegocioRepository negocioRepository;
+
+    @Autowired
     private ConfiguracionGlobalPlataformaRepository configuracionRepository;
 
     // ==================================================================================
@@ -93,8 +96,7 @@ public class DocumentoFacturacionService {
      * Emitir un nuevo documento de facturación.
      * - Valida serie activa, prefijo correcto según tipo, consistencia multi-tenant.
      * - Incrementa correlativo con bloqueo pesimista (evita race condition).
-     * - Calcula impuestos: ISC + IGV (configurable desde plataforma) sobre (base + ISC).
-     * - Guarda snapshot del emisor.
+     * - Calcula impuestos: IGV (configurable desde plataforma) sobre base gravada.
      * - Estado inicial: emitido / pendiente.
      */
     @Transactional
@@ -111,7 +113,7 @@ public class DocumentoFacturacionService {
             tipoDoc = DocumentoFacturacion.TipoDocumento.valueOf(request.getTipoDocumento());
         } catch (IllegalArgumentException e) {
             throw new OperacionInvalidaException("Tipo de documento inválido: " + request.getTipoDocumento()
-                    + ". Valores permitidos: boleta, factura, nota_credito, nota_debito, guia_remision");
+                    + ". Valores permitidos: boleta, factura, nota_credito, nota_debito");
         }
 
         // --- Validar y obtener serie CON BLOQUEO PESIMISTA ---
@@ -144,12 +146,6 @@ public class DocumentoFacturacionService {
         // --- Validar prefijo de serie según normativa SUNAT ---
         validarPrefijoSerie(serie.getPrefijoSerie(), tipoDoc);
 
-        // --- Validación para notas de crédito/débito ---
-        if (tipoDoc == DocumentoFacturacion.TipoDocumento.nota_credito
-                || tipoDoc == DocumentoFacturacion.TipoDocumento.nota_debito) {
-            validarNotaReferencia(request, tipoDoc);
-        }
-
         // --- Incrementar correlativo (ya con bloqueo pesimista) ---
         int nuevoCorrelativo = serie.getNumeroActual() + 1;
         serie.setNumeroActual(nuevoCorrelativo);
@@ -159,7 +155,7 @@ public class DocumentoFacturacionService {
         String numeroCompleto = serie.getPrefijoSerie() + "-"
                 + String.format("%08d", nuevoCorrelativo);
 
-        // --- Procesar detalles y calcular montos con ISC ---
+        // --- Procesar detalles y calcular montos ---
         if (request.getDetalles() == null || request.getDetalles().isEmpty()) {
             throw new OperacionInvalidaException(
                     "El documento debe tener al menos un item de detalle");
@@ -170,7 +166,6 @@ public class DocumentoFacturacionService {
         BigDecimal totalDescuentoCalculado = BigDecimal.ZERO;
         BigDecimal totalGravadoCalculado = BigDecimal.ZERO;
         BigDecimal totalIgvCalculado = BigDecimal.ZERO;
-        BigDecimal totalIscCalculado = BigDecimal.ZERO;
 
         int itemNum = 1;
         for (DetalleDocumentoFacturacionRequest detReq : request.getDetalles()) {
@@ -195,16 +190,11 @@ public class DocumentoFacturacionService {
             BigDecimal montoGravadoItem = subtotalItem.subtract(descuentoItem)
                     .setScale(2, RoundingMode.HALF_UP);
 
-            // ISC del item (obligatorio para bebidas alcohólicas)
-            BigDecimal iscItem = detReq.getMontoIsc() != null
-                    ? detReq.getMontoIsc() : BigDecimal.ZERO;
-
-            // IGV se calcula sobre (base imponible + ISC) según norma SUNAT
+            // IGV se calcula sobre la base imponible (monto gravado)
             // Tasa configurable desde ConfiguracionGlobalPlataforma (clave: TASA_IGV)
-            BigDecimal baseIgv = montoGravadoItem.add(iscItem);
-            BigDecimal igvItem = baseIgv.multiply(tasaIgv)
+            BigDecimal igvItem = montoGravadoItem.multiply(tasaIgv)
                     .setScale(2, RoundingMode.HALF_UP);
-            BigDecimal totalItem = baseIgv.add(igvItem)
+            BigDecimal totalItem = montoGravadoItem.add(igvItem)
                     .setScale(2, RoundingMode.HALF_UP);
 
             DetalleDocumentoFacturacion detalle = new DetalleDocumentoFacturacion();
@@ -218,7 +208,6 @@ public class DocumentoFacturacionService {
             detalle.setMontoDescuento(descuentoItem);
             detalle.setMontoGravado(montoGravadoItem);
             detalle.setMontoIgv(igvItem);
-            detalle.setMontoIsc(iscItem);
             detalle.setTotal(totalItem);
 
             detallesEntidad.add(detalle);
@@ -226,26 +215,28 @@ public class DocumentoFacturacionService {
             subtotalCalculado = subtotalCalculado.add(subtotalItem);
             totalDescuentoCalculado = totalDescuentoCalculado.add(descuentoItem);
             totalGravadoCalculado = totalGravadoCalculado.add(montoGravadoItem);
-            totalIscCalculado = totalIscCalculado.add(iscItem);
             totalIgvCalculado = totalIgvCalculado.add(igvItem);
 
             itemNum++;
         }
 
         BigDecimal totalCalculado = totalGravadoCalculado
-                .add(totalIscCalculado)
                 .add(totalIgvCalculado)
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // --- Validar regla boleta >= S/ 700 requiere DNI ---
-        if (tipoDoc == DocumentoFacturacion.TipoDocumento.boleta
-                && totalCalculado.compareTo(UMBRAL_BOLETA_DNI) >= 0) {
+        // --- Validar que boletas SIEMPRE incluyan DNI (licorería: verificación de mayoría de edad) ---
+        if (tipoDoc == DocumentoFacturacion.TipoDocumento.boleta) {
             if (request.getNumeroDocumentoReceptor() == null
                     || request.getNumeroDocumentoReceptor().trim().isEmpty()) {
                 throw new OperacionInvalidaException(
-                        "Para boletas con monto total >= S/ 700.00, el documento "
-                                + "de identidad del receptor (DNI) es obligatorio "
-                                + "(Reglamento de Comprobantes de Pago, Art. 4 numeral 3)");
+                        "Para boletas en negocios de licorería, el DNI del receptor "
+                                + "es obligatorio (verificación de mayoría de edad)");
+            }
+            if (request.getNombreReceptor() == null
+                    || request.getNombreReceptor().trim().isEmpty()) {
+                throw new OperacionInvalidaException(
+                        "Para boletas en negocios de licorería, el nombre del receptor "
+                                + "es obligatorio");
             }
         }
 
@@ -261,11 +252,6 @@ public class DocumentoFacturacionService {
         documento.setNumeroCorrelativo(nuevoCorrelativo);
         documento.setNumeroCompleto(numeroCompleto);
 
-        // Snapshot emisor
-        documento.setRucEmisor(request.getRucEmisor());
-        documento.setRazonSocialEmisor(request.getRazonSocialEmisor());
-        documento.setDireccionEmisor(request.getDireccionEmisor());
-
         // Receptor
         documento.setTipoDocumentoReceptor(request.getTipoDocumentoReceptor());
         documento.setNumeroDocumentoReceptor(request.getNumeroDocumentoReceptor());
@@ -278,8 +264,6 @@ public class DocumentoFacturacionService {
         documento.setTotalDescuento(totalDescuentoCalculado);
         documento.setTotalGravado(totalGravadoCalculado);
         documento.setTotalIgv(totalIgvCalculado);
-        documento.setTotalIsc(totalIscCalculado);
-        documento.setTasaIgv(tasaIgv.multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP));
         documento.setTotalOtrosImpuestos(BigDecimal.ZERO);
         documento.setTotal(totalCalculado);
         documento.setMoneda(request.getMoneda() != null ? request.getMoneda() : "PEN");
@@ -293,10 +277,6 @@ public class DocumentoFacturacionService {
         documento.setFechaEmision(
                 request.getFechaEmision() != null ? request.getFechaEmision() : LocalDate.now());
         documento.setFechaVencimiento(request.getFechaVencimiento());
-
-        // Referencia (notas crédito/débito)
-        documento.setDocumentoReferenciadoId(request.getDocumentoReferenciadoId());
-        documento.setMotivoReferencia(request.getMotivoReferencia());
 
         // Creador
         documento.setCreadoPor(request.getCreadoPor());
@@ -329,7 +309,7 @@ public class DocumentoFacturacionService {
      * @param pedidoId    ID del pedido a facturar
      * @param serieId     ID de la serie a usar
      * @param tipoDocumento "boleta" o "factura"
-     * @param request     Datos adicionales del emisor y receptor
+     * @param request     Datos adicionales del receptor
      */
     @Transactional
     public DocumentoFacturacionResponse emitirDesdePedido(
@@ -379,7 +359,6 @@ public class DocumentoFacturacionService {
                     det.setPrecioUnitario(item.getPrecioUnitario());
                     det.setMontoDescuento(item.getDescuento() != null
                             ? item.getDescuento() : BigDecimal.ZERO);
-                    det.setMontoIsc(BigDecimal.ZERO); // ISC por defecto 0, puede configurarse por producto
                     return det;
                 })
                 .collect(Collectors.toList());
@@ -408,7 +387,10 @@ public class DocumentoFacturacionService {
 
     /**
      * Enviar documento a SUNAT mediante PSE (modo simulación).
-     * Actualiza estado_sunat y campos relacionados según la respuesta del PSE.
+     * Obtiene los datos del negocio emisor (RUC, razón social, dirección)
+     * de la tabla negocios vía negocio_id del documento.
+     * Estos datos del EMISOR son requeridos por SUNAT y son distintos
+     * a los datos del RECEPTOR que ya están en el documento.
      */
     @Transactional
     public EnvioSunatResponse enviarASunat(Long documentoId, Long negocioId) {
@@ -427,8 +409,24 @@ public class DocumentoFacturacionService {
                     "El documento ya fue aceptado por SUNAT");
         }
 
-        // Invocar PSE desacoplado
-        PseResponse pseResponse = pseClient.enviarDocumento(documento);
+        // --- Obtener datos del EMISOR (negocio) para envío a SUNAT ---
+        Negocio negocio = negocioRepository.findById(negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Negocio", negocioId));
+
+        // Validar que el negocio tenga RUC (obligatorio para SUNAT)
+        if (negocio.getRuc() == null || negocio.getRuc().trim().isEmpty()) {
+            throw new OperacionInvalidaException(
+                    "El negocio no tiene RUC registrado. "
+                            + "Es obligatorio para enviar documentos a SUNAT");
+        }
+        if (negocio.getRazonSocial() == null || negocio.getRazonSocial().trim().isEmpty()) {
+            throw new OperacionInvalidaException(
+                    "El negocio no tiene razón social registrada. "
+                            + "Es obligatoria para enviar documentos a SUNAT");
+        }
+
+        // Invocar PSE desacoplado con datos del documento + datos del emisor (negocio)
+        PseResponse pseResponse = pseClient.enviarDocumento(documento, negocio);
 
         // Actualizar documento según respuesta
         documento.setEnviadoSunatEn(LocalDateTime.now());
@@ -526,9 +524,13 @@ public class DocumentoFacturacionService {
                 }
             }
 
-            // Enviar anulación vía PSE (Comunicación de Baja o Resumen Diario de Baja)
+            // Obtener datos del emisor (negocio) para la Comunicación de Baja
+            Negocio negocio = negocioRepository.findById(negocioId)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Negocio", negocioId));
+
+            // Enviar anulación vía PSE con datos del emisor
             PseResponse pseAnulacion = pseClient.anularDocumento(
-                    documento, request.getMotivoAnulacion());
+                    documento, negocio, request.getMotivoAnulacion());
 
             documento.setMensajeRespuestaSunat(pseAnulacion.getMensajeRespuesta());
             documento.setCodigoRespuestaSunat(pseAnulacion.getCodigoRespuesta());
@@ -634,7 +636,7 @@ public class DocumentoFacturacionService {
     public DocumentoFacturacionResponse consultarEstado(Long id, Long negocioId) {
         return obtenerPorId(id, negocioId);
     }
-    
+
     /**
      * Actualizar documento de facturación (solo en estado borrador).
      */
@@ -642,12 +644,12 @@ public class DocumentoFacturacionService {
     public DocumentoFacturacionResponse actualizar(Long id, Long negocioId, CreateDocumentoFacturacionRequest request) {
         DocumentoFacturacion documento = documentoRepository.findByIdAndNegocioId(id, negocioId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Documento de facturación", id));
-        
+
         // Solo se pueden editar documentos en estado borrador
         if (documento.getEstado() != DocumentoFacturacion.EstadoDocumento.borrador) {
             throw new OperacionInvalidaException("Solo se pueden editar documentos en estado borrador");
         }
-        
+
         // Actualizar campos permitidos
         if (request.getNombreReceptor() != null) {
             documento.setNombreReceptor(request.getNombreReceptor());
@@ -658,14 +660,14 @@ public class DocumentoFacturacionService {
         if (request.getDireccionReceptor() != null) {
             documento.setDireccionReceptor(request.getDireccionReceptor());
         }
-        
+
         documentoRepository.save(documento);
-        
-        List<DetalleDocumentoFacturacion> detalles = 
+
+        List<DetalleDocumentoFacturacion> detalles =
                 detalleRepository.findByDocumentoIdOrderByNumeroItemAsc(documento.getId());
         return convertirAResponse(documento, detalles);
     }
-    
+
     /**
      * Eliminar documento de facturación (solo en estado borrador).
      */
@@ -673,15 +675,15 @@ public class DocumentoFacturacionService {
     public void eliminar(Long id, Long negocioId) {
         DocumentoFacturacion documento = documentoRepository.findByIdAndNegocioId(id, negocioId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Documento de facturación", id));
-        
+
         // Solo se pueden eliminar documentos en estado borrador
         if (documento.getEstado() != DocumentoFacturacion.EstadoDocumento.borrador) {
             throw new OperacionInvalidaException("Solo se pueden eliminar documentos en estado borrador");
         }
-        
+
         // Eliminar detalles primero
         detalleRepository.deleteByDocumentoId(documento.getId());
-        
+
         // Eliminar documento
         documentoRepository.delete(documento);
     }
@@ -727,24 +729,22 @@ public class DocumentoFacturacionService {
         if (request.getTipoDocumento() == null
                 || request.getTipoDocumento().trim().isEmpty())
             throw new OperacionInvalidaException("El tipoDocumento es obligatorio");
-        if (request.getRucEmisor() == null
-                || request.getRucEmisor().trim().isEmpty())
-            throw new OperacionInvalidaException("El rucEmisor es obligatorio");
-        if (request.getRazonSocialEmisor() == null
-                || request.getRazonSocialEmisor().trim().isEmpty())
-            throw new OperacionInvalidaException(
-                    "La razonSocialEmisor es obligatoria");
         if (request.getNombreReceptor() == null
                 || request.getNombreReceptor().trim().isEmpty())
             throw new OperacionInvalidaException(
                     "El nombreReceptor es obligatorio");
 
-        // Validar RUC del receptor para facturas (11 dígitos numéricos, empieza con 10 o 20)
+        // Validar RUC y dirección del receptor para facturas (normativa SUNAT)
         if ("factura".equals(request.getTipoDocumento())) {
             if (request.getNumeroDocumentoReceptor() == null
                     || request.getNumeroDocumentoReceptor().trim().isEmpty()) {
                 throw new OperacionInvalidaException(
                         "Para facturas, el RUC del receptor es obligatorio");
+            }
+            if (request.getDireccionReceptor() == null
+                    || request.getDireccionReceptor().trim().isEmpty()) {
+                throw new OperacionInvalidaException(
+                        "Para facturas, la dirección del receptor es obligatoria (normativa SUNAT)");
             }
             String ruc = request.getNumeroDocumentoReceptor().trim();
             if (ruc.length() != 11) {
@@ -773,8 +773,7 @@ public class DocumentoFacturacionService {
 
     /**
      * Valida que el prefijo de serie cumpla con la normativa SUNAT.
-     * Boletas: B*, Facturas: F*, NC de boleta: B*, NC de factura: F*,
-     * ND de boleta: B*, ND de factura: F*, Guía remisión: T*.
+     * Boletas: B*, Facturas: F*, NC/ND: B* o F*.
      */
     private void validarPrefijoSerie(String prefijo,
                                       DocumentoFacturacion.TipoDocumento tipoDoc) {
@@ -794,13 +793,6 @@ public class DocumentoFacturacionService {
                                     + "(ej: F001). Serie actual: " + prefijo);
                 }
                 break;
-            case guia_remision:
-                if (!"T".equals(primeraLetra)) {
-                    throw new OperacionInvalidaException(
-                            "Las series de guías de remisión deben comenzar con 'T' "
-                                    + "(ej: T001). Serie actual: " + prefijo);
-                }
-                break;
             case nota_credito:
             case nota_debito:
                 // NC/ND pueden ser B* (de boleta) o F* (de factura)
@@ -810,58 +802,6 @@ public class DocumentoFacturacionService {
                                     + "con 'B' o 'F'. Serie actual: " + prefijo);
                 }
                 break;
-        }
-    }
-
-    private void validarNotaReferencia(CreateDocumentoFacturacionRequest request,
-                                        DocumentoFacturacion.TipoDocumento tipoDoc) {
-        if (request.getDocumentoReferenciadoId() == null) {
-            throw new OperacionInvalidaException(
-                    "Para " + tipoDoc.name() + " se requiere documentoReferenciadoId");
-        }
-        if (request.getMotivoReferencia() == null
-                || request.getMotivoReferencia().trim().isEmpty()) {
-            throw new OperacionInvalidaException(
-                    "Para " + tipoDoc.name() + " se requiere motivoReferencia");
-        }
-
-        // Validar que el documento referenciado exista y pertenezca al mismo negocio
-        DocumentoFacturacion docRef = documentoRepository
-                .findByIdAndNegocioId(
-                        request.getDocumentoReferenciadoId(),
-                        request.getNegocioId())
-                .orElseThrow(() -> new RecursoNoEncontradoException(
-                        "Documento referenciado",
-                        request.getDocumentoReferenciadoId()));
-
-        if (docRef.getEstado() == DocumentoFacturacion.EstadoDocumento.anulado) {
-            throw new OperacionInvalidaException(
-                    "No se puede referenciar un documento anulado");
-        }
-
-        // Validar compatibilidad de tipos: NC/ND de factura solo puede
-        // referenciar facturas, NC/ND de boleta solo puede referenciar boletas
-        DocumentoFacturacion.TipoDocumento tipoRef = docRef.getTipoDocumento();
-        String prefijoSerie = request.getSerieId() != null
-                ? serieRepository.findByIdAndNegocioId(
-                        request.getSerieId(), request.getNegocioId())
-                .map(s -> s.getPrefijoSerie().substring(0, 1).toUpperCase())
-                .orElse("")
-                : "";
-
-        if ("F".equals(prefijoSerie)
-                && tipoRef != DocumentoFacturacion.TipoDocumento.factura) {
-            throw new OperacionInvalidaException(
-                    "Una nota con serie F* solo puede referenciar facturas, "
-                            + "pero el documento referenciado es de tipo: "
-                            + tipoRef.name());
-        }
-        if ("B".equals(prefijoSerie)
-                && tipoRef != DocumentoFacturacion.TipoDocumento.boleta) {
-            throw new OperacionInvalidaException(
-                    "Una nota con serie B* solo puede referenciar boletas, "
-                            + "pero el documento referenciado es de tipo: "
-                            + tipoRef.name());
         }
     }
 
@@ -881,7 +821,7 @@ public class DocumentoFacturacionService {
                 || detalle.getPrecioUnitario().compareTo(BigDecimal.ZERO) <= 0) {
             throw new OperacionInvalidaException(
                     "El precio unitario del item " + itemNum
-                            + " debe ser mayor a cero (precio sin IGV ni ISC)");
+                            + " debe ser mayor a cero (precio sin IGV)");
         }
     }
 
@@ -907,11 +847,6 @@ public class DocumentoFacturacionService {
         response.setNumeroCorrelativo(doc.getNumeroCorrelativo());
         response.setNumeroCompleto(doc.getNumeroCompleto());
 
-        // Emisor
-        response.setRucEmisor(doc.getRucEmisor());
-        response.setRazonSocialEmisor(doc.getRazonSocialEmisor());
-        response.setDireccionEmisor(doc.getDireccionEmisor());
-
         // Receptor
         response.setTipoDocumentoReceptor(doc.getTipoDocumentoReceptor());
         response.setNumeroDocumentoReceptor(doc.getNumeroDocumentoReceptor());
@@ -919,13 +854,20 @@ public class DocumentoFacturacionService {
         response.setDireccionReceptor(doc.getDireccionReceptor());
         response.setEmailReceptor(doc.getEmailReceptor());
 
+        // Emisor (datos del Negocio, consultados desde tabla negocios vía negocio_id)
+        // NO se almacenan en el documento — se resuelven al momento de responder.
+        // JPA first-level cache evita consultas repetidas dentro de una misma transacción.
+        negocioRepository.findById(doc.getNegocioId()).ifPresent(negocio -> {
+            response.setRucEmisor(negocio.getRuc());
+            response.setRazonSocialEmisor(negocio.getRazonSocial());
+            response.setDireccionEmisor(negocio.getDireccion());
+        });
+
         // Montos
         response.setSubtotal(doc.getSubtotal());
         response.setTotalDescuento(doc.getTotalDescuento());
         response.setTotalGravado(doc.getTotalGravado());
         response.setTotalIgv(doc.getTotalIgv());
-        response.setTotalIsc(doc.getTotalIsc());
-        response.setTasaIgv(doc.getTasaIgv());
         response.setTotalOtrosImpuestos(doc.getTotalOtrosImpuestos());
         response.setTotal(doc.getTotal());
         response.setMoneda(doc.getMoneda());
@@ -943,10 +885,6 @@ public class DocumentoFacturacionService {
         response.setUrlPdfSunat(doc.getUrlPdfSunat());
         response.setEnviadoSunatEn(doc.getEnviadoSunatEn());
         response.setAceptadoSunatEn(doc.getAceptadoSunatEn());
-
-        // Referencia
-        response.setDocumentoReferenciadoId(doc.getDocumentoReferenciadoId());
-        response.setMotivoReferencia(doc.getMotivoReferencia());
 
         // Estado/Fechas
         response.setFechaEmision(doc.getFechaEmision());
@@ -986,7 +924,6 @@ public class DocumentoFacturacionService {
         resp.setMontoDescuento(det.getMontoDescuento());
         resp.setMontoGravado(det.getMontoGravado());
         resp.setMontoIgv(det.getMontoIgv());
-        resp.setMontoIsc(det.getMontoIsc());
         resp.setTotal(det.getTotal());
         return resp;
     }
@@ -1037,7 +974,6 @@ public class DocumentoFacturacionService {
      * - 03: Boleta de Venta
      * - 07: Nota de Crédito
      * - 08: Nota de Débito
-     * - 09: Guía de Remisión
      */
     private String getCodigoTipoDocumentoSunat(DocumentoFacturacion.TipoDocumento tipo) {
         switch (tipo) {
@@ -1045,7 +981,6 @@ public class DocumentoFacturacionService {
             case boleta:        return "03";
             case nota_credito:  return "07";
             case nota_debito:   return "08";
-            case guia_remision: return "09";
             default:            return null;
         }
     }

@@ -2,285 +2,229 @@ package DrinkGo.DrinkGo_backend.service;
 
 import DrinkGo.DrinkGo_backend.dto.MovimientoInventarioRequest;
 import DrinkGo.DrinkGo_backend.dto.MovimientoInventarioResponse;
-import DrinkGo.DrinkGo_backend.entity.*;
+import DrinkGo.DrinkGo_backend.entity.LoteInventario;
+import DrinkGo.DrinkGo_backend.entity.LoteInventario.LoteEstado;
+import DrinkGo.DrinkGo_backend.entity.MovimientoInventario;
+import DrinkGo.DrinkGo_backend.entity.MovimientoInventario.TipoMovimiento;
+import DrinkGo.DrinkGo_backend.entity.StockInventario;
 import DrinkGo.DrinkGo_backend.exception.OperacionInvalidaException;
 import DrinkGo.DrinkGo_backend.exception.RecursoNoEncontradoException;
 import DrinkGo.DrinkGo_backend.exception.StockInsuficienteException;
-import DrinkGo.DrinkGo_backend.repository.*;
+import DrinkGo.DrinkGo_backend.repository.AlmacenRepository;
+import DrinkGo.DrinkGo_backend.repository.LoteInventarioRepository;
+import DrinkGo.DrinkGo_backend.repository.MovimientoInventarioRepository;
+import DrinkGo.DrinkGo_backend.repository.ProductoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Servicio para movimientos de inventario (RF-INV-006).
- * Registra cada entrada y salida con referencia al lote utilizado.
- * Valida disponibilidad antes de salida.
- * Los movimientos son inmutables (no se editan ni eliminan).
- */
 @Service
 public class MovimientoInventarioService {
 
-    private static final Set<String> TIPOS_ENTRADA = Set.of(
-            "entrada_compra", "entrada_devolucion", "entrada_transferencia",
-            "ajuste_entrada", "stock_inicial", "entrada_produccion"
+    private static final Set<TipoMovimiento> TIPOS_ENTRADA = Set.of(
+            TipoMovimiento.entrada_compra,
+            TipoMovimiento.ajuste_entrada,
+            TipoMovimiento.stock_inicial
     );
 
-    private static final Set<String> TIPOS_SALIDA = Set.of(
-            "salida_venta", "salida_devolucion", "salida_transferencia",
-            "ajuste_salida", "merma", "rotura", "vencimiento", "salida_produccion"
+    private static final Set<TipoMovimiento> TIPOS_SALIDA = Set.of(
+            TipoMovimiento.salida_venta,
+            TipoMovimiento.ajuste_salida
     );
 
-    private final MovimientoInventarioRepository movimientoRepository;
-    private final StockInventarioRepository stockRepository;
-    private final LoteInventarioRepository loteRepository;
-    private final ProductoRepository productoRepository;
-    private final AlmacenRepository almacenRepository;
+    private final MovimientoInventarioRepository movRepo;
+    private final ProductoRepository productoRepo;
+    private final AlmacenRepository almacenRepo;
+    private final LoteInventarioRepository loteRepo;
+    private final StockInventarioService stockService;
 
-    public MovimientoInventarioService(MovimientoInventarioRepository movimientoRepository,
-                                        StockInventarioRepository stockRepository,
-                                        LoteInventarioRepository loteRepository,
-                                        ProductoRepository productoRepository,
-                                        AlmacenRepository almacenRepository) {
-        this.movimientoRepository = movimientoRepository;
-        this.stockRepository = stockRepository;
-        this.loteRepository = loteRepository;
-        this.productoRepository = productoRepository;
-        this.almacenRepository = almacenRepository;
+    public MovimientoInventarioService(MovimientoInventarioRepository movRepo,
+                                        ProductoRepository productoRepo,
+                                        AlmacenRepository almacenRepo,
+                                        LoteInventarioRepository loteRepo,
+                                        StockInventarioService stockService) {
+        this.movRepo = movRepo;
+        this.productoRepo = productoRepo;
+        this.almacenRepo = almacenRepo;
+        this.loteRepo = loteRepo;
+        this.stockService = stockService;
     }
 
-    /** Listar todos los movimientos del negocio */
-    public List<MovimientoInventarioResponse> listar(Long negocioId) {
-        return movimientoRepository.findByNegocioIdOrderByCreadoEnDesc(negocioId).stream()
-                .map(this::convertirAResponse)
-                .collect(Collectors.toList());
+    /* ── Listar ───────────────────────────────────────────── */
+
+    @Transactional(readOnly = true)
+    public List<MovimientoInventarioResponse> listarTodos(Long negocioId) {
+        return movRepo.findByNegocioIdOrderByCreadoEnDesc(negocioId)
+                .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    /** Obtener movimiento por ID */
+    @Transactional(readOnly = true)
     public MovimientoInventarioResponse obtenerPorId(Long id, Long negocioId) {
-        MovimientoInventario mov = movimientoRepository.findByIdAndNegocioId(id, negocioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Movimiento de inventario", id));
-        return convertirAResponse(mov);
+        MovimientoInventario mov = movRepo.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("MovimientoInventario", id));
+        return toResponse(mov);
     }
 
-    /**
-     * Registrar movimiento de inventario (ajuste manual).
-     * Para entradas: incrementa stock.
-     * Para salidas: usa FIFO para descontar de lotes, valida disponibilidad.
-     */
+    @Transactional(readOnly = true)
+    public List<MovimientoInventarioResponse> listarPorProductoYAlmacen(Long productoId, Long almacenId, Long negocioId) {
+        return movRepo.findByProductoIdAndAlmacenIdAndNegocioId(productoId, almacenId, negocioId)
+                .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MovimientoInventarioResponse> listarPorTipo(String tipo, Long negocioId) {
+        TipoMovimiento tm = parseTipo(tipo);
+        return movRepo.findByTipoMovimientoAndNegocioId(tm, negocioId)
+                .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MovimientoInventarioResponse> listarPorRangoFechas(Long negocioId, LocalDateTime desde, LocalDateTime hasta) {
+        return movRepo.findByNegocioIdAndCreadoEnBetween(negocioId, desde, hasta)
+                .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    /* ── Registrar movimiento ─────────────────────────────── */
+
     @Transactional
-    public MovimientoInventarioResponse crear(MovimientoInventarioRequest request,
-                                               Long negocioId, Long usuarioId) {
-        // Validar tipo de movimiento
-        MovimientoInventario.TipoMovimiento tipo;
+    public MovimientoInventarioResponse registrar(MovimientoInventarioRequest req, Long negocioId, Long realizadoPor) {
+        // Validar producto y almacén
+        productoRepo.findByIdAndNegocioId(req.getProductoId(), negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Producto", req.getProductoId()));
+        almacenRepo.findByIdAndNegocioId(req.getAlmacenId(), negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Almacen", req.getAlmacenId()));
+
+        TipoMovimiento tipo = parseTipo(req.getTipoMovimiento());
+        int cantidad = req.getCantidad();
+
+        // Obtener o crear stock
+        StockInventario stock = stockService.obtenerOCrearStock(
+                req.getProductoId(), req.getAlmacenId(), negocioId);
+
+        // ── Entradas ──
+        if (TIPOS_ENTRADA.contains(tipo)) {
+            stock.setCantidadTotal(stock.getCantidadTotal() + cantidad);
+
+            // Si se indica un lote, sumar al lote
+            if (req.getLoteId() != null) {
+                LoteInventario lote = loteRepo.findByIdAndNegocioId(req.getLoteId(), negocioId)
+                        .orElseThrow(() -> new RecursoNoEncontradoException("LoteInventario", req.getLoteId()));
+                lote.setCantidadRestante(lote.getCantidadRestante() + cantidad);
+                if (lote.getEstado() == LoteEstado.agotado) {
+                    lote.setEstado(LoteEstado.disponible);
+                }
+                loteRepo.save(lote);
+            }
+        }
+        // ── Salidas ──
+        else if (TIPOS_SALIDA.contains(tipo)) {
+            if (stock.getCantidadTotal() < cantidad) {
+                throw new StockInsuficienteException(
+                        "Stock insuficiente: disponible=" + stock.getCantidadTotal()
+                        + ", solicitado=" + cantidad);
+            }
+            stock.setCantidadTotal(stock.getCantidadTotal() - cantidad);
+
+            // Si se indica un lote concreto, descontar de ese lote
+            if (req.getLoteId() != null) {
+                LoteInventario lote = loteRepo.findByIdAndNegocioId(req.getLoteId(), negocioId)
+                        .orElseThrow(() -> new RecursoNoEncontradoException("LoteInventario", req.getLoteId()));
+                descontarDeLote(lote, cantidad);
+            } else {
+                // FIFO: descontar de lotes disponibles en orden
+                descontarFIFO(req.getProductoId(), req.getAlmacenId(), negocioId, cantidad);
+            }
+        }
+
+        // Guardar movimiento
+        MovimientoInventario mov = new MovimientoInventario();
+        mov.setNegocioId(negocioId);
+        mov.setProductoId(req.getProductoId());
+        mov.setAlmacenId(req.getAlmacenId());
+        mov.setLoteId(req.getLoteId());
+        mov.setTipoMovimiento(tipo);
+        mov.setCantidad(cantidad);
+        mov.setMotivo(req.getMotivo());
+        mov.setRealizadoPor(realizadoPor);
+
+        return toResponse(movRepo.save(mov));
+    }
+
+    /* ── FIFO de salida ───────────────────────────────────── */
+
+    private void descontarFIFO(Long productoId, Long almacenId, Long negocioId, int cantidadRequerida) {
+        List<LoteInventario> lotes = loteRepo.findLotesDisponiblesFIFO(productoId, almacenId, negocioId);
+        int restante = cantidadRequerida;
+
+        for (LoteInventario lote : lotes) {
+            if (restante <= 0) break;
+            int disponible = lote.getCantidadRestante();
+            int descuento = Math.min(disponible, restante);
+
+            lote.setCantidadRestante(disponible - descuento);
+            if (lote.getCantidadRestante() <= 0) {
+                lote.setEstado(LoteEstado.agotado);
+            }
+            loteRepo.save(lote);
+            restante -= descuento;
+        }
+        // Si no hay lotes suficientes, lo permitimos (stock ya fue validado).
+    }
+
+    private void descontarDeLote(LoteInventario lote, int cantidad) {
+        if (lote.getCantidadRestante() < cantidad) {
+            throw new StockInsuficienteException(
+                    "Lote " + lote.getNumeroLote() + " tiene solo "
+                    + lote.getCantidadRestante() + " unidades disponibles");
+        }
+        lote.setCantidadRestante(lote.getCantidadRestante() - cantidad);
+        if (lote.getCantidadRestante() <= 0) {
+            lote.setEstado(LoteEstado.agotado);
+        }
+        loteRepo.save(lote);
+    }
+
+    /* ── Helpers ──────────────────────────────────────────── */
+
+    private TipoMovimiento parseTipo(String valor) {
         try {
-            tipo = MovimientoInventario.TipoMovimiento.valueOf(request.getTipoMovimiento());
+            return TipoMovimiento.valueOf(valor);
         } catch (IllegalArgumentException e) {
             throw new OperacionInvalidaException(
-                    "Tipo de movimiento inválido: " + request.getTipoMovimiento() +
-                    ". Valores permitidos: " + String.join(", ",
-                    TIPOS_ENTRADA) + ", " + String.join(", ", TIPOS_SALIDA));
-        }
-
-        // Validar producto pertenece al negocio
-        Producto producto = productoRepository.findByIdAndNegocioId(request.getProductoId(), negocioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Producto", request.getProductoId()));
-
-        // Validar almacén pertenece al negocio
-        Almacen almacen = almacenRepository.findByIdAndNegocioId(request.getAlmacenId(), negocioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Almacén", request.getAlmacenId()));
-
-        // Validar lote si se proporcionó
-        LoteInventario lote = null;
-        if (request.getLoteId() != null) {
-            lote = loteRepository.findByIdAndNegocioId(request.getLoteId(), negocioId)
-                    .orElseThrow(() -> new RecursoNoEncontradoException("Lote de inventario", request.getLoteId()));
-        }
-
-        boolean esEntrada = TIPOS_ENTRADA.contains(request.getTipoMovimiento());
-        boolean esSalida = TIPOS_SALIDA.contains(request.getTipoMovimiento());
-
-        if (esSalida) {
-            // Validar disponibilidad antes de salida
-            validarDisponibilidadSalida(negocioId, request.getProductoId(),
-                    request.getAlmacenId(), request.getCantidad());
-
-            // Descontar FIFO de lotes
-            descontarFIFO(negocioId, request.getProductoId(), request.getAlmacenId(),
-                    request.getCantidad());
-
-            // Actualizar stock (reducir)
-            actualizarStock(negocioId, request.getProductoId(), request.getAlmacenId(),
-                    -request.getCantidad());
-        } else if (esEntrada) {
-            // Actualizar stock (incrementar)
-            actualizarStock(negocioId, request.getProductoId(), request.getAlmacenId(),
-                    request.getCantidad());
-
-            // Crear lote automático para mantener consistencia stock/lotes (FIFO)
-            if (lote == null) {
-                lote = crearLoteAutomatico(negocioId, producto, almacen,
-                        request.getCantidad(), request.getCostoUnitario(),
-                        request.getTipoMovimiento(), request.getMotivo());
-            } else {
-                // Si se proporcionó lote, incrementar su cantidad
-                lote.setCantidadRestante(lote.getCantidadRestante() + request.getCantidad());
-                lote.setCantidadInicial(lote.getCantidadInicial() + request.getCantidad());
-                loteRepository.save(lote);
-            }
-        }
-
-        // Registrar el movimiento
-        MovimientoInventario movimiento = new MovimientoInventario();
-        movimiento.setNegocioId(negocioId);
-        movimiento.setProducto(producto);
-        movimiento.setAlmacen(almacen);
-        movimiento.setLote(lote);
-        movimiento.setTipoMovimiento(tipo);
-        movimiento.setCantidad(request.getCantidad());
-        movimiento.setCostoUnitario(request.getCostoUnitario());
-        movimiento.setTipoReferencia(request.getTipoReferencia());
-        movimiento.setReferenciaId(request.getReferenciaId());
-        movimiento.setMotivo(request.getMotivo());
-        movimiento.setRealizadoPor(usuarioId);
-        movimiento.setCreadoEn(LocalDateTime.now());
-
-        MovimientoInventario guardado = movimientoRepository.save(movimiento);
-
-        return convertirAResponse(guardado);
-    }
-
-    // ── Métodos auxiliares ──
-
-    /** Listar movimientos filtrados por producto */
-    public List<MovimientoInventarioResponse> listarPorProducto(Long negocioId, Long productoId) {
-        return movimientoRepository.findByNegocioIdAndProductoIdOrderByCreadoEnDesc(negocioId, productoId).stream()
-                .map(this::convertirAResponse)
-                .collect(Collectors.toList());
-    }
-
-    /** Listar movimientos filtrados por almacén */
-    public List<MovimientoInventarioResponse> listarPorAlmacen(Long negocioId, Long almacenId) {
-        return movimientoRepository.findByNegocioIdAndAlmacenIdOrderByCreadoEnDesc(negocioId, almacenId).stream()
-                .map(this::convertirAResponse)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Crea un lote automático al registrar un movimiento de entrada.
-     * Garantiza que todo stock tenga respaldo en lotes para mantener FIFO consistente.
-     */
-    private LoteInventario crearLoteAutomatico(Long negocioId, Producto producto, Almacen almacen,
-                                                int cantidad, java.math.BigDecimal costoUnitario,
-                                                String tipoMovimiento, String motivo) {
-        LoteInventario lote = new LoteInventario();
-        lote.setNegocioId(negocioId);
-        lote.setProducto(producto);
-        lote.setAlmacen(almacen);
-        lote.setNumeroLote("MOV-" + tipoMovimiento.toUpperCase() + "-" + System.currentTimeMillis());
-        lote.setCantidadInicial(cantidad);
-        lote.setCantidadRestante(cantidad);
-        lote.setPrecioCompra(costoUnitario != null ? costoUnitario : java.math.BigDecimal.ZERO);
-        lote.setFechaRecepcion(java.time.LocalDate.now());
-        lote.setEstado(LoteInventario.LoteEstado.disponible);
-        lote.setNotas("Lote generado automáticamente por movimiento: " +
-                (motivo != null ? motivo : tipoMovimiento));
-        lote.setCreadoEn(LocalDateTime.now());
-        return loteRepository.save(lote);
-    }
-
-    private void validarDisponibilidadSalida(Long negocioId, Long productoId,
-                                              Long almacenId, int cantidad) {
-        Optional<StockInventario> stockOpt = stockRepository
-                .findByNegocioIdAndProductoIdAndAlmacenId(negocioId, productoId, almacenId);
-
-        if (stockOpt.isEmpty() || stockOpt.get().getCantidadEnMano() < cantidad) {
-            int disponible = stockOpt.map(StockInventario::getCantidadEnMano).orElse(0);
-            throw new StockInsuficienteException(
-                    "Stock insuficiente para la salida. Disponible: " + disponible +
-                    ", Solicitado: " + cantidad);
+                    "Tipo de movimiento inválido: '" + valor
+                    + "'. Valores permitidos: entrada_compra, salida_venta, "
+                    + "ajuste_entrada, ajuste_salida, stock_inicial");
         }
     }
 
-    private void descontarFIFO(Long negocioId, Long productoId, Long almacenId, int cantidadADescontar) {
-        List<LoteInventario> lotesDisponibles = loteRepository
-                .findLotesFIFODisponibles(
-                        negocioId, productoId, almacenId,
-                        LoteInventario.LoteEstado.disponible, java.time.LocalDate.now());
+    /* ── Mapper ───────────────────────────────────────────── */
 
-        int restante = cantidadADescontar;
-        for (LoteInventario lote : lotesDisponibles) {
-            if (restante <= 0) break;
+    private MovimientoInventarioResponse toResponse(MovimientoInventario m) {
+        MovimientoInventarioResponse r = new MovimientoInventarioResponse();
+        r.setId(m.getId());
+        r.setNegocioId(m.getNegocioId());
+        r.setProductoId(m.getProductoId());
+        r.setAlmacenId(m.getAlmacenId());
+        r.setLoteId(m.getLoteId());
+        r.setTipoMovimiento(m.getTipoMovimiento() != null ? m.getTipoMovimiento().name() : null);
+        r.setCantidad(m.getCantidad());
+        r.setMotivo(m.getMotivo());
+        r.setRealizadoPor(m.getRealizadoPor());
+        r.setCreadoEn(m.getCreadoEn());
 
-            int descontar = Math.min(restante, lote.getCantidadRestante());
-            lote.setCantidadRestante(lote.getCantidadRestante() - descontar);
-
-            if (lote.getCantidadRestante() == 0) {
-                lote.setEstado(LoteInventario.LoteEstado.agotado);
-            }
-
-            loteRepository.save(lote);
-            restante -= descontar;
+        if (m.getProducto() != null) {
+            r.setProductoNombre(m.getProducto().getNombre());
         }
-
-        if (restante > 0) {
-            throw new StockInsuficienteException(
-                    "No hay suficientes lotes disponibles para cubrir la cantidad solicitada");
+        if (m.getAlmacen() != null) {
+            r.setAlmacenNombre(m.getAlmacen().getNombre());
         }
-    }
-
-    private void actualizarStock(Long negocioId, Long productoId, Long almacenId, int delta) {
-        Optional<StockInventario> stockOpt = stockRepository
-                .findByNegocioIdAndProductoIdAndAlmacenId(negocioId, productoId, almacenId);
-
-        StockInventario stock;
-        if (stockOpt.isPresent()) {
-            stock = stockOpt.get();
-            int nuevoStock = stock.getCantidadEnMano() + delta;
-            if (nuevoStock < 0) {
-                throw new StockInsuficienteException("El stock resultante sería negativo");
-            }
-            stock.setCantidadEnMano(nuevoStock);
-        } else {
-            if (delta < 0) {
-                throw new StockInsuficienteException("No existe registro de stock para este producto en este almacén");
-            }
-            Producto producto = productoRepository.findById(productoId).orElse(null);
-            Almacen almacen = almacenRepository.findById(almacenId).orElse(null);
-            stock = new StockInventario();
-            stock.setNegocioId(negocioId);
-            stock.setProducto(producto);
-            stock.setAlmacen(almacen);
-            stock.setCantidadEnMano(delta);
-            stock.setCantidadReservada(0);
-            stock.setCreadoEn(LocalDateTime.now());
+        if (m.getLote() != null) {
+            r.setNumeroLote(m.getLote().getNumeroLote());
         }
-        stock.setUltimoMovimientoEn(LocalDateTime.now());
-        stockRepository.save(stock);
-    }
-
-    private MovimientoInventarioResponse convertirAResponse(MovimientoInventario mov) {
-        MovimientoInventarioResponse resp = new MovimientoInventarioResponse();
-        resp.setId(mov.getId());
-        resp.setNegocioId(mov.getNegocioId());
-        resp.setProductoId(mov.getProductoId());
-        resp.setProductoNombre(mov.getProducto() != null ? mov.getProducto().getNombre() : null);
-        resp.setAlmacenId(mov.getAlmacenId());
-        resp.setAlmacenNombre(mov.getAlmacen() != null ? mov.getAlmacen().getNombre() : null);
-        resp.setLoteId(mov.getLoteId());
-        resp.setNumeroLote(mov.getLote() != null ? mov.getLote().getNumeroLote() : null);
-        resp.setTipoMovimiento(mov.getTipoMovimiento() != null ? mov.getTipoMovimiento().name() : null);
-        resp.setCantidad(mov.getCantidad());
-        resp.setCostoUnitario(mov.getCostoUnitario());
-        resp.setTipoReferencia(mov.getTipoReferencia());
-        resp.setReferenciaId(mov.getReferenciaId());
-        resp.setMotivo(mov.getMotivo());
-        resp.setRealizadoPor(mov.getRealizadoPor());
-        resp.setCreadoEn(mov.getCreadoEn());
-        return resp;
+        return r;
     }
 }

@@ -9,37 +9,26 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Repositorio para stock de inventario (RF-INV-001).
- * Gestiona las existencias actuales filtrando siempre por negocio_id.
- */
 @Repository
 public interface StockInventarioRepository extends JpaRepository<StockInventario, Long> {
 
-    /** Buscar stock por ID y negocio (Seguridad multi-tenant) */
-    Optional<StockInventario> findByIdAndNegocioId(Long id, Long negocioId);
-
-    /** Listar todo el stock de un negocio */
     List<StockInventario> findByNegocioId(Long negocioId);
 
-    /** Listar stock de un producto en todos los almacenes del negocio */
-    List<StockInventario> findByNegocioIdAndProductoId(Long negocioId, Long productoId);
+    Optional<StockInventario> findByIdAndNegocioId(Long id, Long negocioId);
 
-    /** Buscar el registro de stock específico de un producto en un almacén determinado */
-    Optional<StockInventario> findByNegocioIdAndProductoIdAndAlmacenId(
-            Long negocioId, Long productoId, Long almacenId);
+    Optional<StockInventario> findByProductoIdAndAlmacenIdAndNegocioId(Long productoId, Long almacenId, Long negocioId);
 
-    /** Listar existencias de un almacén específico */
-    List<StockInventario> findByNegocioIdAndAlmacenId(Long negocioId, Long almacenId);
+    List<StockInventario> findByAlmacenIdAndNegocioId(Long almacenId, Long negocioId);
 
-    /** * Consulta para detectar stock bajo comparando con el stock_minimo definido en Producto.
-     * Se usa Native Query para facilitar el JOIN con la tabla de productos de MySQL.
+    List<StockInventario> findByProductoIdAndNegocioId(Long productoId, Long negocioId);
+
+    /**
+     * Stock bajo: registros cuya cantidad_total está por debajo de un umbral.
      */
-    @Query(value = "SELECT si.* FROM stock_inventario si " +
-            "INNER JOIN productos p ON si.producto_id = p.id " +
-            "WHERE si.negocio_id = :negocioId " +
-            "AND si.cantidad_en_mano <= p.stock_minimo " +
-            "AND p.esta_activo = 1", 
+    @Query(value = "SELECT * FROM stock_inventario " +
+            "WHERE negocio_id = :negocioId AND cantidad_total <= :umbral " +
+            "ORDER BY cantidad_total ASC",
             nativeQuery = true)
-    List<StockInventario> findStockBajo(@Param("negocioId") Long negocioId);
+    List<StockInventario> findStockBajo(@Param("negocioId") Long negocioId,
+                                        @Param("umbral") int umbral);
 }

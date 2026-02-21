@@ -7,7 +7,7 @@ public class CreateSerieFacturacionRequest {
 
     private Long negocioId;
     private Long sedeId;
-    private String tipoDocumento; // boleta, factura, nota_credito, nota_debito, guia_remision
+    private String tipoDocumento; // boleta, factura, nota_credito, nota_debito
     private String prefijoSerie;  // Ej: B001, F001, BC01, FC01
 
     // --- Getters y Setters ---

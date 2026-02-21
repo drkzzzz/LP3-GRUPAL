@@ -20,27 +20,15 @@ public class LoteInventarioRequest {
     @Size(max = 50, message = "El numero_lote no puede exceder 50 caracteres")
     private String numeroLote;
 
-    @NotNull(message = "La cantidad_inicial es obligatoria")
-    @Min(value = 1, message = "La cantidad_inicial debe ser al menos 1")
-    private Integer cantidadInicial;
+    @NotNull(message = "La cantidad_restante es obligatoria")
+    @Min(value = 1, message = "La cantidad_restante debe ser al menos 1")
+    private Integer cantidadRestante;
 
-    @NotNull(message = "El precio_compra es obligatorio")
-    @DecimalMin(value = "0.01", message = "El precio_compra debe ser mayor a 0")
-    private BigDecimal precioCompra;
-
-    private LocalDate fechaFabricacion;
+    @NotNull(message = "El costo_unitario_compra es obligatorio")
+    @DecimalMin(value = "0.00", message = "El costo_unitario_compra no puede ser negativo")
+    private BigDecimal costoUnitarioCompra;
 
     private LocalDate fechaVencimiento;
-
-    @NotNull(message = "La fecha_recepcion es obligatoria")
-    private LocalDate fechaRecepcion;
-
-    private Long proveedorId;
-
-    private Long ordenCompraId;
-
-    @Size(max = 65535, message = "Las notas son demasiado largas")
-    private String notas;
 
     public LoteInventarioRequest() {}
 
@@ -53,27 +41,12 @@ public class LoteInventarioRequest {
     public String getNumeroLote() { return numeroLote; }
     public void setNumeroLote(String numeroLote) { this.numeroLote = numeroLote; }
 
-    public Integer getCantidadInicial() { return cantidadInicial; }
-    public void setCantidadInicial(Integer cantidadInicial) { this.cantidadInicial = cantidadInicial; }
+    public Integer getCantidadRestante() { return cantidadRestante; }
+    public void setCantidadRestante(Integer cantidadRestante) { this.cantidadRestante = cantidadRestante; }
 
-    public BigDecimal getPrecioCompra() { return precioCompra; }
-    public void setPrecioCompra(BigDecimal precioCompra) { this.precioCompra = precioCompra; }
-
-    public LocalDate getFechaFabricacion() { return fechaFabricacion; }
-    public void setFechaFabricacion(LocalDate fechaFabricacion) { this.fechaFabricacion = fechaFabricacion; }
+    public BigDecimal getCostoUnitarioCompra() { return costoUnitarioCompra; }
+    public void setCostoUnitarioCompra(BigDecimal costoUnitarioCompra) { this.costoUnitarioCompra = costoUnitarioCompra; }
 
     public LocalDate getFechaVencimiento() { return fechaVencimiento; }
     public void setFechaVencimiento(LocalDate fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
-
-    public LocalDate getFechaRecepcion() { return fechaRecepcion; }
-    public void setFechaRecepcion(LocalDate fechaRecepcion) { this.fechaRecepcion = fechaRecepcion; }
-
-    public Long getProveedorId() { return proveedorId; }
-    public void setProveedorId(Long proveedorId) { this.proveedorId = proveedorId; }
-
-    public Long getOrdenCompraId() { return ordenCompraId; }
-    public void setOrdenCompraId(Long ordenCompraId) { this.ordenCompraId = ordenCompraId; }
-
-    public String getNotas() { return notas; }
-    public void setNotas(String notas) { this.notas = notas; }
 }

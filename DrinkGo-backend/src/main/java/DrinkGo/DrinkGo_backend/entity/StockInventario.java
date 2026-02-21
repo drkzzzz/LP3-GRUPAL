@@ -4,9 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * Stock actual por producto y almacén (RF-INV-001).
- * La columna cantidad_disponible es calculada por la base de datos (mano - reservada).
- * NOTA: la tabla stock_inventario NO tiene columna eliminado_en.
+ * Resumen de stock actual por producto y almacén.
+ * Tabla: stock_inventario (Bloque 5.1)
  */
 @Entity
 @Table(name = "stock_inventario")
@@ -33,31 +32,14 @@ public class StockInventario {
     @JoinColumn(name = "almacen_id", insertable = false, updatable = false)
     private Almacen almacen;
 
-    @Column(name = "cantidad_en_mano", nullable = false)
-    private Integer cantidadEnMano = 0;
-
-    @Column(name = "cantidad_reservada", nullable = false)
-    private Integer cantidadReservada = 0;
-
-    /** Columna generada por MySQL: cantidad_en_mano - cantidad_reservada */
-    @Column(name = "cantidad_disponible", insertable = false, updatable = false)
-    private Integer cantidadDisponible;
-
-    @Column(name = "ultimo_conteo_en")
-    private LocalDateTime ultimoConteoEn;
-
-    @Column(name = "ultimo_movimiento_en")
-    private LocalDateTime ultimoMovimientoEn;
-
-    @Column(name = "creado_en", nullable = false, updatable = false)
-    private LocalDateTime creadoEn;
+    @Column(name = "cantidad_total", nullable = false)
+    private Integer cantidadTotal = 0;
 
     @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
     @PrePersist
     protected void onCreate() {
-        this.creadoEn = LocalDateTime.now();
         this.actualizadoEn = LocalDateTime.now();
     }
 
@@ -92,22 +74,9 @@ public class StockInventario {
         if (almacen != null) this.almacenId = almacen.getId();
     }
 
-    public Integer getCantidadEnMano() { return cantidadEnMano; }
-    public void setCantidadEnMano(Integer cantidadEnMano) { this.cantidadEnMano = cantidadEnMano; }
-
-    public Integer getCantidadReservada() { return cantidadReservada; }
-    public void setCantidadReservada(Integer cantidadReservada) { this.cantidadReservada = cantidadReservada; }
-
-    public Integer getCantidadDisponible() { return cantidadDisponible; }
-
-    public LocalDateTime getUltimoConteoEn() { return ultimoConteoEn; }
-    public void setUltimoConteoEn(LocalDateTime ultimoConteoEn) { this.ultimoConteoEn = ultimoConteoEn; }
-
-    public LocalDateTime getUltimoMovimientoEn() { return ultimoMovimientoEn; }
-    public void setUltimoMovimientoEn(LocalDateTime ultimoMovimientoEn) { this.ultimoMovimientoEn = ultimoMovimientoEn; }
-
-    public LocalDateTime getCreadoEn() { return creadoEn; }
-    public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
+    public Integer getCantidadTotal() { return cantidadTotal; }
+    public void setCantidadTotal(Integer cantidadTotal) { this.cantidadTotal = cantidadTotal; }
 
     public LocalDateTime getActualizadoEn() { return actualizadoEn; }
+    public void setActualizadoEn(LocalDateTime actualizadoEn) { this.actualizadoEn = actualizadoEn; }
 }

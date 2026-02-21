@@ -68,7 +68,7 @@ public class DocumentoFacturacionController {
 
     /**
      * Emitir un nuevo documento de facturación.
-     * Tipo: boleta, factura, nota_credito, nota_debito, guia_remision.
+     * Tipo: boleta, factura, nota_credito, nota_debito.
      */
     @PostMapping("/documentos")
     public ResponseEntity<?> emitirDocumento(@RequestBody CreateDocumentoFacturacionRequest request) {
@@ -94,8 +94,6 @@ public class DocumentoFacturacionController {
      * Request body ejemplo:
      * {
      *   "tipoDocumento": "boleta",      // opcional, se puede dejar en la URL
-     *   "rucEmisor": "20123456789",
-     *   "razonSocialEmisor": "Mi Licorería SAC",
      *   "nombreReceptor": "Juan Pérez", // opcional, se toma del pedido si no se envía
      *   "creadoPor": 3
      * }

@@ -651,84 +651,53 @@ CREATE TABLE detalle_combos (
 -- BLOQUE 5: INVENTARIO, LOTES Y MOVIMIENTOS
 -- ============================================================
 
--- ============================================================
--- 5.1 STOCK POR ALMACÉN
--- ============================================================
-
+-- 5.1 STOCK TOTAL POR ALMACÉN
+-- Provee una vista rápida para el catálogo y validación de stock.
 CREATE TABLE stock_inventario (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
     producto_id BIGINT UNSIGNED NOT NULL,
     almacen_id BIGINT UNSIGNED NOT NULL,
-    cantidad_en_mano INT NOT NULL DEFAULT 0,
-    cantidad_reservada INT NOT NULL DEFAULT 0 COMMENT 'Reservado por pedidos pendientes',
-    cantidad_disponible INT GENERATED ALWAYS AS (cantidad_en_mano - cantidad_reservada) STORED,
-    ultimo_conteo_en TIMESTAMP NULL,
-    ultimo_movimiento_en TIMESTAMP NULL,
-    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cantidad_total INT NOT NULL DEFAULT 0 COMMENT 'Suma de todos los lotes disponibles',
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_stkinv_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     CONSTRAINT fk_stkinv_producto FOREIGN KEY (producto_id) REFERENCES productos(id),
     CONSTRAINT fk_stkinv_almacen FOREIGN KEY (almacen_id) REFERENCES almacenes(id),
-    UNIQUE KEY uk_stkinv_producto_almacen (producto_id, almacen_id),
-    INDEX idx_stkinv_negocio (negocio_id),
-    INDEX idx_stkinv_almacen (almacen_id),
-    INDEX idx_stkinv_stock_bajo (negocio_id, cantidad_en_mano)
-) ENGINE=InnoDB COMMENT='Stock actual por producto y almacén (RF-INV-001)';
+    UNIQUE KEY uk_stkinv_prod_alm (producto_id, almacen_id),
+    INDEX idx_stkinv_negocio (negocio_id)
+) ENGINE=InnoDB COMMENT='Resumen de stock actual por producto';
 
--- ============================================================
--- 5.2 LOTES (FIFO)
--- ============================================================
-
+-- 5.2 LOTES Y VENCIMIENTOS
+-- Permite el control de fechas para licores y la valoración del inventario.
 CREATE TABLE lotes_inventario (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
     producto_id BIGINT UNSIGNED NOT NULL,
     almacen_id BIGINT UNSIGNED NOT NULL,
     numero_lote VARCHAR(50) NOT NULL,
-    cantidad_inicial INT NOT NULL,
     cantidad_restante INT NOT NULL,
-    precio_compra DECIMAL(10,2) NOT NULL,
-    fecha_fabricacion DATE NULL,
-    fecha_vencimiento DATE NULL,
-    fecha_recepcion DATE NOT NULL,
-    proveedor_id BIGINT UNSIGNED NULL,
-    orden_compra_id BIGINT UNSIGNED NULL,
-    estado ENUM('disponible','agotado','vencido','cuarentena','devuelto') NOT NULL DEFAULT 'disponible',
-    notas TEXT NULL,
+    costo_unitario_compra DECIMAL(10,2) NOT NULL COMMENT 'Necesario para reporte de valoración',
+    fecha_vencimiento DATE NULL COMMENT 'Crítico para rotación de licores',
+    estado ENUM('disponible','agotado','vencido') NOT NULL DEFAULT 'disponible',
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_lotinv_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    CONSTRAINT fk_lotinv_producto FOREIGN KEY (producto_id) REFERENCES productos(id),
-    CONSTRAINT fk_lotinv_almacen FOREIGN KEY (almacen_id) REFERENCES almacenes(id),
-    UNIQUE KEY uk_lotinv_negocio_lote (negocio_id, numero_lote),
-    INDEX idx_lotinv_negocio (negocio_id),
-    INDEX idx_lotinv_producto (producto_id, almacen_id),
+    -- Relación directa con el stock maestro para integridad
+    CONSTRAINT fk_lotinv_prod_alm FOREIGN KEY (producto_id, almacen_id) REFERENCES stock_inventario(producto_id, almacen_id),
     INDEX idx_lotinv_vencimiento (fecha_vencimiento),
-    INDEX idx_lotinv_estado (estado),
-    INDEX idx_lotinv_fifo (producto_id, almacen_id, fecha_recepcion, estado)
-) ENGINE=InnoDB COMMENT='Lotes de inventario con FIFO (RF-INV-002..003)';
+    INDEX idx_lotinv_negocio (negocio_id)
+) ENGINE=InnoDB COMMENT='Gestión de lotes y fechas de expiración';
 
--- ============================================================
--- 5.3 MOVIMIENTOS DE INVENTARIO
--- ============================================================
-
+-- 5.3 HISTORIAL DE MOVIMIENTOS
+-- Registra ajustes manuales, entradas por compra y salidas por venta.
 CREATE TABLE movimientos_inventario (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
     producto_id BIGINT UNSIGNED NOT NULL,
     almacen_id BIGINT UNSIGNED NOT NULL,
     lote_id BIGINT UNSIGNED NULL,
-    tipo_movimiento ENUM(
-        'entrada_compra','salida_venta','entrada_devolucion','salida_devolucion',
-        'entrada_transferencia','salida_transferencia','ajuste_entrada','ajuste_salida',
-        'merma','rotura','vencimiento','stock_inicial','entrada_produccion','salida_produccion'
-    ) NOT NULL,
-    cantidad INT NOT NULL COMMENT 'Positivo o negativo según tipo',
-    costo_unitario DECIMAL(10,2) NULL,
-    tipo_referencia VARCHAR(50) NULL COMMENT 'Tipo de documento referencia',
-    referencia_id BIGINT UNSIGNED NULL COMMENT 'ID del documento referencia',
-    motivo VARCHAR(300) NULL,
+    tipo_movimiento ENUM('entrada_compra','salida_venta','ajuste_entrada','ajuste_salida','stock_inicial') NOT NULL,
+    cantidad INT NOT NULL COMMENT 'Cantidad afectada en el movimiento',
+    motivo VARCHAR(300) NULL COMMENT 'Referencia a venta, compra o motivo de ajuste',
     realizado_por BIGINT UNSIGNED NULL,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_movinv_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
@@ -736,13 +705,9 @@ CREATE TABLE movimientos_inventario (
     CONSTRAINT fk_movinv_almacen FOREIGN KEY (almacen_id) REFERENCES almacenes(id),
     CONSTRAINT fk_movinv_lote FOREIGN KEY (lote_id) REFERENCES lotes_inventario(id),
     CONSTRAINT fk_movinv_usuario FOREIGN KEY (realizado_por) REFERENCES usuarios(id),
-    INDEX idx_movinv_negocio (negocio_id),
-    INDEX idx_movinv_producto (producto_id),
-    INDEX idx_movinv_almacen (almacen_id),
-    INDEX idx_movinv_tipo (tipo_movimiento),
-    INDEX idx_movinv_referencia (tipo_referencia, referencia_id),
-    INDEX idx_movinv_creado (negocio_id, creado_en)
-) ENGINE=InnoDB COMMENT='Movimientos de inventario (RF-INV-004..006)';
+    INDEX idx_movinv_tipo (negocio_id, tipo_movimiento),
+    INDEX idx_movinv_fecha (creado_en)
+) ENGINE=InnoDB COMMENT='Kardex de movimientos de almacén';
 
 -- ============================================================
 -- BLOQUE 6: PROVEEDORES Y COMPRAS
@@ -1191,16 +1156,15 @@ CREATE TABLE series_facturacion (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
     sede_id BIGINT UNSIGNED NOT NULL,
-    tipo_documento ENUM('boleta','factura','nota_credito','nota_debito','guia_remision') NOT NULL,
-    prefijo_serie VARCHAR(10) NOT NULL COMMENT 'Ej: B001, F001, BC01, FC01',
+    tipo_documento ENUM('boleta','factura','nota_credito','nota_debito') NOT NULL,
+    prefijo_serie VARCHAR(10) NOT NULL COMMENT 'Ej: B001, F001',
     numero_actual INT UNSIGNED NOT NULL DEFAULT 0,
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_serfac_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     CONSTRAINT fk_serfac_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
-    UNIQUE KEY uk_serfac_negocio_serie (negocio_id, sede_id, tipo_documento, prefijo_serie),
-    INDEX idx_serfac_negocio (negocio_id)
+    UNIQUE KEY uk_serfac_negocio_serie (negocio_id, sede_id, tipo_documento, prefijo_serie)
 ) ENGINE=InnoDB COMMENT='Series de facturación por sede (RF-FACT-001)';
 
 CREATE TABLE documentos_facturacion (
@@ -1211,35 +1175,29 @@ CREATE TABLE documentos_facturacion (
     venta_id BIGINT UNSIGNED NULL,
     pedido_id BIGINT UNSIGNED NULL,
 
-    tipo_documento ENUM('boleta','factura','nota_credito','nota_debito','guia_remision') NOT NULL,
+    tipo_documento ENUM('boleta','factura','nota_credito','nota_debito') NOT NULL,
     serie VARCHAR(10) NOT NULL,
     numero_correlativo INT UNSIGNED NOT NULL,
-    numero_completo VARCHAR(30) NOT NULL COMMENT 'Ej: B001-00000123',
+    numero_completo VARCHAR(30) NOT NULL,
 
-    -- Datos del emisor (snapshot)
-    ruc_emisor VARCHAR(20) NOT NULL,
-    razon_social_emisor VARCHAR(200) NOT NULL,
-    direccion_emisor VARCHAR(300) NULL,
-
-    -- Datos del receptor
-    tipo_documento_receptor VARCHAR(5) NULL,
+    -- Datos del receptor (Snapshot para historial)
+    tipo_documento_receptor VARCHAR(5) NULL COMMENT 'DNI, RUC, CE',
     numero_documento_receptor VARCHAR(20) NULL,
     nombre_receptor VARCHAR(200) NOT NULL,
     direccion_receptor VARCHAR(300) NULL,
     email_receptor VARCHAR(150) NULL,
 
-    -- Montos
+    -- Montos e Impuestos (ISC incluido en precio según lógica de licorería)
     subtotal DECIMAL(12,2) NOT NULL,
     total_descuento DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    total_gravado DECIMAL(12,2) NOT NULL COMMENT 'Base imponible',
+    total_gravado DECIMAL(12,2) NOT NULL,
     total_igv DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    total_isc DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Impuesto selectivo al consumo',
     total_otros_impuestos DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     total DECIMAL(12,2) NOT NULL,
     moneda VARCHAR(3) NOT NULL DEFAULT 'PEN',
     tipo_cambio DECIMAL(10,6) NULL,
 
-    -- SUNAT
+    -- Integración Técnica PSE
     estado_sunat ENUM('pendiente','enviado','aceptado','rechazado','anulado','error') NOT NULL DEFAULT 'pendiente',
     ticket_sunat VARCHAR(100) NULL,
     codigo_respuesta_sunat VARCHAR(10) NULL,
@@ -1251,14 +1209,13 @@ CREATE TABLE documentos_facturacion (
     enviado_sunat_en TIMESTAMP NULL,
     aceptado_sunat_en TIMESTAMP NULL,
 
-    -- Documento referenciado (para notas de crédito/débito)
-    documento_referenciado_id BIGINT UNSIGNED NULL,
-    motivo_referencia VARCHAR(300) NULL,
-
+    -- Control de Estados del Documento (Solicitado por Requerimientos)
+    estado ENUM('borrador','emitido','enviado','aceptado','anulado','error') NOT NULL DEFAULT 'borrador',
+    
     fecha_emision DATE NOT NULL,
     fecha_vencimiento DATE NULL,
-    estado ENUM('borrador','emitido','enviado','aceptado','anulado','error') NOT NULL DEFAULT 'borrador',
 
+    -- Auditoría
     creado_por BIGINT UNSIGNED NULL,
     anulado_por BIGINT UNSIGNED NULL,
     anulado_en TIMESTAMP NULL,
@@ -1268,23 +1225,11 @@ CREATE TABLE documentos_facturacion (
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_docfac_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    CONSTRAINT fk_docfac_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
     CONSTRAINT fk_docfac_serie FOREIGN KEY (serie_id) REFERENCES series_facturacion(id),
     CONSTRAINT fk_docfac_venta FOREIGN KEY (venta_id) REFERENCES ventas(id) ON DELETE SET NULL,
-    CONSTRAINT fk_docfac_pedido FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE SET NULL,
-    CONSTRAINT fk_docfac_ref FOREIGN KEY (documento_referenciado_id) REFERENCES documentos_facturacion(id),
     CONSTRAINT fk_docfac_creado FOREIGN KEY (creado_por) REFERENCES usuarios(id),
-
-    UNIQUE KEY uk_docfac_numero_completo (negocio_id, numero_completo),
-    INDEX idx_docfac_negocio (negocio_id),
-    INDEX idx_docfac_sede (sede_id),
-    INDEX idx_docfac_venta (venta_id),
-    INDEX idx_docfac_pedido (pedido_id),
-    INDEX idx_docfac_tipo (negocio_id, tipo_documento),
-    INDEX idx_docfac_estado_sunat (estado_sunat),
-    INDEX idx_docfac_fecha_emision (negocio_id, fecha_emision),
-    INDEX idx_docfac_estado (negocio_id, estado)
-) ENGINE=InnoDB COMMENT='Documentos de facturación electrónica SUNAT (RF-FACT-001..005)';
+    UNIQUE KEY uk_docfac_numero_completo (negocio_id, numero_completo)
+) ENGINE=InnoDB COMMENT='Documentos SUNAT con estados definidos (RF-FACT-001..005)';
 
 CREATE TABLE detalle_documentos_facturacion (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -1292,18 +1237,16 @@ CREATE TABLE detalle_documentos_facturacion (
     producto_id BIGINT UNSIGNED NULL,
     numero_item INT UNSIGNED NOT NULL,
     descripcion VARCHAR(500) NOT NULL,
-    codigo_unidad VARCHAR(10) NOT NULL DEFAULT 'NIU' COMMENT 'Código SUNAT de unidad',
+    codigo_unidad VARCHAR(10) NOT NULL DEFAULT 'NIU',
     cantidad DECIMAL(12,4) NOT NULL,
     precio_unitario DECIMAL(10,4) NOT NULL,
     monto_descuento DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     monto_gravado DECIMAL(10,2) NOT NULL,
     monto_igv DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    monto_isc DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     total DECIMAL(10,2) NOT NULL,
     CONSTRAINT fk_detdocfac_documento FOREIGN KEY (documento_id) REFERENCES documentos_facturacion(id) ON DELETE CASCADE,
-    CONSTRAINT fk_detdocfac_producto FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE SET NULL,
-    INDEX idx_detdocfac_documento (documento_id)
-) ENGINE=InnoDB COMMENT='Items de documento de facturación';
+    CONSTRAINT fk_detdocfac_producto FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE SET NULL
+) ENGINE=InnoDB COMMENT='Detalle de comprobantes electrónicos';
 
 -- ============================================================
 -- BLOQUE 11: DEVOLUCIONES Y REEMBOLSOS

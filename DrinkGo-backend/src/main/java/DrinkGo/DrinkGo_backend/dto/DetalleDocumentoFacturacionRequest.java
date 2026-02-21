@@ -4,13 +4,7 @@ import java.math.BigDecimal;
 
 /**
  * DTO para items dentro del request de creación de documento de facturación.
- * 
- * NOTA ISC (Impuesto Selectivo al Consumo):
- * Para licorerías, el ISC es obligatorio en bebidas alcohólicas.
- * Las tasas varían por tipo de producto y se actualizan periódicamente.
- * El campo montoIsc debe ser calculado por el frontend o la capa de negocio
- * según el catálogo de ISC vigente de SUNAT.
- * El IGV se calcula sobre (montoGravado + montoIsc).
+ * Sin campo montoIsc (no existe en la tabla detalle_documentos_facturacion).
  */
 public class DetalleDocumentoFacturacionRequest {
 
@@ -18,9 +12,8 @@ public class DetalleDocumentoFacturacionRequest {
     private String descripcion;
     private String codigoUnidad; // NIU por defecto (Código SUNAT para unidades)
     private BigDecimal cantidad;
-    private BigDecimal precioUnitario; // Precio SIN IGV ni ISC (base imponible por unidad)
+    private BigDecimal precioUnitario; // Precio SIN IGV (base imponible por unidad)
     private BigDecimal montoDescuento;
-    private BigDecimal montoIsc;       // ISC por item (obligatorio para bebidas alcohólicas)
 
     // --- Getters y Setters ---
 
@@ -41,7 +34,4 @@ public class DetalleDocumentoFacturacionRequest {
 
     public BigDecimal getMontoDescuento() { return montoDescuento; }
     public void setMontoDescuento(BigDecimal montoDescuento) { this.montoDescuento = montoDescuento; }
-
-    public BigDecimal getMontoIsc() { return montoIsc; }
-    public void setMontoIsc(BigDecimal montoIsc) { this.montoIsc = montoIsc; }
 }

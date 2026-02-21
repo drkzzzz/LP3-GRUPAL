@@ -7,16 +7,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Lotes de inventario con sistema FIFO (RF-INV-002..003).
- * Los lotes se consumen ordenados por fecha_recepcion ASC (FIFO estricto).
- * NOTA: la tabla lotes_inventario NO tiene columna eliminado_en.
+ * Gestión de lotes y fechas de expiración (Bloque 5.2).
+ * FK compuesta (producto_id, almacen_id) referencia a stock_inventario.
+ * Tabla: lotes_inventario
  */
 @Entity
 @Table(name = "lotes_inventario")
 public class LoteInventario {
 
     public enum LoteEstado {
-        disponible, agotado, vencido, cuarentena, devuelto
+        disponible, agotado, vencido
     }
 
     @Id
@@ -43,52 +43,25 @@ public class LoteInventario {
     @Column(name = "numero_lote", nullable = false, length = 50)
     private String numeroLote;
 
-    @Column(name = "cantidad_inicial", nullable = false)
-    private Integer cantidadInicial;
-
     @Column(name = "cantidad_restante", nullable = false)
     private Integer cantidadRestante;
 
-    @Column(name = "precio_compra", nullable = false, precision = 10, scale = 2)
-    private BigDecimal precioCompra;
-
-    @Column(name = "fecha_fabricacion")
-    private LocalDate fechaFabricacion;
+    @Column(name = "costo_unitario_compra", nullable = false, precision = 10, scale = 2)
+    private BigDecimal costoUnitarioCompra;
 
     @Column(name = "fecha_vencimiento")
     private LocalDate fechaVencimiento;
-
-    @Column(name = "fecha_recepcion", nullable = false)
-    private LocalDate fechaRecepcion;
-
-    @Column(name = "proveedor_id")
-    private Long proveedorId;
-
-    @Column(name = "orden_compra_id")
-    private Long ordenCompraId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false)
     private LoteEstado estado = LoteEstado.disponible;
 
-    @Column(name = "notas", columnDefinition = "TEXT")
-    private String notas;
-
     @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
-
-    @Column(name = "actualizado_en")
-    private LocalDateTime actualizadoEn;
 
     @PrePersist
     protected void onCreate() {
         this.creadoEn = LocalDateTime.now();
-        this.actualizadoEn = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.actualizadoEn = LocalDateTime.now();
     }
 
     // --- Getters y Setters ---
@@ -120,38 +93,18 @@ public class LoteInventario {
     public String getNumeroLote() { return numeroLote; }
     public void setNumeroLote(String numeroLote) { this.numeroLote = numeroLote; }
 
-    public Integer getCantidadInicial() { return cantidadInicial; }
-    public void setCantidadInicial(Integer cantidadInicial) { this.cantidadInicial = cantidadInicial; }
-
     public Integer getCantidadRestante() { return cantidadRestante; }
     public void setCantidadRestante(Integer cantidadRestante) { this.cantidadRestante = cantidadRestante; }
 
-    public BigDecimal getPrecioCompra() { return precioCompra; }
-    public void setPrecioCompra(BigDecimal precioCompra) { this.precioCompra = precioCompra; }
-
-    public LocalDate getFechaFabricacion() { return fechaFabricacion; }
-    public void setFechaFabricacion(LocalDate fechaFabricacion) { this.fechaFabricacion = fechaFabricacion; }
+    public BigDecimal getCostoUnitarioCompra() { return costoUnitarioCompra; }
+    public void setCostoUnitarioCompra(BigDecimal costoUnitarioCompra) { this.costoUnitarioCompra = costoUnitarioCompra; }
 
     public LocalDate getFechaVencimiento() { return fechaVencimiento; }
     public void setFechaVencimiento(LocalDate fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
 
-    public LocalDate getFechaRecepcion() { return fechaRecepcion; }
-    public void setFechaRecepcion(LocalDate fechaRecepcion) { this.fechaRecepcion = fechaRecepcion; }
-
-    public Long getProveedorId() { return proveedorId; }
-    public void setProveedorId(Long proveedorId) { this.proveedorId = proveedorId; }
-
-    public Long getOrdenCompraId() { return ordenCompraId; }
-    public void setOrdenCompraId(Long ordenCompraId) { this.ordenCompraId = ordenCompraId; }
-
     public LoteEstado getEstado() { return estado; }
     public void setEstado(LoteEstado estado) { this.estado = estado; }
 
-    public String getNotas() { return notas; }
-    public void setNotas(String notas) { this.notas = notas; }
-
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
-
-    public LocalDateTime getActualizadoEn() { return actualizadoEn; }
 }
