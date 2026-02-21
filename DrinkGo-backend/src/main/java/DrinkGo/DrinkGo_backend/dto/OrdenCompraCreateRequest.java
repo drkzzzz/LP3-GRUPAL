@@ -1,7 +1,5 @@
 package DrinkGo.DrinkGo_backend.dto;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -14,9 +12,6 @@ public class OrdenCompraCreateRequest {
     private Long proveedorId;
     private Long sedeId;
     private Long almacenId;
-    private String moneda;
-    private LocalDate fechaEntregaEsperada;
-    private Integer plazoPagoDias;
     private String notas;
     private List<DetalleOrdenCompraRequest> items;
 
@@ -33,15 +28,6 @@ public class OrdenCompraCreateRequest {
 
     public Long getAlmacenId() { return almacenId; }
     public void setAlmacenId(Long almacenId) { this.almacenId = almacenId; }
-
-    public String getMoneda() { return moneda; }
-    public void setMoneda(String moneda) { this.moneda = moneda; }
-
-    public LocalDate getFechaEntregaEsperada() { return fechaEntregaEsperada; }
-    public void setFechaEntregaEsperada(LocalDate fechaEntregaEsperada) { this.fechaEntregaEsperada = fechaEntregaEsperada; }
-
-    public Integer getPlazoPagoDias() { return plazoPagoDias; }
-    public void setPlazoPagoDias(Integer plazoPagoDias) { this.plazoPagoDias = plazoPagoDias; }
 
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }

@@ -58,31 +58,16 @@ public class ProveedorService {
             throw new RuntimeException("Ya existe un proveedor con código '" + request.getCodigo() + "' en este negocio");
         }
 
-        // Validar calificación si se envía
-        if (request.getCalificacion() != null && (request.getCalificacion() < 1 || request.getCalificacion() > 5)) {
-            throw new RuntimeException("La calificación debe estar entre 1 y 5");
-        }
-
         Proveedor proveedor = new Proveedor();
         proveedor.setNegocioId(negocioId);
         proveedor.setCodigo(request.getCodigo());
         proveedor.setRazonSocial(request.getRazonSocial());
         proveedor.setNombreComercial(request.getNombreComercial());
         proveedor.setRuc(request.getRuc());
-        proveedor.setNombreContacto(request.getNombreContacto());
-        proveedor.setTelefonoContacto(request.getTelefonoContacto());
-        proveedor.setEmailContacto(request.getEmailContacto());
         proveedor.setDireccion(request.getDireccion());
-        proveedor.setCiudad(request.getCiudad());
-        proveedor.setDepartamento(request.getDepartamento());
-        if (request.getPais() != null) proveedor.setPais(request.getPais());
-        if (request.getPlazoPagoDias() != null) proveedor.setPlazoPagoDias(request.getPlazoPagoDias());
-        proveedor.setLimiteCredito(request.getLimiteCredito());
-        proveedor.setNombreBanco(request.getNombreBanco());
-        proveedor.setNumeroCuentaBancaria(request.getNumeroCuentaBancaria());
-        proveedor.setCciBancario(request.getCciBancario());
-        proveedor.setCalificacion(request.getCalificacion());
-        proveedor.setNotas(request.getNotas());
+        proveedor.setTelefono(request.getTelefono());
+        proveedor.setEmail(request.getEmail());
+        proveedor.setRubro(request.getRubro());
 
         return proveedorRepository.save(proveedor);
     }
@@ -98,25 +83,10 @@ public class ProveedorService {
         if (request.getRazonSocial() != null) proveedor.setRazonSocial(request.getRazonSocial());
         if (request.getNombreComercial() != null) proveedor.setNombreComercial(request.getNombreComercial());
         if (request.getRuc() != null) proveedor.setRuc(request.getRuc());
-        if (request.getNombreContacto() != null) proveedor.setNombreContacto(request.getNombreContacto());
-        if (request.getTelefonoContacto() != null) proveedor.setTelefonoContacto(request.getTelefonoContacto());
-        if (request.getEmailContacto() != null) proveedor.setEmailContacto(request.getEmailContacto());
         if (request.getDireccion() != null) proveedor.setDireccion(request.getDireccion());
-        if (request.getCiudad() != null) proveedor.setCiudad(request.getCiudad());
-        if (request.getDepartamento() != null) proveedor.setDepartamento(request.getDepartamento());
-        if (request.getPais() != null) proveedor.setPais(request.getPais());
-        if (request.getPlazoPagoDias() != null) proveedor.setPlazoPagoDias(request.getPlazoPagoDias());
-        if (request.getLimiteCredito() != null) proveedor.setLimiteCredito(request.getLimiteCredito());
-        if (request.getNombreBanco() != null) proveedor.setNombreBanco(request.getNombreBanco());
-        if (request.getNumeroCuentaBancaria() != null) proveedor.setNumeroCuentaBancaria(request.getNumeroCuentaBancaria());
-        if (request.getCciBancario() != null) proveedor.setCciBancario(request.getCciBancario());
-        if (request.getCalificacion() != null) {
-            if (request.getCalificacion() < 1 || request.getCalificacion() > 5) {
-                throw new RuntimeException("La calificación debe estar entre 1 y 5");
-            }
-            proveedor.setCalificacion(request.getCalificacion());
-        }
-        if (request.getNotas() != null) proveedor.setNotas(request.getNotas());
+        if (request.getTelefono() != null) proveedor.setTelefono(request.getTelefono());
+        if (request.getEmail() != null) proveedor.setEmail(request.getEmail());
+        if (request.getRubro() != null) proveedor.setRubro(request.getRubro());
 
         return proveedorRepository.save(proveedor);
     }

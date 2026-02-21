@@ -1,7 +1,5 @@
 package DrinkGo.DrinkGo_backend.dto;
 
-import java.math.BigDecimal;
-
 /**
  * DTO para actualizar un proveedor (PUT /restful/proveedores/{id}).
  * Bloque 6. Todos los campos son opcionales.
@@ -11,20 +9,10 @@ public class ProveedorUpdateRequest {
     private String razonSocial;
     private String nombreComercial;
     private String ruc;
-    private String nombreContacto;
-    private String telefonoContacto;
-    private String emailContacto;
     private String direccion;
-    private String ciudad;
-    private String departamento;
-    private String pais;
-    private Integer plazoPagoDias;
-    private BigDecimal limiteCredito;
-    private String nombreBanco;
-    private String numeroCuentaBancaria;
-    private String cciBancario;
-    private Integer calificacion;
-    private String notas;
+    private String telefono;
+    private String email;
+    private String rubro;
 
     // --- Getters y Setters ---
 
@@ -37,45 +25,15 @@ public class ProveedorUpdateRequest {
     public String getRuc() { return ruc; }
     public void setRuc(String ruc) { this.ruc = ruc; }
 
-    public String getNombreContacto() { return nombreContacto; }
-    public void setNombreContacto(String nombreContacto) { this.nombreContacto = nombreContacto; }
-
-    public String getTelefonoContacto() { return telefonoContacto; }
-    public void setTelefonoContacto(String telefonoContacto) { this.telefonoContacto = telefonoContacto; }
-
-    public String getEmailContacto() { return emailContacto; }
-    public void setEmailContacto(String emailContacto) { this.emailContacto = emailContacto; }
-
     public String getDireccion() { return direccion; }
     public void setDireccion(String direccion) { this.direccion = direccion; }
 
-    public String getCiudad() { return ciudad; }
-    public void setCiudad(String ciudad) { this.ciudad = ciudad; }
+    public String getTelefono() { return telefono; }
+    public void setTelefono(String telefono) { this.telefono = telefono; }
 
-    public String getDepartamento() { return departamento; }
-    public void setDepartamento(String departamento) { this.departamento = departamento; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public String getPais() { return pais; }
-    public void setPais(String pais) { this.pais = pais; }
-
-    public Integer getPlazoPagoDias() { return plazoPagoDias; }
-    public void setPlazoPagoDias(Integer plazoPagoDias) { this.plazoPagoDias = plazoPagoDias; }
-
-    public BigDecimal getLimiteCredito() { return limiteCredito; }
-    public void setLimiteCredito(BigDecimal limiteCredito) { this.limiteCredito = limiteCredito; }
-
-    public String getNombreBanco() { return nombreBanco; }
-    public void setNombreBanco(String nombreBanco) { this.nombreBanco = nombreBanco; }
-
-    public String getNumeroCuentaBancaria() { return numeroCuentaBancaria; }
-    public void setNumeroCuentaBancaria(String numeroCuentaBancaria) { this.numeroCuentaBancaria = numeroCuentaBancaria; }
-
-    public String getCciBancario() { return cciBancario; }
-    public void setCciBancario(String cciBancario) { this.cciBancario = cciBancario; }
-
-    public Integer getCalificacion() { return calificacion; }
-    public void setCalificacion(Integer calificacion) { this.calificacion = calificacion; }
-
-    public String getNotas() { return notas; }
-    public void setNotas(String notas) { this.notas = notas; }
+    public String getRubro() { return rubro; }
+    public void setRubro(String rubro) { this.rubro = rubro; }
 }

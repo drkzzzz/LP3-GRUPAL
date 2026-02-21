@@ -1,6 +1,5 @@
 package DrinkGo.DrinkGo_backend.entity;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.SQLDelete;
@@ -43,50 +42,20 @@ public class Proveedor {
     @Column(name = "ruc", length = 20)
     private String ruc;
 
-    @Column(name = "nombre_contacto", length = 150)
-    private String nombreContacto;
-
-    @Column(name = "telefono_contacto", length = 30)
-    private String telefonoContacto;
-
-    @Column(name = "email_contacto", length = 150)
-    private String emailContacto;
-
     @Column(name = "direccion", length = 300)
     private String direccion;
 
-    @Column(name = "ciudad", length = 100)
-    private String ciudad;
+    @Column(name = "telefono", length = 30)
+    private String telefono;
 
-    @Column(name = "departamento", length = 100)
-    private String departamento;
-
-    @Column(name = "pais", nullable = false, length = 3)
-    private String pais = "PE";
-
-    @Column(name = "plazo_pago_dias", nullable = false)
-    private Integer plazoPagoDias = 30;
-
-    @Column(name = "limite_credito", precision = 12, scale = 2)
-    private BigDecimal limiteCredito;
-
-    @Column(name = "nombre_banco", length = 100)
-    private String nombreBanco;
-
-    @Column(name = "numero_cuenta_bancaria", length = 50)
-    private String numeroCuentaBancaria;
-
-    @Column(name = "cci_bancario", length = 50)
-    private String cciBancario;
-
-    @Column(name = "calificacion")
-    private Integer calificacion;
-
-    @Column(name = "notas", columnDefinition = "TEXT")
-    private String notas;
+    @Column(name = "email", length = 150)
+    private String email;
 
     @Column(name = "esta_activo", nullable = false)
     private Boolean estaActivo = true;
+
+    @Column(name = "rubro", columnDefinition = "TEXT")
+    private String rubro;
 
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
@@ -114,50 +83,20 @@ public class Proveedor {
     public String getRuc() { return ruc; }
     public void setRuc(String ruc) { this.ruc = ruc; }
 
-    public String getNombreContacto() { return nombreContacto; }
-    public void setNombreContacto(String nombreContacto) { this.nombreContacto = nombreContacto; }
-
-    public String getTelefonoContacto() { return telefonoContacto; }
-    public void setTelefonoContacto(String telefonoContacto) { this.telefonoContacto = telefonoContacto; }
-
-    public String getEmailContacto() { return emailContacto; }
-    public void setEmailContacto(String emailContacto) { this.emailContacto = emailContacto; }
-
     public String getDireccion() { return direccion; }
     public void setDireccion(String direccion) { this.direccion = direccion; }
 
-    public String getCiudad() { return ciudad; }
-    public void setCiudad(String ciudad) { this.ciudad = ciudad; }
+    public String getTelefono() { return telefono; }
+    public void setTelefono(String telefono) { this.telefono = telefono; }
 
-    public String getDepartamento() { return departamento; }
-    public void setDepartamento(String departamento) { this.departamento = departamento; }
-
-    public String getPais() { return pais; }
-    public void setPais(String pais) { this.pais = pais; }
-
-    public Integer getPlazoPagoDias() { return plazoPagoDias; }
-    public void setPlazoPagoDias(Integer plazoPagoDias) { this.plazoPagoDias = plazoPagoDias; }
-
-    public BigDecimal getLimiteCredito() { return limiteCredito; }
-    public void setLimiteCredito(BigDecimal limiteCredito) { this.limiteCredito = limiteCredito; }
-
-    public String getNombreBanco() { return nombreBanco; }
-    public void setNombreBanco(String nombreBanco) { this.nombreBanco = nombreBanco; }
-
-    public String getNumeroCuentaBancaria() { return numeroCuentaBancaria; }
-    public void setNumeroCuentaBancaria(String numeroCuentaBancaria) { this.numeroCuentaBancaria = numeroCuentaBancaria; }
-
-    public String getCciBancario() { return cciBancario; }
-    public void setCciBancario(String cciBancario) { this.cciBancario = cciBancario; }
-
-    public Integer getCalificacion() { return calificacion; }
-    public void setCalificacion(Integer calificacion) { this.calificacion = calificacion; }
-
-    public String getNotas() { return notas; }
-    public void setNotas(String notas) { this.notas = notas; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
     public Boolean getEstaActivo() { return estaActivo; }
     public void setEstaActivo(Boolean estaActivo) { this.estaActivo = estaActivo; }
+
+    public String getRubro() { return rubro; }
+    public void setRubro(String rubro) { this.rubro = rubro; }
 
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public LocalDateTime getActualizadoEn() { return actualizadoEn; }
