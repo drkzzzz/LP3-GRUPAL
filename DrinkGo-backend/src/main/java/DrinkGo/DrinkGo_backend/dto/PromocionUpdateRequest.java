@@ -11,28 +11,19 @@ import java.util.List;
 public class PromocionUpdateRequest {
 
     private String nombre;
-    private String descripcion;
     private String tipoDescuento;
     private BigDecimal valorDescuento;
     private BigDecimal montoMinimoCompra;
-    private BigDecimal montoMaximoDescuento;
     private Integer maxUsos;
-    private Integer maxUsosPorCliente;
     private String aplicaA;
     private LocalDateTime validoDesde;
     private LocalDateTime validoHasta;
-    private Boolean esCombinable;
-    private String canales;
     private List<CondicionPromocionRequest> condiciones;
-    private List<Long> sedeIds;
 
     // --- Getters y Setters ---
 
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
-
-    public String getDescripcion() { return descripcion; }
-    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
 
     public String getTipoDescuento() { return tipoDescuento; }
     public void setTipoDescuento(String tipoDescuento) { this.tipoDescuento = tipoDescuento; }
@@ -43,14 +34,8 @@ public class PromocionUpdateRequest {
     public BigDecimal getMontoMinimoCompra() { return montoMinimoCompra; }
     public void setMontoMinimoCompra(BigDecimal montoMinimoCompra) { this.montoMinimoCompra = montoMinimoCompra; }
 
-    public BigDecimal getMontoMaximoDescuento() { return montoMaximoDescuento; }
-    public void setMontoMaximoDescuento(BigDecimal montoMaximoDescuento) { this.montoMaximoDescuento = montoMaximoDescuento; }
-
     public Integer getMaxUsos() { return maxUsos; }
     public void setMaxUsos(Integer maxUsos) { this.maxUsos = maxUsos; }
-
-    public Integer getMaxUsosPorCliente() { return maxUsosPorCliente; }
-    public void setMaxUsosPorCliente(Integer maxUsosPorCliente) { this.maxUsosPorCliente = maxUsosPorCliente; }
 
     public String getAplicaA() { return aplicaA; }
     public void setAplicaA(String aplicaA) { this.aplicaA = aplicaA; }
@@ -61,15 +46,6 @@ public class PromocionUpdateRequest {
     public LocalDateTime getValidoHasta() { return validoHasta; }
     public void setValidoHasta(LocalDateTime validoHasta) { this.validoHasta = validoHasta; }
 
-    public Boolean getEsCombinable() { return esCombinable; }
-    public void setEsCombinable(Boolean esCombinable) { this.esCombinable = esCombinable; }
-
-    public String getCanales() { return canales; }
-    public void setCanales(String canales) { this.canales = canales; }
-
     public List<CondicionPromocionRequest> getCondiciones() { return condiciones; }
     public void setCondiciones(List<CondicionPromocionRequest> condiciones) { this.condiciones = condiciones; }
-
-    public List<Long> getSedeIds() { return sedeIds; }
-    public void setSedeIds(List<Long> sedeIds) { this.sedeIds = sedeIds; }
 }

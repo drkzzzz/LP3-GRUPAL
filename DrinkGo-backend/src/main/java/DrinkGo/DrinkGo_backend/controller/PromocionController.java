@@ -77,7 +77,7 @@ public class PromocionController {
 
     /**
      * GET /restful/promociones/{id}
-     * Obtener una promoción por ID con sus condiciones y sedes.
+     * Obtener una promoción por ID con sus condiciones.
      */
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerPromocion(@PathVariable Long id) {
@@ -92,7 +92,7 @@ public class PromocionController {
 
     /**
      * POST /restful/promociones
-     * Crear una nueva promoción con condiciones y sedes.
+     * Crear una nueva promoción con condiciones.
      */
     @PostMapping
     public ResponseEntity<?> crearPromocion(@RequestBody PromocionCreateRequest request) {
@@ -105,7 +105,6 @@ public class PromocionController {
             response.put("mensaje", "Promoción creada exitosamente");
             response.put("promocion", resultado.get("promocion"));
             response.put("condiciones", resultado.get("condiciones"));
-            response.put("sedes", resultado.get("sedes"));
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());
@@ -127,7 +126,6 @@ public class PromocionController {
             response.put("mensaje", "Promoción actualizada exitosamente");
             response.put("promocion", resultado.get("promocion"));
             response.put("condiciones", resultado.get("condiciones"));
-            response.put("sedes", resultado.get("sedes"));
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return errorResponse(e.getMessage());

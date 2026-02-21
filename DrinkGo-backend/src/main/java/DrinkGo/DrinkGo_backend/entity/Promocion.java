@@ -27,11 +27,11 @@ import jakarta.persistence.Table;
 public class Promocion {
 
     public enum TipoDescuento {
-        porcentaje, monto_fijo, compre_x_lleve_y, envio_gratis
+        porcentaje, monto_fijo
     }
 
     public enum AplicaA {
-        todo, categoria, producto, marca, combo
+        todo, categoria, producto
     }
 
     @Id
@@ -47,9 +47,6 @@ public class Promocion {
     @Column(name = "codigo", length = 50)
     private String codigo;
 
-    @Column(name = "descripcion", columnDefinition = "TEXT")
-    private String descripcion;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_descuento", nullable = false)
     private TipoDescuento tipoDescuento;
@@ -60,14 +57,8 @@ public class Promocion {
     @Column(name = "monto_minimo_compra", precision = 10, scale = 2)
     private BigDecimal montoMinimoCompra;
 
-    @Column(name = "monto_maximo_descuento", precision = 10, scale = 2)
-    private BigDecimal montoMaximoDescuento;
-
     @Column(name = "max_usos")
     private Integer maxUsos;
-
-    @Column(name = "max_usos_por_cliente")
-    private Integer maxUsosPorCliente;
 
     @Column(name = "usos_actuales", nullable = false)
     private Integer usosActuales = 0;
@@ -84,12 +75,6 @@ public class Promocion {
 
     @Column(name = "esta_activo", nullable = false)
     private Boolean estaActivo = true;
-
-    @Column(name = "es_combinable", nullable = false)
-    private Boolean esCombinable = false;
-
-    @Column(name = "canales", columnDefinition = "JSON")
-    private String canales;
 
     @Column(name = "creado_por")
     private Long creadoPor;
@@ -114,9 +99,6 @@ public class Promocion {
     public String getCodigo() { return codigo; }
     public void setCodigo(String codigo) { this.codigo = codigo; }
 
-    public String getDescripcion() { return descripcion; }
-    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
-
     public TipoDescuento getTipoDescuento() { return tipoDescuento; }
     public void setTipoDescuento(TipoDescuento tipoDescuento) { this.tipoDescuento = tipoDescuento; }
 
@@ -126,14 +108,8 @@ public class Promocion {
     public BigDecimal getMontoMinimoCompra() { return montoMinimoCompra; }
     public void setMontoMinimoCompra(BigDecimal montoMinimoCompra) { this.montoMinimoCompra = montoMinimoCompra; }
 
-    public BigDecimal getMontoMaximoDescuento() { return montoMaximoDescuento; }
-    public void setMontoMaximoDescuento(BigDecimal montoMaximoDescuento) { this.montoMaximoDescuento = montoMaximoDescuento; }
-
     public Integer getMaxUsos() { return maxUsos; }
     public void setMaxUsos(Integer maxUsos) { this.maxUsos = maxUsos; }
-
-    public Integer getMaxUsosPorCliente() { return maxUsosPorCliente; }
-    public void setMaxUsosPorCliente(Integer maxUsosPorCliente) { this.maxUsosPorCliente = maxUsosPorCliente; }
 
     public Integer getUsosActuales() { return usosActuales; }
     public void setUsosActuales(Integer usosActuales) { this.usosActuales = usosActuales; }
@@ -149,12 +125,6 @@ public class Promocion {
 
     public Boolean getEstaActivo() { return estaActivo; }
     public void setEstaActivo(Boolean estaActivo) { this.estaActivo = estaActivo; }
-
-    public Boolean getEsCombinable() { return esCombinable; }
-    public void setEsCombinable(Boolean esCombinable) { this.esCombinable = esCombinable; }
-
-    public String getCanales() { return canales; }
-    public void setCanales(String canales) { this.canales = canales; }
 
     public Long getCreadoPor() { return creadoPor; }
     public void setCreadoPor(Long creadoPor) { this.creadoPor = creadoPor; }
