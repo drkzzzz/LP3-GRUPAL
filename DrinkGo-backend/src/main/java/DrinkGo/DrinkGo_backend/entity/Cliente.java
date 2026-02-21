@@ -1,7 +1,6 @@
 package DrinkGo.DrinkGo_backend.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -35,10 +34,6 @@ public class Cliente {
 
     public enum TipoDocumento {
         DNI, RUC, CE, PASAPORTE, OTRO
-    }
-
-    public enum Genero {
-        M, F, OTRO, NO_ESPECIFICADO
     }
 
     @Id
@@ -77,15 +72,8 @@ public class Cliente {
     @Column(name = "telefono", length = 30)
     private String telefono;
 
-    @Column(name = "telefono_secundario", length = 30)
-    private String telefonoSecundario;
-
-    @Column(name = "fecha_nacimiento")
-    private LocalDate fechaNacimiento;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "genero")
-    private Genero genero;
+    @Column(name = "direccion", length = 500)
+    private String direccion;
 
     @Column(name = "total_compras", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalCompras = BigDecimal.ZERO;
@@ -93,20 +81,8 @@ public class Cliente {
     @Column(name = "total_pedidos", nullable = false)
     private Integer totalPedidos = 0;
 
-    @Column(name = "acepta_marketing", nullable = false)
-    private Boolean aceptaMarketing = false;
-
-    @Column(name = "canal_marketing", length = 50)
-    private String canalMarketing;
-
     @Column(name = "esta_activo", nullable = false)
     private Boolean estaActivo = true;
-
-    @Column(name = "notas", columnDefinition = "TEXT")
-    private String notas;
-
-    @Column(name = "ultima_compra_en")
-    private LocalDateTime ultimaCompraEn;
 
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
@@ -156,14 +132,8 @@ public class Cliente {
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
 
-    public String getTelefonoSecundario() { return telefonoSecundario; }
-    public void setTelefonoSecundario(String telefonoSecundario) { this.telefonoSecundario = telefonoSecundario; }
-
-    public LocalDate getFechaNacimiento() { return fechaNacimiento; }
-    public void setFechaNacimiento(LocalDate fechaNacimiento) { this.fechaNacimiento = fechaNacimiento; }
-
-    public Genero getGenero() { return genero; }
-    public void setGenero(Genero genero) { this.genero = genero; }
+    public String getDireccion() { return direccion; }
+    public void setDireccion(String direccion) { this.direccion = direccion; }
 
     public BigDecimal getTotalCompras() { return totalCompras; }
     public void setTotalCompras(BigDecimal totalCompras) { this.totalCompras = totalCompras; }
@@ -171,20 +141,8 @@ public class Cliente {
     public Integer getTotalPedidos() { return totalPedidos; }
     public void setTotalPedidos(Integer totalPedidos) { this.totalPedidos = totalPedidos; }
 
-    public Boolean getAceptaMarketing() { return aceptaMarketing; }
-    public void setAceptaMarketing(Boolean aceptaMarketing) { this.aceptaMarketing = aceptaMarketing; }
-
-    public String getCanalMarketing() { return canalMarketing; }
-    public void setCanalMarketing(String canalMarketing) { this.canalMarketing = canalMarketing; }
-
     public Boolean getEstaActivo() { return estaActivo; }
     public void setEstaActivo(Boolean estaActivo) { this.estaActivo = estaActivo; }
-
-    public String getNotas() { return notas; }
-    public void setNotas(String notas) { this.notas = notas; }
-
-    public LocalDateTime getUltimaCompraEn() { return ultimaCompraEn; }
-    public void setUltimaCompraEn(LocalDateTime ultimaCompraEn) { this.ultimaCompraEn = ultimaCompraEn; }
 
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public LocalDateTime getActualizadoEn() { return actualizadoEn; }
