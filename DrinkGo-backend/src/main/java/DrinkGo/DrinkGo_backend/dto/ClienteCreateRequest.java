@@ -1,7 +1,5 @@
 package DrinkGo.DrinkGo_backend.dto;
 
-import java.time.LocalDate;
-
 /**
  * DTO para crear un nuevo cliente (POST /restful/clientes).
  * Bloque 7.
@@ -16,12 +14,7 @@ public class ClienteCreateRequest {
     private String numeroDocumento;
     private String email;
     private String telefono;
-    private String telefonoSecundario;
-    private LocalDate fechaNacimiento;
-    private String genero;            // "M", "F", "OTRO", "NO_ESPECIFICADO"
-    private Boolean aceptaMarketing;
-    private String canalMarketing;
-    private String notas;
+    private String direccion;
 
     // --- Getters y Setters ---
 
@@ -49,21 +42,6 @@ public class ClienteCreateRequest {
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
 
-    public String getTelefonoSecundario() { return telefonoSecundario; }
-    public void setTelefonoSecundario(String telefonoSecundario) { this.telefonoSecundario = telefonoSecundario; }
-
-    public LocalDate getFechaNacimiento() { return fechaNacimiento; }
-    public void setFechaNacimiento(LocalDate fechaNacimiento) { this.fechaNacimiento = fechaNacimiento; }
-
-    public String getGenero() { return genero; }
-    public void setGenero(String genero) { this.genero = genero; }
-
-    public Boolean getAceptaMarketing() { return aceptaMarketing; }
-    public void setAceptaMarketing(Boolean aceptaMarketing) { this.aceptaMarketing = aceptaMarketing; }
-
-    public String getCanalMarketing() { return canalMarketing; }
-    public void setCanalMarketing(String canalMarketing) { this.canalMarketing = canalMarketing; }
-
-    public String getNotas() { return notas; }
-    public void setNotas(String notas) { this.notas = notas; }
+    public String getDireccion() { return direccion; }
+    public void setDireccion(String direccion) { this.direccion = direccion; }
 }

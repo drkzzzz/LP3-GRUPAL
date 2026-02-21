@@ -18,15 +18,13 @@ import DrinkGo.DrinkGo_backend.entity.CondicionPromocion.TipoEntidad;
 import DrinkGo.DrinkGo_backend.entity.Promocion;
 import DrinkGo.DrinkGo_backend.entity.Promocion.AplicaA;
 import DrinkGo.DrinkGo_backend.entity.Promocion.TipoDescuento;
-import DrinkGo.DrinkGo_backend.entity.PromocionSede;
 import DrinkGo.DrinkGo_backend.repository.CondicionPromocionRepository;
 import DrinkGo.DrinkGo_backend.repository.PromocionRepository;
-import DrinkGo.DrinkGo_backend.repository.PromocionSedeRepository;
 
 /**
  * Servicio de Promociones y Descuentos - Bloque 13.
  * Implementa RF-PRO-015:
- * - CRUD completo de promociones con condiciones y sedes
+ * - CRUD completo de promociones con condiciones
  * - Validación de fechas, tipos y valores
  * - Consulta de promociones vigentes
  * - Filtrado multi-tenant por negocio_id
@@ -40,9 +38,6 @@ public class PromocionService {
 
     @Autowired
     private CondicionPromocionRepository condicionRepository;
-
-    @Autowired
-    private PromocionSedeRepository sedeRepository;
 
     // ============================================================
     // PROMOCIONES
@@ -63,7 +58,7 @@ public class PromocionService {
     }
 
     /**
-     * Obtener una promoción por ID con sus condiciones y sedes.
+     * Obtener una promoción por ID con sus condiciones.
      */
     public Map<String, Object> obtenerPromocion(Long negocioId, Long id) {
         Promocion promocion = promocionRepository.findByIdAndNegocioId(id, negocioId)
@@ -71,17 +66,15 @@ public class PromocionService {
                         "Promoción no encontrada con id " + id + " para el negocio actual"));
 
         List<CondicionPromocion> condiciones = condicionRepository.findByPromocionId(id);
-        List<PromocionSede> sedes = sedeRepository.findByPromocionId(id);
 
         Map<String, Object> resultado = new HashMap<>();
         resultado.put("promocion", promocion);
         resultado.put("condiciones", condiciones);
-        resultado.put("sedes", sedes);
         return resultado;
     }
 
     /**
-     * Crear una nueva promoción con sus condiciones y sedes.
+     * Crear una nueva promoción con sus condiciones.
      */
     @Transactional
     public Map<String, Object> crearPromocion(Long negocioId, Long usuarioId,
@@ -128,13 +121,10 @@ public class PromocionService {
         promocion.setNegocioId(negocioId);
         promocion.setNombre(request.getNombre());
         promocion.setCodigo(request.getCodigo());
-        promocion.setDescripcion(request.getDescripcion());
         promocion.setTipoDescuento(tipoDescuento);
         promocion.setValorDescuento(request.getValorDescuento());
         promocion.setMontoMinimoCompra(request.getMontoMinimoCompra());
-        promocion.setMontoMaximoDescuento(request.getMontoMaximoDescuento());
         promocion.setMaxUsos(request.getMaxUsos());
-        promocion.setMaxUsosPorCliente(request.getMaxUsosPorCliente());
 
         if (request.getAplicaA() != null) {
             promocion.setAplicaA(parseAplicaA(request.getAplicaA()));
@@ -142,11 +132,6 @@ public class PromocionService {
 
         promocion.setValidoDesde(request.getValidoDesde());
         promocion.setValidoHasta(request.getValidoHasta());
-
-        if (request.getEsCombinable() != null) {
-            promocion.setEsCombinable(request.getEsCombinable());
-        }
-        promocion.setCanales(request.getCanales());
         promocion.setCreadoPor(usuarioId);
 
         promocion = promocionRepository.save(promocion);
@@ -154,23 +139,18 @@ public class PromocionService {
         // Crear condiciones si se envían
         guardarCondiciones(promocion.getId(), request.getCondiciones());
 
-        // Crear asociaciones con sedes si se envían
-        guardarSedes(promocion.getId(), request.getSedeIds());
-
         // Retornar resultado completo
         List<CondicionPromocion> condiciones = condicionRepository.findByPromocionId(promocion.getId());
-        List<PromocionSede> sedes = sedeRepository.findByPromocionId(promocion.getId());
 
         Map<String, Object> resultado = new HashMap<>();
         resultado.put("promocion", promocion);
         resultado.put("condiciones", condiciones);
-        resultado.put("sedes", sedes);
         return resultado;
     }
 
     /**
      * Actualizar una promoción existente.
-     * Actualiza condiciones y sedes si se envían (reemplazo completo).
+     * Actualiza condiciones si se envían (reemplazo completo).
      */
     @Transactional
     public Map<String, Object> actualizarPromocion(Long negocioId, Long id,
@@ -180,7 +160,6 @@ public class PromocionService {
                         "Promoción no encontrada con id " + id + " para el negocio actual"));
 
         if (request.getNombre() != null) promocion.setNombre(request.getNombre());
-        if (request.getDescripcion() != null) promocion.setDescripcion(request.getDescripcion());
 
         if (request.getTipoDescuento() != null) {
             promocion.setTipoDescuento(parseTipoDescuento(request.getTipoDescuento()));
@@ -198,9 +177,7 @@ public class PromocionService {
         }
 
         if (request.getMontoMinimoCompra() != null) promocion.setMontoMinimoCompra(request.getMontoMinimoCompra());
-        if (request.getMontoMaximoDescuento() != null) promocion.setMontoMaximoDescuento(request.getMontoMaximoDescuento());
         if (request.getMaxUsos() != null) promocion.setMaxUsos(request.getMaxUsos());
-        if (request.getMaxUsosPorCliente() != null) promocion.setMaxUsosPorCliente(request.getMaxUsosPorCliente());
 
         if (request.getAplicaA() != null) {
             promocion.setAplicaA(parseAplicaA(request.getAplicaA()));
@@ -214,9 +191,6 @@ public class PromocionService {
             throw new RuntimeException("La fecha 'válido hasta' debe ser posterior a 'válido desde'");
         }
 
-        if (request.getEsCombinable() != null) promocion.setEsCombinable(request.getEsCombinable());
-        if (request.getCanales() != null) promocion.setCanales(request.getCanales());
-
         promocion = promocionRepository.save(promocion);
 
         // Reemplazar condiciones si se envían
@@ -225,19 +199,11 @@ public class PromocionService {
             guardarCondiciones(id, request.getCondiciones());
         }
 
-        // Reemplazar sedes si se envían
-        if (request.getSedeIds() != null) {
-            sedeRepository.deleteByPromocionId(id);
-            guardarSedes(id, request.getSedeIds());
-        }
-
         List<CondicionPromocion> condiciones = condicionRepository.findByPromocionId(id);
-        List<PromocionSede> sedes = sedeRepository.findByPromocionId(id);
 
         Map<String, Object> resultado = new HashMap<>();
         resultado.put("promocion", promocion);
         resultado.put("condiciones", condiciones);
-        resultado.put("sedes", sedes);
         return resultado;
     }
 
@@ -272,23 +238,12 @@ public class PromocionService {
         }
     }
 
-    private void guardarSedes(Long promocionId, List<Long> sedeIds) {
-        if (sedeIds == null || sedeIds.isEmpty()) return;
-
-        for (Long sedeId : sedeIds) {
-            PromocionSede ps = new PromocionSede();
-            ps.setPromocionId(promocionId);
-            ps.setSedeId(sedeId);
-            sedeRepository.save(ps);
-        }
-    }
-
     private TipoDescuento parseTipoDescuento(String valor) {
         try {
             return TipoDescuento.valueOf(valor);
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Tipo de descuento inválido: " + valor
-                    + ". Valores permitidos: porcentaje, monto_fijo, compre_x_lleve_y, envio_gratis");
+                    + ". Valores permitidos: porcentaje, monto_fijo");
         }
     }
 
@@ -297,7 +252,7 @@ public class PromocionService {
             return AplicaA.valueOf(valor);
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Valor 'aplica_a' inválido: " + valor
-                    + ". Valores permitidos: todo, categoria, producto, marca, combo");
+                    + ". Valores permitidos: todo, categoria, producto");
         }
     }
 

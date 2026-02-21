@@ -2,7 +2,6 @@ package DrinkGo.DrinkGo_backend.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,8 +24,8 @@ import DrinkGo.DrinkGo_backend.repository.ProveedorRepository;
  * Servicio de Órdenes de Compra - Bloque 6.
  * Implementa RF-COM-004 a RF-COM-007:
  * - CRUD completo de órdenes de compra con detalle
- * - Cálculo automático de totales (subtotal, impuesto, descuento, total)
- * - Validación de estados
+ * - Cálculo automático del total de la orden
+ * - Validación de estados (pendiente, recibida, cancelada)
  * - Filtrado multi-tenant por negocio_id
  */
 @Service
@@ -67,7 +66,7 @@ public class OrdenCompraService {
 
     /**
      * Crear una nueva orden de compra con sus items.
-     * Calcula automáticamente subtotal, impuesto, descuento y total.
+     * Calcula automáticamente el total sumando los totales de cada item.
      */
     @Transactional
     public Map<String, Object> crearOrden(Long negocioId, Long usuarioId, OrdenCompraCreateRequest request) {
@@ -107,37 +106,24 @@ public class OrdenCompraService {
         orden.setProveedorId(request.getProveedorId());
         orden.setSedeId(request.getSedeId());
         orden.setAlmacenId(request.getAlmacenId());
-        orden.setEstado(EstadoOrden.borrador);
-        if (request.getMoneda() != null) orden.setMoneda(request.getMoneda());
-        orden.setFechaEntregaEsperada(request.getFechaEntregaEsperada());
-        orden.setPlazoPagoDias(request.getPlazoPagoDias());
+        orden.setEstado(EstadoOrden.pendiente);
         orden.setNotas(request.getNotas());
         orden.setCreadoPor(usuarioId);
 
         // Guardar orden primero para obtener el ID
         orden = ordenCompraRepository.save(orden);
 
-        // Crear items y calcular totales
-        BigDecimal subtotalGeneral = BigDecimal.ZERO;
-        BigDecimal impuestoGeneral = BigDecimal.ZERO;
-        BigDecimal descuentoGeneral = BigDecimal.ZERO;
+        // Crear items y calcular total general
+        BigDecimal totalGeneral = BigDecimal.ZERO;
 
         for (DetalleOrdenCompraRequest itemReq : request.getItems()) {
             DetalleOrdenCompra item = crearDetalleItem(orden.getId(), itemReq);
             detalleRepository.save(item);
-
-            subtotalGeneral = subtotalGeneral.add(item.getSubtotal());
-            impuestoGeneral = impuestoGeneral.add(item.getMontoImpuesto());
-            descuentoGeneral = descuentoGeneral.add(
-                    item.getSubtotal().multiply(item.getPorcentajeDescuento())
-                            .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP));
+            totalGeneral = totalGeneral.add(item.getTotal());
         }
 
-        // Actualizar totales en la orden
-        orden.setSubtotal(subtotalGeneral);
-        orden.setMontoImpuesto(impuestoGeneral);
-        orden.setMontoDescuento(descuentoGeneral);
-        orden.setTotal(subtotalGeneral.add(impuestoGeneral).subtract(descuentoGeneral));
+        // Actualizar total en la orden
+        orden.setTotal(totalGeneral);
         orden = ordenCompraRepository.save(orden);
 
         List<DetalleOrdenCompra> items = detalleRepository.findByOrdenCompraId(orden.getId());
@@ -150,7 +136,7 @@ public class OrdenCompraService {
 
     /**
      * Actualizar una orden de compra.
-     * Solo se puede modificar completamente si está en estado 'borrador'.
+     * Solo se puede modificar completamente si está en estado 'pendiente'.
      * Si se envía un cambio de estado, se aplica la transición.
      */
     @Transactional
@@ -167,68 +153,30 @@ public class OrdenCompraService {
                 nuevoEstado = EstadoOrden.valueOf(request.getEstado());
             } catch (IllegalArgumentException e) {
                 throw new RuntimeException("Estado inválido: " + request.getEstado() +
-                        ". Valores permitidos: borrador, pendiente_aprobacion, aprobada, enviada, recepcion_parcial, recibida, cancelada");
+                        ". Valores permitidos: pendiente, recibida, cancelada");
             }
 
             validarTransicionEstado(orden.getEstado(), nuevoEstado);
-
-            // Registrar timestamps según transición
-            switch (nuevoEstado) {
-                case aprobada:
-                    orden.setAprobadoPor(usuarioId);
-                    orden.setAprobadoEn(LocalDateTime.now());
-                    break;
-                case enviada:
-                    orden.setEnviadoEn(LocalDateTime.now());
-                    break;
-                case recibida:
-                case recepcion_parcial:
-                    orden.setRecibidoPor(usuarioId);
-                    orden.setRecibidoEn(LocalDateTime.now());
-                    break;
-                case cancelada:
-                    orden.setCanceladoEn(LocalDateTime.now());
-                    if (request.getRazonCancelacion() != null) {
-                        orden.setRazonCancelacion(request.getRazonCancelacion());
-                    }
-                    break;
-                default:
-                    break;
-            }
-
             orden.setEstado(nuevoEstado);
         }
 
-        // Solo permitir edición de campos si está en borrador
-        if (orden.getEstado() == EstadoOrden.borrador) {
-            if (request.getMoneda() != null) orden.setMoneda(request.getMoneda());
-            if (request.getFechaEntregaEsperada() != null) orden.setFechaEntregaEsperada(request.getFechaEntregaEsperada());
-            if (request.getPlazoPagoDias() != null) orden.setPlazoPagoDias(request.getPlazoPagoDias());
+        // Solo permitir edición de campos si está en pendiente
+        if (orden.getEstado() == EstadoOrden.pendiente) {
             if (request.getNotas() != null) orden.setNotas(request.getNotas());
 
             // Si se envían items, reemplazar todos los existentes
             if (request.getItems() != null && !request.getItems().isEmpty()) {
                 detalleRepository.deleteByOrdenCompraId(id);
 
-                BigDecimal subtotalGeneral = BigDecimal.ZERO;
-                BigDecimal impuestoGeneral = BigDecimal.ZERO;
-                BigDecimal descuentoGeneral = BigDecimal.ZERO;
+                BigDecimal totalGeneral = BigDecimal.ZERO;
 
                 for (DetalleOrdenCompraRequest itemReq : request.getItems()) {
                     DetalleOrdenCompra item = crearDetalleItem(id, itemReq);
                     detalleRepository.save(item);
-
-                    subtotalGeneral = subtotalGeneral.add(item.getSubtotal());
-                    impuestoGeneral = impuestoGeneral.add(item.getMontoImpuesto());
-                    descuentoGeneral = descuentoGeneral.add(
-                            item.getSubtotal().multiply(item.getPorcentajeDescuento())
-                                    .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP));
+                    totalGeneral = totalGeneral.add(item.getTotal());
                 }
 
-                orden.setSubtotal(subtotalGeneral);
-                orden.setMontoImpuesto(impuestoGeneral);
-                orden.setMontoDescuento(descuentoGeneral);
-                orden.setTotal(subtotalGeneral.add(impuestoGeneral).subtract(descuentoGeneral));
+                orden.setTotal(totalGeneral);
             }
         }
 
@@ -243,7 +191,7 @@ public class OrdenCompraService {
 
     /**
      * Eliminar (cancelar) una orden de compra.
-     * Solo se puede cancelar si está en estado 'borrador' o 'pendiente_aprobacion'.
+     * Solo se puede cancelar si está en estado 'pendiente'.
      */
     @Transactional
     public void eliminarOrden(Long negocioId, Long id) {
@@ -251,8 +199,8 @@ public class OrdenCompraService {
                 .orElseThrow(() -> new RuntimeException(
                         "Orden de compra no encontrada con id " + id + " para el negocio actual"));
 
-        if (orden.getEstado() != EstadoOrden.borrador && orden.getEstado() != EstadoOrden.pendiente_aprobacion) {
-            throw new RuntimeException("Solo se pueden eliminar órdenes en estado 'borrador' o 'pendiente_aprobacion'. " +
+        if (orden.getEstado() != EstadoOrden.pendiente) {
+            throw new RuntimeException("Solo se pueden eliminar órdenes en estado 'pendiente'. " +
                     "Estado actual: " + orden.getEstado());
         }
 
@@ -261,8 +209,6 @@ public class OrdenCompraService {
 
         // Cambiar estado a cancelada (borrado lógico de negocio)
         orden.setEstado(EstadoOrden.cancelada);
-        orden.setCanceladoEn(LocalDateTime.now());
-        orden.setRazonCancelacion("Eliminada por el usuario");
         ordenCompraRepository.save(orden);
     }
 
@@ -272,7 +218,6 @@ public class OrdenCompraService {
 
     /**
      * Crear un DetalleOrdenCompra a partir del DTO y calcular montos.
-     * Incluye mapeo de campos de recepción simplificados.
      */
     private DetalleOrdenCompra crearDetalleItem(Long ordenId, DetalleOrdenCompraRequest itemReq) {
         if (itemReq.getProductoId() == null) {
@@ -336,14 +281,13 @@ public class OrdenCompraService {
 
     /**
      * Validar transiciones de estado permitidas.
+     * pendiente → recibida | cancelada
+     * recibida → (no se puede cambiar)
+     * cancelada → (no se puede cambiar)
      */
     private void validarTransicionEstado(EstadoOrden estadoActual, EstadoOrden nuevoEstado) {
         boolean transicionValida = switch (estadoActual) {
-            case borrador -> nuevoEstado == EstadoOrden.pendiente_aprobacion || nuevoEstado == EstadoOrden.cancelada;
-            case pendiente_aprobacion -> nuevoEstado == EstadoOrden.aprobada || nuevoEstado == EstadoOrden.cancelada;
-            case aprobada -> nuevoEstado == EstadoOrden.enviada || nuevoEstado == EstadoOrden.cancelada;
-            case enviada -> nuevoEstado == EstadoOrden.recepcion_parcial || nuevoEstado == EstadoOrden.recibida || nuevoEstado == EstadoOrden.cancelada;
-            case recepcion_parcial -> nuevoEstado == EstadoOrden.recibida;
+            case pendiente -> nuevoEstado == EstadoOrden.recibida || nuevoEstado == EstadoOrden.cancelada;
             case recibida, cancelada -> false;
         };
 

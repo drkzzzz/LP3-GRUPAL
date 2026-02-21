@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 import DrinkGo.DrinkGo_backend.dto.ClienteCreateRequest;
 import DrinkGo.DrinkGo_backend.dto.ClienteUpdateRequest;
 import DrinkGo.DrinkGo_backend.entity.Cliente;
-import DrinkGo.DrinkGo_backend.entity.Cliente.Genero;
 import DrinkGo.DrinkGo_backend.entity.Cliente.TipoCliente;
 import DrinkGo.DrinkGo_backend.entity.Cliente.TipoDocumento;
 import DrinkGo.DrinkGo_backend.repository.ClienteRepository;
@@ -17,7 +16,7 @@ import DrinkGo.DrinkGo_backend.repository.ClienteRepository;
 /**
  * Servicio de Clientes - Bloque 7.
  * Implementa RF-CLI-001 a RF-CLI-005:
- * - CRUD completo de clientes y direcciones
+ * - CRUD completo de clientes
  * - Filtrado por negocio_id (multi-tenant)
  * - Borrado lógico (esta_activo = 0 vía @SQLDelete)
  * - UUID generado automáticamente al crear
@@ -100,18 +99,7 @@ public class ClienteService {
         cliente.setNumeroDocumento(request.getNumeroDocumento());
         cliente.setEmail(request.getEmail());
         cliente.setTelefono(request.getTelefono());
-        cliente.setTelefonoSecundario(request.getTelefonoSecundario());
-        cliente.setFechaNacimiento(request.getFechaNacimiento());
-
-        if (request.getGenero() != null) {
-            cliente.setGenero(parseGenero(request.getGenero()));
-        }
-
-        if (request.getAceptaMarketing() != null) {
-            cliente.setAceptaMarketing(request.getAceptaMarketing());
-        }
-        cliente.setCanalMarketing(request.getCanalMarketing());
-        cliente.setNotas(request.getNotas());
+        cliente.setDireccion(request.getDireccion());
 
         return clienteRepository.save(cliente);
     }
@@ -143,16 +131,7 @@ public class ClienteService {
         if (request.getNumeroDocumento() != null) cliente.setNumeroDocumento(request.getNumeroDocumento());
         if (request.getEmail() != null) cliente.setEmail(request.getEmail());
         if (request.getTelefono() != null) cliente.setTelefono(request.getTelefono());
-        if (request.getTelefonoSecundario() != null) cliente.setTelefonoSecundario(request.getTelefonoSecundario());
-        if (request.getFechaNacimiento() != null) cliente.setFechaNacimiento(request.getFechaNacimiento());
-
-        if (request.getGenero() != null) {
-            cliente.setGenero(parseGenero(request.getGenero()));
-        }
-
-        if (request.getAceptaMarketing() != null) cliente.setAceptaMarketing(request.getAceptaMarketing());
-        if (request.getCanalMarketing() != null) cliente.setCanalMarketing(request.getCanalMarketing());
-        if (request.getNotas() != null) cliente.setNotas(request.getNotas());
+        if (request.getDireccion() != null) cliente.setDireccion(request.getDireccion());
 
         return clienteRepository.save(cliente);
     }
@@ -176,15 +155,6 @@ public class ClienteService {
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Tipo de documento inválido: " + valor
                     + ". Valores permitidos: DNI, RUC, CE, PASAPORTE, OTRO");
-        }
-    }
-
-    private Genero parseGenero(String valor) {
-        try {
-            return Genero.valueOf(valor);
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Género inválido: " + valor
-                    + ". Valores permitidos: M, F, OTRO, NO_ESPECIFICADO");
         }
     }
 }
