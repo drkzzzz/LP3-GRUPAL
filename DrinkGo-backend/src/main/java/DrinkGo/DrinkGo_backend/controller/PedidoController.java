@@ -19,6 +19,13 @@ public class PedidoController {
     @Autowired
     private PedidoService pedidoService;
     
+    // Listar todos los pedidos del negocio
+    @GetMapping
+    public ResponseEntity<List<PedidoDTO>> listarTodosPedidos(@PathVariable Long tenantId) {
+        List<PedidoDTO> pedidos = pedidoService.listarPorNegocio(tenantId);
+        return ResponseEntity.ok(pedidos);
+    }
+    
     // Crear pedido
     @PostMapping("/sedes/{sedeId}")
     public ResponseEntity<PedidoDTO> crearPedido(
@@ -149,6 +156,25 @@ public class PedidoController {
             @RequestParam(required = false) Long usuarioId) {
         PedidoDTO pedido = pedidoService.anularPedido(tenantId, id, motivo, usuarioId);
         return ResponseEntity.ok(pedido);
+    }
+    
+    // Actualizar pedido completo
+    @PutMapping("/{id}")
+    public ResponseEntity<PedidoDTO> actualizarPedido(
+            @PathVariable Long tenantId,
+            @PathVariable Long id,
+            @RequestBody PedidoDTO dto) {
+        PedidoDTO pedido = pedidoService.actualizarPedido(tenantId, id, dto);
+        return ResponseEntity.ok(pedido);
+    }
+    
+    // Eliminar pedido (soft delete)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarPedido(
+            @PathVariable Long tenantId,
+            @PathVariable Long id) {
+        pedidoService.eliminar(tenantId, id);
+        return ResponseEntity.noContent().build();
     }
     
     // Obtener pedidos de delivery sin repartidor

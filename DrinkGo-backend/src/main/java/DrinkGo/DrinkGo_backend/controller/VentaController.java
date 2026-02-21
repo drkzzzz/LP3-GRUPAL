@@ -204,6 +204,43 @@ public class VentaController {
     }
 
     /**
+     * PUT /api/ventas/{id} - Actualizar una venta
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizar(@PathVariable Long id, @RequestBody VentaCreateRequest request) {
+        try {
+            Long negocioId = obtenerNegocioId();
+            VentaDTO venta = ventaService.actualizar(negocioId, id, request);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("mensaje", "Venta actualizada exitosamente");
+            response.put("venta", venta);
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return errorResponse(e.getMessage());
+        }
+    }
+
+    /**
+     * DELETE /api/ventas/{id} - Eliminar (soft delete) una venta
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        try {
+            Long negocioId = obtenerNegocioId();
+            ventaService.eliminar(negocioId, id);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("mensaje", "Venta eliminada exitosamente");
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return errorResponse(e.getMessage());
+        }
+    }
+
+    /**
      * GET /api/ventas/sede/{sedeId}/total - Calcular total de ventas de una sede en
      * rango
      */

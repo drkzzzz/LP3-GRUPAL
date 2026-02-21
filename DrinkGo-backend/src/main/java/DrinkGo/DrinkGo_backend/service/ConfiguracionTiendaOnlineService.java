@@ -100,6 +100,31 @@ public class ConfiguracionTiendaOnlineService {
     public boolean existeConfiguracion(Long negocioId) {
         return configuracionRepository.existsByNegocioId(negocioId);
     }
+    
+    /**
+     * Obtener configuración por ID
+     */
+    @Transactional(readOnly = true)
+    public ConfiguracionTiendaOnline obtenerPorId(Long id) {
+        return configuracionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Configuración de tienda online no encontrada"));
+    }
+    
+    /**
+     * Eliminar configuración de tienda online
+     */
+    @Transactional
+    public void eliminar(Long id, Long negocioId) {
+        ConfiguracionTiendaOnline configuracion = configuracionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Configuración de tienda online no encontrada"));
+        
+        // Verificar que la configuración pertenece al negocio
+        if (!configuracion.getNegocioId().equals(negocioId)) {
+            throw new RuntimeException("La configuración no pertenece al negocio especificado");
+        }
+        
+        configuracionRepository.delete(configuracion);
+    }
 
     /**
      * Mapear DTO a entidad

@@ -25,6 +25,11 @@ public class HorarioSedeService {
     public List<HorarioSede> findBySedeActivos(Long sedeId) {
         return horarioSedeRepository.findBySedeIdAndEstaActivo(sedeId, true);
     }
+    
+    @Transactional(readOnly = true)
+    public List<HorarioSede> findAll() {
+        return horarioSedeRepository.findAll();
+    }
 
     @Transactional(readOnly = true)
     public HorarioSede findById(Long id) {

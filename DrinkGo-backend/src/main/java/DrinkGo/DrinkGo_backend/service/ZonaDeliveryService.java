@@ -93,6 +93,15 @@ public class ZonaDeliveryService {
         zonaDeliveryRepository.delete(zona);
     }
     
+    // Listar todas las zonas del negocio
+    @Transactional(readOnly = true)
+    public List<ZonaDeliveryDTO> listarZonasPorNegocio(Long tenantId) {
+        return zonaDeliveryRepository.findByTenantId(tenantId)
+            .stream()
+            .map(this::convertirADTO)
+            .collect(Collectors.toList());
+    }
+    
     // Métodos privados
     private void mapearDatos(ZonaDelivery zona, ZonaDeliveryDTO dto) {
         zona.setSedeId(dto.getSedeId());

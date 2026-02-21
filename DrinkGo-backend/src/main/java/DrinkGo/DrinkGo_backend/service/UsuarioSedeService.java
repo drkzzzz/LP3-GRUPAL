@@ -25,6 +25,11 @@ public class UsuarioSedeService {
     public List<UsuarioSede> findBySede(Long sedeId) {
         return usuarioSedeRepository.findBySedeId(sedeId);
     }
+    
+    @Transactional(readOnly = true)
+    public List<UsuarioSede> findAll() {
+        return usuarioSedeRepository.findAll();
+    }
 
     @Transactional(readOnly = true)
     public UsuarioSede findById(Long id) {
@@ -39,6 +44,14 @@ public class UsuarioSedeService {
             throw new RuntimeException("El usuario ya está asignado a esta sede");
         }
         return usuarioSedeRepository.save(usuarioSede);
+    }
+    
+    @Transactional
+    public UsuarioSede actualizar(Long id, UsuarioSede usuarioSede) {
+        UsuarioSede existente = findById(id);
+        existente.setEsPredeterminado(usuarioSede.getEsPredeterminado() != null ? 
+            usuarioSede.getEsPredeterminado() : existente.getEsPredeterminado());
+        return usuarioSedeRepository.save(existente);
     }
 
     @Transactional

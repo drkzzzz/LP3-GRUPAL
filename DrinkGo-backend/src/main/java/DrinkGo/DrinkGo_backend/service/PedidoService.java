@@ -203,6 +203,65 @@ public class PedidoService {
             .collect(Collectors.toList());
     }
     
+    // Listar todos los pedidos del negocio
+    @Transactional(readOnly = true)
+    public List<PedidoDTO> listarPorNegocio(Long tenantId) {
+        return pedidoRepository.findByTenantIdOrderByFechaCreacionDesc(tenantId)
+            .stream()
+            .map(this::convertirADTO)
+            .collect(Collectors.toList());
+    }
+    
+    // Actualizar pedido completo
+    public PedidoDTO actualizarPedido(Long tenantId, Long id, PedidoDTO dto) {
+        Pedido pedido = pedidoRepository.findById(id)
+            .filter(p -> p.getTenantId().equals(tenantId))
+            .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+        
+        // Solo actualizar si el pedido está en estado pendiente
+        if (pedido.getEstado() != OrderStatus.pendiente) {
+            throw new RuntimeException("Solo se pueden actualizar pedidos en estado pendiente");
+        }
+        
+        // Actualizar datos básicos
+        if (dto.getClienteNombre() != null) {
+            pedido.setClienteNombre(dto.getClienteNombre());
+        }
+        if (dto.getClienteTelefono() != null) {
+            pedido.setClienteTelefono(dto.getClienteTelefono());
+        }
+        if (dto.getDireccionEntrega() != null) {
+            pedido.setDireccionEntrega(dto.getDireccionEntrega());
+        }
+        if (dto.getDireccionReferencia() != null) {
+            pedido.setDireccionReferencia(dto.getDireccionReferencia());
+        }
+        if (dto.getObservaciones() != null) {
+            pedido.setObservaciones(dto.getObservaciones());
+        }
+        if (dto.getNotasPreparacion() != null) {
+            pedido.setNotasPreparacion(dto.getNotasPreparacion());
+        }
+        
+        pedido = pedidoRepository.save(pedido);
+        return convertirADTO(pedido);
+    }
+    
+    // Eliminar pedido (soft delete)
+    public void eliminar(Long tenantId, Long id) {
+        Pedido pedido = pedidoRepository.findById(id)
+            .filter(p -> p.getTenantId().equals(tenantId))
+            .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+        
+        // Solo eliminar si el pedido está en estado pendiente o anulado
+        if (pedido.getEstado() != OrderStatus.pendiente && pedido.getEstado() != OrderStatus.anulado) {
+            throw new RuntimeException("Solo se pueden eliminar pedidos en estado pendiente o anulado");
+        }
+        
+        pedido.setEstado(OrderStatus.anulado);
+        pedidoRepository.save(pedido);
+    }
+    
     // Métodos privados
     private String generarNumeroPedido(Long tenantId) {
         String prefijo = "PED-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
