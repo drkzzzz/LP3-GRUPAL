@@ -11,70 +11,49 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Repositorio para lotes de inventario (RF-INV-002..003).
- * Garantiza el cumplimiento del sistema FIFO (First-In, First-Out).
- */
 @Repository
 public interface LoteInventarioRepository extends JpaRepository<LoteInventario, Long> {
 
-    /** Listar todos los lotes de un negocio */
     List<LoteInventario> findByNegocioId(Long negocioId);
 
-    /** Buscar lote por ID y negocio (Seguridad multi-tenant) */
     Optional<LoteInventario> findByIdAndNegocioId(Long id, Long negocioId);
 
+    List<LoteInventario> findByProductoIdAndAlmacenIdAndNegocioId(Long productoId, Long almacenId, Long negocioId);
+
+    List<LoteInventario> findByEstadoAndNegocioId(LoteEstado estado, Long negocioId);
+
     /**
-     * CONSULTA FIFO MAESTRA:
-     * Obtiene lotes disponibles ordenados por fecha de recepción (más antiguos primero).
-     * Filtra automáticamente lotes agotados y lotes cuya fecha de vencimiento ya pasó.
+     * Lotes disponibles para un producto+almacén ordenados FIFO (por id ASC).
      */
-    @Query("SELECT l FROM LoteInventario l WHERE l.negocioId = :negocioId " +
-           "AND l.productoId = :productoId AND l.almacenId = :almacenId " +
-           "AND l.estado = :estado AND l.cantidadRestante > 0 " +
-           "AND (l.fechaVencimiento IS NULL OR l.fechaVencimiento >= :hoy) " +
-           "ORDER BY l.fechaRecepcion ASC, l.id ASC")
-    List<LoteInventario> findLotesFIFODisponibles(
-            @Param("negocioId") Long negocioId,
-            @Param("productoId") Long productoId,
-            @Param("almacenId") Long almacenId,
-            @Param("estado") LoteEstado estado,
-            @Param("hoy") LocalDate hoy);
+    @Query("SELECT l FROM LoteInventario l " +
+           "WHERE l.productoId = :productoId AND l.almacenId = :almacenId " +
+           "AND l.negocioId = :negocioId AND l.estado = 'disponible' " +
+           "AND l.cantidadRestante > 0 " +
+           "ORDER BY l.id ASC")
+    List<LoteInventario> findLotesDisponiblesFIFO(@Param("productoId") Long productoId,
+                                                   @Param("almacenId") Long almacenId,
+                                                   @Param("negocioId") Long negocioId);
 
-    /** Buscar lotes próximos a vencer (útil para el sistema de alertas) */
-    @Query("SELECT l FROM LoteInventario l WHERE l.negocioId = :negocioId " +
-           "AND l.estado = :estado AND l.fechaVencimiento BETWEEN :desde AND :hasta")
-    List<LoteInventario> findProximosAVencer(
-            @Param("negocioId") Long negocioId, 
-            @Param("estado") LoteEstado estado, 
-            @Param("desde") LocalDate desde, 
-            @Param("hasta") LocalDate hasta);
+    /**
+     * Lotes próximos a vencer dentro de los días indicados.
+     */
+    @Query("SELECT l FROM LoteInventario l " +
+           "WHERE l.negocioId = :negocioId AND l.estado = 'disponible' " +
+           "AND l.fechaVencimiento IS NOT NULL " +
+           "AND l.fechaVencimiento <= :fechaLimite " +
+           "ORDER BY l.fechaVencimiento ASC")
+    List<LoteInventario> findLotesProximosAVencer(@Param("negocioId") Long negocioId,
+                                                   @Param("fechaLimite") LocalDate fechaLimite);
 
-    /** Buscar lotes que ya vencieron pero siguen marcados como disponibles en el sistema */
-    List<LoteInventario> findByNegocioIdAndEstadoAndFechaVencimientoBefore(
-            Long negocioId, LoteEstado estado, LocalDate fecha);
+    /**
+     * Lotes vencidos (estado = disponible pero fecha de vencimiento pasada).
+     */
+    @Query("SELECT l FROM LoteInventario l " +
+           "WHERE l.negocioId = :negocioId AND l.estado = 'disponible' " +
+           "AND l.fechaVencimiento IS NOT NULL " +
+           "AND l.fechaVencimiento < :hoy")
+    List<LoteInventario> findLotesVencidos(@Param("negocioId") Long negocioId,
+                                            @Param("hoy") LocalDate hoy);
 
-    /** Buscar lotes por producto y negocio */
-    List<LoteInventario> findByProductoIdAndNegocioId(Long productoId, Long negocioId);
-
-    /** Verificar si un número de lote ya existe en el negocio para evitar duplicados */
-    boolean existsByNegocioIdAndNumeroLote(Long negocioId, String numeroLote);
-
-    /** FIFO simplificado (3 params): lotes disponibles con cantidad > 0, sin filtro de vencimiento */
-    @Query("SELECT l FROM LoteInventario l WHERE l.negocioId = :negocioId " +
-           "AND l.productoId = :productoId AND l.almacenId = :almacenId " +
-           "AND l.estado = 'disponible' AND l.cantidadRestante > 0 " +
-           "ORDER BY l.fechaRecepcion ASC, l.id ASC")
-    List<LoteInventario> findLotesDisponiblesFIFO(
-            @Param("negocioId") Long negocioId,
-            @Param("productoId") Long productoId,
-            @Param("almacenId") Long almacenId);
-
-    /** Listar lotes de un producto en orden FIFO */
-    List<LoteInventario> findByNegocioIdAndProductoIdOrderByFechaRecepcionAsc(
-            Long negocioId, Long productoId);
-
-    /** Listar lotes de un producto en un almacén en orden FIFO */
-    List<LoteInventario> findByNegocioIdAndProductoIdAndAlmacenIdOrderByFechaRecepcionAsc(
-            Long negocioId, Long productoId, Long almacenId);
+    boolean existsByNumeroLoteAndNegocioId(String numeroLote, Long negocioId);
 }

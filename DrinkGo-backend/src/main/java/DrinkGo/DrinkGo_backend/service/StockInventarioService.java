@@ -2,221 +2,156 @@ package DrinkGo.DrinkGo_backend.service;
 
 import DrinkGo.DrinkGo_backend.dto.StockInventarioRequest;
 import DrinkGo.DrinkGo_backend.dto.StockInventarioResponse;
-import DrinkGo.DrinkGo_backend.entity.*;
+import DrinkGo.DrinkGo_backend.entity.Almacen;
+import DrinkGo.DrinkGo_backend.entity.Producto;
+import DrinkGo.DrinkGo_backend.entity.StockInventario;
 import DrinkGo.DrinkGo_backend.exception.OperacionInvalidaException;
 import DrinkGo.DrinkGo_backend.exception.RecursoNoEncontradoException;
-import DrinkGo.DrinkGo_backend.repository.*;
+import DrinkGo.DrinkGo_backend.repository.AlmacenRepository;
+import DrinkGo.DrinkGo_backend.repository.ProductoRepository;
+import DrinkGo.DrinkGo_backend.repository.StockInventarioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Servicio para gestión de stock de inventario (RF-INV-001).
- * Todas las operaciones filtran por negocio_id del token (multi-tenant).
- * No se permite stock negativo.
- */
 @Service
 public class StockInventarioService {
 
-    private final StockInventarioRepository stockRepository;
-    private final ProductoRepository productoRepository;
-    private final AlmacenRepository almacenRepository;
-    private final LoteInventarioRepository loteRepository;
-    private final MovimientoInventarioRepository movimientoRepository;
+    private final StockInventarioRepository stockRepo;
+    private final ProductoRepository productoRepo;
+    private final AlmacenRepository almacenRepo;
 
-    public StockInventarioService(StockInventarioRepository stockRepository,
-                                   ProductoRepository productoRepository,
-                                   AlmacenRepository almacenRepository,
-                                   LoteInventarioRepository loteRepository,
-                                   MovimientoInventarioRepository movimientoRepository) {
-        this.stockRepository = stockRepository;
-        this.productoRepository = productoRepository;
-        this.almacenRepository = almacenRepository;
-        this.loteRepository = loteRepository;
-        this.movimientoRepository = movimientoRepository;
+    public StockInventarioService(StockInventarioRepository stockRepo,
+                                   ProductoRepository productoRepo,
+                                   AlmacenRepository almacenRepo) {
+        this.stockRepo = stockRepo;
+        this.productoRepo = productoRepo;
+        this.almacenRepo = almacenRepo;
     }
 
-    /** Listar todo el stock del negocio */
-    public List<StockInventarioResponse> listar(Long negocioId) {
-        return stockRepository.findByNegocioId(negocioId).stream()
-                .map(this::convertirAResponse)
-                .collect(Collectors.toList());
+    /* ── Listar ───────────────────────────────────────────── */
+
+    @Transactional(readOnly = true)
+    public List<StockInventarioResponse> listarTodos(Long negocioId) {
+        return stockRepo.findByNegocioId(negocioId)
+                .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    /** Obtener stock por ID */
+    @Transactional(readOnly = true)
     public StockInventarioResponse obtenerPorId(Long id, Long negocioId) {
-        StockInventario stock = stockRepository.findByIdAndNegocioId(id, negocioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Stock de inventario", id));
-        return convertirAResponse(stock);
+        StockInventario stock = stockRepo.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("StockInventario", id));
+        return toResponse(stock);
     }
 
-    /** Crear registro de stock */
+    @Transactional(readOnly = true)
+    public StockInventarioResponse obtenerPorProductoYAlmacen(Long productoId, Long almacenId, Long negocioId) {
+        StockInventario stock = stockRepo.findByProductoIdAndAlmacenIdAndNegocioId(productoId, almacenId, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "No existe stock para producto " + productoId + " en almacén " + almacenId));
+        return toResponse(stock);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockInventarioResponse> listarPorAlmacen(Long almacenId, Long negocioId) {
+        return stockRepo.findByAlmacenIdAndNegocioId(almacenId, negocioId)
+                .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockInventarioResponse> listarStockBajo(Long negocioId, int umbral) {
+        return stockRepo.findStockBajo(negocioId, umbral)
+                .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    /* ── Crear ────────────────────────────────────────────── */
+
     @Transactional
-    public StockInventarioResponse crear(StockInventarioRequest request, Long negocioId) {
-        // Validar producto pertenece al negocio
-        Producto producto = productoRepository.findByIdAndNegocioId(request.getProductoId(), negocioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Producto", request.getProductoId()));
+    public StockInventarioResponse crear(StockInventarioRequest req, Long negocioId) {
+        // Validar producto y almacén
+        productoRepo.findByIdAndNegocioId(req.getProductoId(), negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Producto", req.getProductoId()));
+        almacenRepo.findByIdAndNegocioId(req.getAlmacenId(), negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Almacen", req.getAlmacenId()));
 
-        // Validar almacén pertenece al negocio
-        Almacen almacen = almacenRepository.findByIdAndNegocioId(request.getAlmacenId(), negocioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Almacén", request.getAlmacenId()));
-
-        // Verificar que no exista duplicado producto-almacén
-        if (stockRepository.findByNegocioIdAndProductoIdAndAlmacenId(
-                negocioId, request.getProductoId(), request.getAlmacenId()).isPresent()) {
-            throw new OperacionInvalidaException(
-                    "Ya existe un registro de stock para este producto en este almacén");
-        }
-
-        // No permitir stock negativo
-        if (request.getCantidadEnMano() < 0) {
-            throw new OperacionInvalidaException("La cantidad en mano no puede ser negativa");
-        }
+        // Verificar duplicado (unique key producto_id + almacen_id)
+        stockRepo.findByProductoIdAndAlmacenIdAndNegocioId(req.getProductoId(), req.getAlmacenId(), negocioId)
+                .ifPresent(s -> {
+                    throw new OperacionInvalidaException(
+                            "Ya existe un registro de stock para producto " + req.getProductoId()
+                            + " en almacén " + req.getAlmacenId());
+                });
 
         StockInventario stock = new StockInventario();
         stock.setNegocioId(negocioId);
-        stock.setProducto(producto);
-        stock.setAlmacen(almacen);
-        stock.setCantidadEnMano(request.getCantidadEnMano());
-        stock.setCantidadReservada(request.getCantidadReservada() != null ? request.getCantidadReservada() : 0);
-        stock.setUltimoMovimientoEn(LocalDateTime.now());
-        stock.setCreadoEn(LocalDateTime.now());
+        stock.setProductoId(req.getProductoId());
+        stock.setAlmacenId(req.getAlmacenId());
+        stock.setCantidadTotal(req.getCantidadTotal() != null ? req.getCantidadTotal() : 0);
 
-        StockInventario guardado = stockRepository.save(stock);
-
-        // BUG-1 FIX: Auto-crear lote de respaldo para mantener consistencia stock/lotes (FIFO)
-        if (request.getCantidadEnMano() > 0) {
-            LoteInventario lote = new LoteInventario();
-            lote.setNegocioId(negocioId);
-            lote.setProducto(producto);
-            lote.setAlmacen(almacen);
-            lote.setNumeroLote("STK-INIT-" + System.currentTimeMillis());
-            lote.setCantidadInicial(request.getCantidadEnMano());
-            lote.setCantidadRestante(request.getCantidadEnMano());
-            lote.setPrecioCompra(BigDecimal.ZERO);
-            lote.setFechaRecepcion(LocalDate.now());
-            lote.setEstado(LoteInventario.LoteEstado.disponible);
-            lote.setNotas("Lote generado automáticamente al crear registro de stock inicial");
-            lote.setCreadoEn(LocalDateTime.now());
-            LoteInventario loteGuardado = loteRepository.save(lote);
-
-            // Registrar movimiento de stock_inicial
-            MovimientoInventario mov = new MovimientoInventario();
-            mov.setNegocioId(negocioId);
-            mov.setProducto(producto);
-            mov.setAlmacen(almacen);
-            mov.setLote(loteGuardado);
-            mov.setTipoMovimiento(MovimientoInventario.TipoMovimiento.stock_inicial);
-            mov.setCantidad(request.getCantidadEnMano());
-            mov.setCostoUnitario(BigDecimal.ZERO);
-            mov.setTipoReferencia("stock_inventario");
-            mov.setReferenciaId(guardado.getId());
-            mov.setMotivo("Stock inicial creado vía POST /restful/stock");
-            mov.setCreadoEn(LocalDateTime.now());
-            movimientoRepository.save(mov);
-        }
-
-        return convertirAResponse(guardado);
+        return toResponse(stockRepo.save(stock));
     }
 
-    /** Actualizar registro de stock */
+    /* ── Actualizar ───────────────────────────────────────── */
+
     @Transactional
-    public StockInventarioResponse actualizar(Long id, StockInventarioRequest request, Long negocioId) {
-        StockInventario stock = stockRepository.findByIdAndNegocioId(id, negocioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Stock de inventario", id));
+    public StockInventarioResponse actualizar(Long id, StockInventarioRequest req, Long negocioId) {
+        StockInventario stock = stockRepo.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("StockInventario", id));
 
-        // No permitir stock negativo
-        if (request.getCantidadEnMano() < 0) {
-            throw new OperacionInvalidaException("La cantidad en mano no puede ser negativa");
+        if (req.getCantidadTotal() != null) {
+            stock.setCantidadTotal(req.getCantidadTotal());
         }
 
-        stock.setCantidadEnMano(request.getCantidadEnMano());
-        if (request.getCantidadReservada() != null) {
-            stock.setCantidadReservada(request.getCantidadReservada());
-        }
-        stock.setUltimoMovimientoEn(LocalDateTime.now());
-
-        StockInventario guardado = stockRepository.save(stock);
-        return convertirAResponse(guardado);
+        return toResponse(stockRepo.save(stock));
     }
 
-    /** Listar stock filtrado por producto */
-    public List<StockInventarioResponse> listarPorProducto(Long negocioId, Long productoId) {
-        return stockRepository.findByNegocioIdAndProductoId(negocioId, productoId).stream()
-                .map(this::convertirAResponse)
-                .collect(Collectors.toList());
-    }
+    /* ── Eliminar ─────────────────────────────────────────── */
 
-    /** Obtener stock por producto y almacén */
-    public StockInventarioResponse obtenerPorProductoAlmacen(Long negocioId, Long productoId, Long almacenId) {
-        StockInventario stock = stockRepository.findByNegocioIdAndProductoIdAndAlmacenId(negocioId, productoId, almacenId)
-                .orElseThrow(() -> new RecursoNoEncontradoException(
-                        "Stock para producto " + productoId + " en almacén " + almacenId));
-        return convertirAResponse(stock);
-    }
-
-    /** Listar stock filtrado por almacén */
-    public List<StockInventarioResponse> listarPorAlmacen(Long negocioId, Long almacenId) {
-        return stockRepository.findByNegocioIdAndAlmacenId(negocioId, almacenId).stream()
-                .map(this::convertirAResponse)
-                .collect(Collectors.toList());
-    }
-
-    /** Eliminar registro de stock */
     @Transactional
     public void eliminar(Long id, Long negocioId) {
-        StockInventario stock = stockRepository.findByIdAndNegocioId(id, negocioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Stock de inventario", id));
-        stockRepository.delete(stock);
+        StockInventario stock = stockRepo.findByIdAndNegocioId(id, negocioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("StockInventario", id));
+        stockRepo.delete(stock);
     }
 
-    /** Obtener o crear registro de stock */
+    /* ── Utilidad interna (usada por otros services) ──────── */
+
+    /**
+     * Obtiene o crea automáticamente el registro de stock para un producto+almacén.
+     */
     @Transactional
-    public StockInventario obtenerOCrearStock(Long negocioId, Long productoId, Long almacenId) {
-        return stockRepository.findByNegocioIdAndProductoIdAndAlmacenId(negocioId, productoId, almacenId)
+    public StockInventario obtenerOCrearStock(Long productoId, Long almacenId, Long negocioId) {
+        return stockRepo.findByProductoIdAndAlmacenIdAndNegocioId(productoId, almacenId, negocioId)
                 .orElseGet(() -> {
-                    Producto producto = productoRepository.findById(productoId).orElse(null);
-                    Almacen almacen = almacenRepository.findById(almacenId).orElse(null);
-                    StockInventario nuevoStock = new StockInventario();
-                    nuevoStock.setNegocioId(negocioId);
-                    nuevoStock.setProducto(producto);
-                    nuevoStock.setAlmacen(almacen);
-                    nuevoStock.setCantidadEnMano(0);
-                    nuevoStock.setCantidadReservada(0);
-                    nuevoStock.setCreadoEn(LocalDateTime.now());
-                    return stockRepository.save(nuevoStock);
+                    StockInventario nuevo = new StockInventario();
+                    nuevo.setNegocioId(negocioId);
+                    nuevo.setProductoId(productoId);
+                    nuevo.setAlmacenId(almacenId);
+                    nuevo.setCantidadTotal(0);
+                    return stockRepo.save(nuevo);
                 });
     }
 
-    /** Listar stock bajo (por debajo del mínimo) */
-    public List<StockInventarioResponse> listarStockBajo(Long negocioId) {
-        return stockRepository.findStockBajo(negocioId).stream()
-                .map(this::convertirAResponse)
-                .collect(Collectors.toList());
-    }
+    /* ── Mapper ───────────────────────────────────────────── */
 
-    // ── Método auxiliar de conversión ──
+    private StockInventarioResponse toResponse(StockInventario s) {
+        StockInventarioResponse r = new StockInventarioResponse();
+        r.setId(s.getId());
+        r.setNegocioId(s.getNegocioId());
+        r.setProductoId(s.getProductoId());
+        r.setAlmacenId(s.getAlmacenId());
+        r.setCantidadTotal(s.getCantidadTotal());
+        r.setActualizadoEn(s.getActualizadoEn());
 
-    private StockInventarioResponse convertirAResponse(StockInventario stock) {
-        StockInventarioResponse resp = new StockInventarioResponse();
-        resp.setId(stock.getId());
-        resp.setNegocioId(stock.getNegocioId());
-        resp.setProductoId(stock.getProductoId());
-        resp.setProductoNombre(stock.getProducto() != null ? stock.getProducto().getNombre() : null);
-        resp.setAlmacenId(stock.getAlmacenId());
-        resp.setAlmacenNombre(stock.getAlmacen() != null ? stock.getAlmacen().getNombre() : null);
-        resp.setCantidadEnMano(stock.getCantidadEnMano());
-        resp.setCantidadReservada(stock.getCantidadReservada());
-        resp.setCantidadDisponible(stock.getCantidadDisponible());
-        resp.setUltimoConteoEn(stock.getUltimoConteoEn());
-        resp.setUltimoMovimientoEn(stock.getUltimoMovimientoEn());
-        resp.setCreadoEn(stock.getCreadoEn());
-        resp.setActualizadoEn(stock.getActualizadoEn());
-        return resp;
+        // Nombres (lazy-load)
+        if (s.getProducto() != null) {
+            r.setProductoNombre(s.getProducto().getNombre());
+        }
+        if (s.getAlmacen() != null) {
+            r.setAlmacenNombre(s.getAlmacen().getNombre());
+        }
+        return r;
     }
 }

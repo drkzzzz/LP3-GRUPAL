@@ -1,6 +1,5 @@
 package DrinkGo.DrinkGo_backend.dto;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -18,9 +17,6 @@ public class MovimientoInventarioResponse {
     private String numeroLote;
     private String tipoMovimiento;
     private Integer cantidad;
-    private BigDecimal costoUnitario;
-    private String tipoReferencia;
-    private Long referenciaId;
     private String motivo;
     private Long realizadoPor;
     private LocalDateTime creadoEn;
@@ -56,15 +52,6 @@ public class MovimientoInventarioResponse {
 
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
-
-    public BigDecimal getCostoUnitario() { return costoUnitario; }
-    public void setCostoUnitario(BigDecimal costoUnitario) { this.costoUnitario = costoUnitario; }
-
-    public String getTipoReferencia() { return tipoReferencia; }
-    public void setTipoReferencia(String tipoReferencia) { this.tipoReferencia = tipoReferencia; }
-
-    public Long getReferenciaId() { return referenciaId; }
-    public void setReferenciaId(Long referenciaId) { this.referenciaId = referenciaId; }
 
     public String getMotivo() { return motivo; }
     public void setMotivo(String motivo) { this.motivo = motivo; }

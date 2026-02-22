@@ -15,12 +15,9 @@ public class StockInventarioRequest {
     @NotNull(message = "El almacen_id es obligatorio")
     private Long almacenId;
 
-    @NotNull(message = "La cantidad_en_mano es obligatoria")
-    @Min(value = 0, message = "La cantidad_en_mano no puede ser negativa")
-    private Integer cantidadEnMano;
-
-    @Min(value = 0, message = "La cantidad_reservada no puede ser negativa")
-    private Integer cantidadReservada = 0;
+    @NotNull(message = "La cantidad_total es obligatoria")
+    @Min(value = 0, message = "La cantidad_total no puede ser negativa")
+    private Integer cantidadTotal;
 
     public StockInventarioRequest() {}
 
@@ -30,9 +27,6 @@ public class StockInventarioRequest {
     public Long getAlmacenId() { return almacenId; }
     public void setAlmacenId(Long almacenId) { this.almacenId = almacenId; }
 
-    public Integer getCantidadEnMano() { return cantidadEnMano; }
-    public void setCantidadEnMano(Integer cantidadEnMano) { this.cantidadEnMano = cantidadEnMano; }
-
-    public Integer getCantidadReservada() { return cantidadReservada; }
-    public void setCantidadReservada(Integer cantidadReservada) { this.cantidadReservada = cantidadReservada; }
+    public Integer getCantidadTotal() { return cantidadTotal; }
+    public void setCantidadTotal(Integer cantidadTotal) { this.cantidadTotal = cantidadTotal; }
 }

@@ -9,7 +9,10 @@ import java.time.LocalDateTime;
  * RF-FACT-001: Series de facturación electrónica
  */
 @Entity
-@Table(name = "series_facturacion")
+@Table(name = "series_facturacion",
+       uniqueConstraints = @UniqueConstraint(
+               name = "uk_serfac_negocio_serie",
+               columnNames = {"negocio_id", "sede_id", "tipo_documento", "prefijo_serie"}))
 public class SerieFacturacion {
 
     @Id
@@ -41,20 +44,18 @@ public class SerieFacturacion {
     @Column(name = "actualizado_en", nullable = false)
     private LocalDateTime actualizadoEn;
 
-    // --- ENUMS ---
+    // --- ENUM (4 valores según BD) ---
 
     public enum TipoDocumento {
         boleta,
         factura,
         nota_credito,
-        nota_debito,
-        guia_remision
+        nota_debito
     }
 
     // --- Constructores ---
 
-    public SerieFacturacion() {
-    }
+    public SerieFacturacion() {}
 
     // --- PrePersist & PreUpdate ---
 

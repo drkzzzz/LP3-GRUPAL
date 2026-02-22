@@ -16,18 +16,11 @@ public class LoteInventarioResponse {
     private Long almacenId;
     private String almacenNombre;
     private String numeroLote;
-    private Integer cantidadInicial;
     private Integer cantidadRestante;
-    private BigDecimal precioCompra;
-    private LocalDate fechaFabricacion;
+    private BigDecimal costoUnitarioCompra;
     private LocalDate fechaVencimiento;
-    private LocalDate fechaRecepcion;
-    private Long proveedorId;
-    private Long ordenCompraId;
     private String estado;
-    private String notas;
     private LocalDateTime creadoEn;
-    private LocalDateTime actualizadoEn;
 
     public LoteInventarioResponse() {}
 
@@ -52,39 +45,18 @@ public class LoteInventarioResponse {
     public String getNumeroLote() { return numeroLote; }
     public void setNumeroLote(String numeroLote) { this.numeroLote = numeroLote; }
 
-    public Integer getCantidadInicial() { return cantidadInicial; }
-    public void setCantidadInicial(Integer cantidadInicial) { this.cantidadInicial = cantidadInicial; }
-
     public Integer getCantidadRestante() { return cantidadRestante; }
     public void setCantidadRestante(Integer cantidadRestante) { this.cantidadRestante = cantidadRestante; }
 
-    public BigDecimal getPrecioCompra() { return precioCompra; }
-    public void setPrecioCompra(BigDecimal precioCompra) { this.precioCompra = precioCompra; }
-
-    public LocalDate getFechaFabricacion() { return fechaFabricacion; }
-    public void setFechaFabricacion(LocalDate fechaFabricacion) { this.fechaFabricacion = fechaFabricacion; }
+    public BigDecimal getCostoUnitarioCompra() { return costoUnitarioCompra; }
+    public void setCostoUnitarioCompra(BigDecimal costoUnitarioCompra) { this.costoUnitarioCompra = costoUnitarioCompra; }
 
     public LocalDate getFechaVencimiento() { return fechaVencimiento; }
     public void setFechaVencimiento(LocalDate fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
 
-    public LocalDate getFechaRecepcion() { return fechaRecepcion; }
-    public void setFechaRecepcion(LocalDate fechaRecepcion) { this.fechaRecepcion = fechaRecepcion; }
-
-    public Long getProveedorId() { return proveedorId; }
-    public void setProveedorId(Long proveedorId) { this.proveedorId = proveedorId; }
-
-    public Long getOrdenCompraId() { return ordenCompraId; }
-    public void setOrdenCompraId(Long ordenCompraId) { this.ordenCompraId = ordenCompraId; }
-
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
 
-    public String getNotas() { return notas; }
-    public void setNotas(String notas) { this.notas = notas; }
-
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
-
-    public LocalDateTime getActualizadoEn() { return actualizadoEn; }
-    public void setActualizadoEn(LocalDateTime actualizadoEn) { this.actualizadoEn = actualizadoEn; }
 }

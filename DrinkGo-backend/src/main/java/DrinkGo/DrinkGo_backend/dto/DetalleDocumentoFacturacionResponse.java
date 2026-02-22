@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 /**
  * Response para items del documento de facturación.
+ * Sin campo montoIsc (no existe en la tabla detalle_documentos_facturacion).
  */
 public class DetalleDocumentoFacturacionResponse {
 
@@ -18,7 +19,6 @@ public class DetalleDocumentoFacturacionResponse {
     private BigDecimal montoDescuento;
     private BigDecimal montoGravado;
     private BigDecimal montoIgv;
-    private BigDecimal montoIsc;
     private BigDecimal total;
 
     // --- Getters y Setters ---
@@ -55,9 +55,6 @@ public class DetalleDocumentoFacturacionResponse {
 
     public BigDecimal getMontoIgv() { return montoIgv; }
     public void setMontoIgv(BigDecimal montoIgv) { this.montoIgv = montoIgv; }
-
-    public BigDecimal getMontoIsc() { return montoIsc; }
-    public void setMontoIsc(BigDecimal montoIsc) { this.montoIsc = montoIsc; }
 
     public BigDecimal getTotal() { return total; }
     public void setTotal(BigDecimal total) { this.total = total; }

@@ -1,7 +1,6 @@
 package DrinkGo.DrinkGo_backend.dto;
 
 import jakarta.validation.constraints.*;
-import java.math.BigDecimal;
 
 /**
  * DTO para registrar un movimiento de inventario (ajuste manual).
@@ -24,14 +23,6 @@ public class MovimientoInventarioRequest {
     @Min(value = 1, message = "La cantidad debe ser al menos 1")
     private Integer cantidad;
 
-    @DecimalMin(value = "0.00", message = "El costo_unitario no puede ser negativo")
-    private BigDecimal costoUnitario;
-
-    @Size(max = 50, message = "El tipo_referencia no puede exceder 50 caracteres")
-    private String tipoReferencia;
-
-    private Long referenciaId;
-
     @Size(max = 300, message = "El motivo no puede exceder 300 caracteres")
     private String motivo;
 
@@ -51,15 +42,6 @@ public class MovimientoInventarioRequest {
 
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
-
-    public BigDecimal getCostoUnitario() { return costoUnitario; }
-    public void setCostoUnitario(BigDecimal costoUnitario) { this.costoUnitario = costoUnitario; }
-
-    public String getTipoReferencia() { return tipoReferencia; }
-    public void setTipoReferencia(String tipoReferencia) { this.tipoReferencia = tipoReferencia; }
-
-    public Long getReferenciaId() { return referenciaId; }
-    public void setReferenciaId(Long referenciaId) { this.referenciaId = referenciaId; }
 
     public String getMotivo() { return motivo; }
     public void setMotivo(String motivo) { this.motivo = motivo; }

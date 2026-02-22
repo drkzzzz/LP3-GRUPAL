@@ -2,22 +2,20 @@ package DrinkGo.DrinkGo_backend.entity;
 
 import jakarta.persistence.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Movimientos de inventario (RF-INV-004..006).
- * Registra cada entrada y salida con referencia al lote utilizado.
- * NOTA: tabla movimientos_inventario NO tiene eliminado_en. Los movimientos son inmutables.
+ * Kardex de movimientos de almacén (Bloque 5.3).
+ * Registra ajustes manuales, entradas por compra y salidas por venta.
+ * Los movimientos son inmutables (no se editan ni eliminan).
+ * Tabla: movimientos_inventario
  */
 @Entity
 @Table(name = "movimientos_inventario")
 public class MovimientoInventario {
 
     public enum TipoMovimiento {
-        entrada_compra, salida_venta, entrada_devolucion, salida_devolucion,
-        entrada_transferencia, salida_transferencia, ajuste_entrada, ajuste_salida,
-        merma, rotura, vencimiento, stock_inicial, entrada_produccion, salida_produccion
+        entrada_compra, salida_venta, ajuste_entrada, ajuste_salida, stock_inicial
     }
 
     @Id
@@ -54,15 +52,6 @@ public class MovimientoInventario {
 
     @Column(name = "cantidad", nullable = false)
     private Integer cantidad;
-
-    @Column(name = "costo_unitario", precision = 10, scale = 2)
-    private BigDecimal costoUnitario;
-
-    @Column(name = "tipo_referencia", length = 50)
-    private String tipoReferencia;
-
-    @Column(name = "referencia_id")
-    private Long referenciaId;
 
     @Column(name = "motivo", length = 300)
     private String motivo;
@@ -118,15 +107,6 @@ public class MovimientoInventario {
 
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
-
-    public BigDecimal getCostoUnitario() { return costoUnitario; }
-    public void setCostoUnitario(BigDecimal costoUnitario) { this.costoUnitario = costoUnitario; }
-
-    public String getTipoReferencia() { return tipoReferencia; }
-    public void setTipoReferencia(String tipoReferencia) { this.tipoReferencia = tipoReferencia; }
-
-    public Long getReferenciaId() { return referenciaId; }
-    public void setReferenciaId(Long referenciaId) { this.referenciaId = referenciaId; }
 
     public String getMotivo() { return motivo; }
     public void setMotivo(String motivo) { this.motivo = motivo; }
