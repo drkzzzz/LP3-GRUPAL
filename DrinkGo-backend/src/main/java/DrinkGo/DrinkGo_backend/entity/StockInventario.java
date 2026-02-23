@@ -1,82 +1,173 @@
 package DrinkGo.DrinkGo_backend.entity;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Resumen de stock actual por producto y almacén.
- * Tabla: stock_inventario (Bloque 5.1)
- */
 @Entity
 @Table(name = "stock_inventario")
+@SQLDelete(sql = "UPDATE stock_inventario SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
+@SQLRestriction("esta_activo = 1")
+@JsonPropertyOrder({ "id", "negocioId", "productoId", "almacenId", "cantidadActual", "cantidadReservada",
+        "cantidadDisponible", "costoPromedio", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class StockInventario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "negocio_id", nullable = false)
-    private Long negocioId;
-
-    @Column(name = "producto_id", nullable = false)
-    private Long productoId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "negocio_id", nullable = false)
+    private Negocios negocio;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "producto_id", insertable = false, updatable = false)
-    private Producto producto;
-
-    @Column(name = "almacen_id", nullable = false)
-    private Long almacenId;
+    @JoinColumn(name = "producto_id", nullable = false)
+    private Productos producto;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "almacen_id", insertable = false, updatable = false)
-    private Almacen almacen;
+    @JoinColumn(name = "almacen_id", nullable = false)
+    private Almacenes almacen;
 
-    @Column(name = "cantidad_total", nullable = false)
-    private Integer cantidadTotal = 0;
+    @Column(name = "cantidad_actual", precision = 10, scale = 2, nullable = false)
+    private BigDecimal cantidadActual = BigDecimal.ZERO;
+
+    @Column(name = "cantidad_reservada", precision = 10, scale = 2)
+    private BigDecimal cantidadReservada = BigDecimal.ZERO;
+
+    @Column(name = "cantidad_disponible", precision = 10, scale = 2)
+    private BigDecimal cantidadDisponible = BigDecimal.ZERO;
+
+    @Column(name = "costo_promedio", precision = 10, scale = 2)
+    private BigDecimal costoPromedio = BigDecimal.ZERO;
+
+    @Column(name = "esta_activo")
+    private Boolean estaActivo = true;
+
+    @Column(name = "creado_en", updatable = false)
+    private LocalDateTime creadoEn;
 
     @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
+    @Column(name = "eliminado_en")
+    private LocalDateTime eliminadoEn;
+
     @PrePersist
     protected void onCreate() {
-        this.actualizadoEn = LocalDateTime.now();
+        creadoEn = LocalDateTime.now();
+        actualizadoEn = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.actualizadoEn = LocalDateTime.now();
+        actualizadoEn = LocalDateTime.now();
     }
 
-    // --- Getters y Setters ---
+    // Getters y Setters
+    public Long getId() {
+        return id;
+    }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Long getNegocioId() { return negocioId; }
-    public void setNegocioId(Long negocioId) { this.negocioId = negocioId; }
+    public Negocios getNegocio() {
+        return negocio;
+    }
 
-    public Long getProductoId() { return productoId; }
-    public void setProductoId(Long productoId) { this.productoId = productoId; }
+    public void setNegocio(Negocios negocio) {
+        this.negocio = negocio;
+    }
 
-    public Producto getProducto() { return producto; }
-    public void setProducto(Producto producto) {
+    public Productos getProducto() {
+        return producto;
+    }
+
+    public void setProducto(Productos producto) {
         this.producto = producto;
-        if (producto != null) this.productoId = producto.getId();
     }
 
-    public Long getAlmacenId() { return almacenId; }
-    public void setAlmacenId(Long almacenId) { this.almacenId = almacenId; }
+    public Almacenes getAlmacen() {
+        return almacen;
+    }
 
-    public Almacen getAlmacen() { return almacen; }
-    public void setAlmacen(Almacen almacen) {
+    public void setAlmacen(Almacenes almacen) {
         this.almacen = almacen;
-        if (almacen != null) this.almacenId = almacen.getId();
     }
 
-    public Integer getCantidadTotal() { return cantidadTotal; }
-    public void setCantidadTotal(Integer cantidadTotal) { this.cantidadTotal = cantidadTotal; }
+    public BigDecimal getCantidadActual() {
+        return cantidadActual;
+    }
 
-    public LocalDateTime getActualizadoEn() { return actualizadoEn; }
-    public void setActualizadoEn(LocalDateTime actualizadoEn) { this.actualizadoEn = actualizadoEn; }
+    public void setCantidadActual(BigDecimal cantidadActual) {
+        this.cantidadActual = cantidadActual;
+    }
+
+    public BigDecimal getCantidadReservada() {
+        return cantidadReservada;
+    }
+
+    public void setCantidadReservada(BigDecimal cantidadReservada) {
+        this.cantidadReservada = cantidadReservada;
+    }
+
+    public BigDecimal getCantidadDisponible() {
+        return cantidadDisponible;
+    }
+
+    public void setCantidadDisponible(BigDecimal cantidadDisponible) {
+        this.cantidadDisponible = cantidadDisponible;
+    }
+
+    public BigDecimal getCostoPromedio() {
+        return costoPromedio;
+    }
+
+    public void setCostoPromedio(BigDecimal costoPromedio) {
+        this.costoPromedio = costoPromedio;
+    }
+
+    public Boolean getEstaActivo() {
+        return estaActivo;
+    }
+
+    public void setEstaActivo(Boolean estaActivo) {
+        this.estaActivo = estaActivo;
+    }
+
+    public LocalDateTime getCreadoEn() {
+        return creadoEn;
+    }
+
+    public void setCreadoEn(LocalDateTime creadoEn) {
+        this.creadoEn = creadoEn;
+    }
+
+    public LocalDateTime getActualizadoEn() {
+        return actualizadoEn;
+    }
+
+    public void setActualizadoEn(LocalDateTime actualizadoEn) {
+        this.actualizadoEn = actualizadoEn;
+    }
+
+    public LocalDateTime getEliminadoEn() {
+        return eliminadoEn;
+    }
+
+    public void setEliminadoEn(LocalDateTime eliminadoEn) {
+        this.eliminadoEn = eliminadoEn;
+    }
+
+    @Override
+    public String toString() {
+        return "StockInventario [id=" + id + ", cantidadActual=" + cantidadActual + ", cantidadDisponible="
+                + cantidadDisponible + ", estaActivo=" + estaActivo + "]";
+    }
 }
