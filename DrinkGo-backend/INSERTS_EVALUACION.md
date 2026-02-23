@@ -59,6 +59,1042 @@ Authorization: Bearer PEGA_AQUI_TU_TOKEN
 
 ---
 
+# 🧪 ENDPOINTS PARA PROBAR EN POSTMAN
+
+> **Todos los endpoints (excepto `/registros` y `/token`) requieren el Header:**
+> `Authorization: Bearer TU_TOKEN_JWT`
+>
+> **Todas las FK se envían como objetos:** `"negocio": { "id": 1 }`
+
+---
+
+## 🔄 FLUJOS COMPLETOS PARA LA EVALUACIÓN
+
+### FLUJO 1: Negocio y Suscripción
+```
+planes-suscripcion → negocios → suscripciones
+```
+1. `GET /restful/planes-suscripcion` — Ver los 3 planes disponibles
+2. `GET /restful/negocios/1` — Ver la licorería registrada
+3. `GET /restful/suscripciones/1` — Ver la suscripción activa (Plan Negocio)
+
+### FLUJO 2: Usuarios y Roles
+```
+roles → usuarios → usuarios-roles → sedes → usuarios-sedes
+```
+1. `GET /restful/roles` — Ver los 4 roles (Admin, Gerente, Vendedor, Almacenero)
+2. `GET /restful/usuarios` — Ver los 3 usuarios del negocio
+3. `GET /restful/usuarios-roles` — Ver qué rol tiene cada usuario
+4. `GET /restful/sedes` — Ver las 2 sedes
+5. `GET /restful/usuarios-sedes` — Ver a qué sede está asignado cada usuario
+
+### FLUJO 3: Catálogo de Productos
+```
+categorias → marcas → unidades-medida → productos
+```
+1. `GET /restful/categorias` — Ver las 6 categorías (Whisky, Vinos, etc.)
+2. `GET /restful/marcas` — Ver las 6 marcas
+3. `GET /restful/unidades-medida` — Ver las 4 unidades
+4. `GET /restful/productos` — Ver los 8 productos del catálogo
+5. `POST /restful/productos` — Crear un nuevo producto (ver body abajo)
+
+### FLUJO 4: Compras a Proveedores
+```
+proveedores → ordenes-compra → detalle-ordenes-compra → movimientos-inventario (entrada)
+```
+1. `GET /restful/proveedores` — Ver los 2 proveedores
+2. `GET /restful/ordenes-compra` — Ver las 2 órdenes (1 recibida, 1 confirmada)
+3. `GET /restful/detalle-ordenes-compra` — Ver los 5 ítems de las órdenes
+4. `POST /restful/ordenes-compra` — Crear nueva orden (ver body abajo)
+
+### FLUJO 5: Inventario
+```
+stock-inventario → lotes-inventario → movimientos-inventario
+```
+1. `GET /restful/stock-inventario` — Ver stock actual de los 8 productos
+2. `GET /restful/lotes-inventario` — Ver los 8 lotes con fechas de vencimiento
+3. `GET /restful/movimientos-inventario` — Ver las 6 entradas y salidas
+
+### FLUJO 6: Ventas (POS)
+```
+cajas-registradoras → sesiones-caja → ventas → detalle-ventas → pagos-venta
+```
+1. `GET /restful/cajas-registradoras` — Ver las 2 cajas
+2. `GET /restful/sesiones-caja/1` — Ver la sesión abierta
+3. `GET /restful/ventas` — Ver las 3 ventas (2 pagadas, 1 borrador)
+4. `GET /restful/detalle-ventas` — Ver los 6 ítems vendidos
+5. `GET /restful/pagos-venta` — Ver los 2 pagos (efectivo y Yape)
+6. `POST /restful/ventas` — Crear nueva venta (ver body abajo)
+
+### FLUJO 7: Facturación
+```
+series-facturacion → documentos-facturacion
+```
+1. `GET /restful/series-facturacion` — Ver las 3 series (Boleta, Factura, NC)
+2. `GET /restful/documentos-facturacion` — Ver las 2 boletas emitidas
+
+### FLUJO 8: Gastos
+```
+categorias-gasto → gastos
+```
+1. `GET /restful/categorias-gasto` — Ver las 5 categorías de gastos
+2. `GET /restful/gastos` — Ver los 3 gastos registrados
+3. `POST /restful/gastos` — Registrar un nuevo gasto (ver body abajo)
+
+### FLUJO 9: Promociones y Devoluciones
+```
+promociones | devoluciones (vinculado a ventas y clientes)
+```
+1. `GET /restful/promociones` — Ver las 2 promociones activas
+2. `GET /restful/devoluciones` — Ver la devolución parcial solicitada
+
+---
+
+## 📋 REFERENCIA DE ENDPOINTS CON BODY
+
+### 1. PLANES SUSCRIPCIÓN
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/planes-suscripcion` |
+| GET | `http://localhost:8080/restful/planes-suscripcion/1` |
+| POST | `http://localhost:8080/restful/planes-suscripcion` |
+| PUT | `http://localhost:8080/restful/planes-suscripcion` |
+| DELETE | `http://localhost:8080/restful/planes-suscripcion/1` |
+
+**Body POST/PUT:**
+```json
+{
+  "nombre": "Plan Premium",
+  "descripcion": "Plan premium para grandes cadenas",
+  "precio": 399.90,
+  "moneda": "PEN",
+  "periodoFacturacion": "mensual",
+  "maxSedes": 20,
+  "maxUsuarios": 100,
+  "maxProductos": 50000,
+  "maxAlmacenesPorSede": 10,
+  "permitePos": true,
+  "permiteTiendaOnline": true,
+  "permiteDelivery": true,
+  "permiteMesas": true,
+  "permiteFacturacionElectronica": true,
+  "permiteMultiAlmacen": true,
+  "permiteReportesAvanzados": true,
+  "permiteAccesoApi": true,
+  "estaActivo": true,
+  "orden": 4
+}
+```
+
+---
+
+### 2. NEGOCIOS
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/negocios` |
+| GET | `http://localhost:8080/restful/negocios/1` |
+| POST | `http://localhost:8080/restful/negocios` |
+| PUT | `http://localhost:8080/restful/negocios` |
+| DELETE | `http://localhost:8080/restful/negocios/1` |
+
+**Body POST:**
+```json
+{
+  "razonSocial": "Licorería El Sol SAC",
+  "nombreComercial": "DrinkGo El Sol",
+  "ruc": "20602345678",
+  "tipoDocumentoFiscal": "RUC",
+  "representanteLegal": "María López",
+  "documentoRepresentante": "87654321",
+  "tipoNegocio": "Licorería",
+  "email": "contacto@elsol.com",
+  "telefono": "01-5551234",
+  "direccion": "Av. Brasil 567, Jesús María",
+  "ciudad": "Lima",
+  "departamento": "Lima",
+  "pais": "PE",
+  "estado": "activo",
+  "estaActivo": true
+}
+```
+
+---
+
+### 3. SUSCRIPCIONES
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/suscripciones` |
+| GET | `http://localhost:8080/restful/suscripciones/1` |
+| POST | `http://localhost:8080/restful/suscripciones` |
+| PUT | `http://localhost:8080/restful/suscripciones` |
+| DELETE | `http://localhost:8080/restful/suscripciones/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "plan": { "id": 3 },
+  "estado": "activa",
+  "inicioPeriodoActual": "2026-03-01",
+  "finPeriodoActual": "2026-04-01",
+  "proximaFechaFacturacion": "2026-04-01",
+  "autoRenovar": true
+}
+```
+
+---
+
+### 4. ROLES
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/roles` |
+| GET | `http://localhost:8080/restful/roles/1` |
+| POST | `http://localhost:8080/restful/roles` |
+| PUT | `http://localhost:8080/restful/roles` |
+| DELETE | `http://localhost:8080/restful/roles/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "nombre": "Cajero",
+  "descripcion": "Responsable de la caja registradora",
+  "esRolSistema": false,
+  "estaActivo": true
+}
+```
+
+---
+
+### 5. USUARIOS
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/usuarios` |
+| GET | `http://localhost:8080/restful/usuarios/1` |
+| POST | `http://localhost:8080/restful/usuarios` |
+| PUT | `http://localhost:8080/restful/usuarios` |
+| DELETE | `http://localhost:8080/restful/usuarios/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "email": "maria.lopez@losandes.com",
+  "hashContrasena": "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+  "nombres": "María",
+  "apellidos": "López",
+  "tipoDocumento": "DNI",
+  "numeroDocumento": "99887766",
+  "telefono": "956789012",
+  "estaActivo": true
+}
+```
+
+---
+
+### 6. USUARIOS ROLES
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/usuarios-roles` |
+| POST | `http://localhost:8080/restful/usuarios-roles` |
+
+**Body POST:**
+```json
+{
+  "usuario": { "id": 1 },
+  "rol": { "id": 2 }
+}
+```
+
+---
+
+### 7. SEDES
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/sedes` |
+| GET | `http://localhost:8080/restful/sedes/1` |
+| POST | `http://localhost:8080/restful/sedes` |
+| PUT | `http://localhost:8080/restful/sedes` |
+| DELETE | `http://localhost:8080/restful/sedes/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "codigo": "SEDE-003",
+  "nombre": "Sucursal Surco",
+  "direccion": "Av. Caminos del Inca 890, Surco",
+  "ciudad": "Lima",
+  "departamento": "Lima",
+  "pais": "PE",
+  "telefono": "01-1234567",
+  "esPrincipal": false,
+  "deliveryHabilitado": true,
+  "recojoHabilitado": true,
+  "estaActivo": true
+}
+```
+
+---
+
+### 8. USUARIOS SEDES
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/usuarios-sedes` |
+| POST | `http://localhost:8080/restful/usuarios-sedes` |
+
+**Body POST:**
+```json
+{
+  "usuario": { "id": 1 },
+  "sede": { "id": 2 },
+  "esPredeterminado": false
+}
+```
+
+---
+
+### 9. ALMACENES
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/almacenes` |
+| GET | `http://localhost:8080/restful/almacenes/1` |
+| POST | `http://localhost:8080/restful/almacenes` |
+| PUT | `http://localhost:8080/restful/almacenes` |
+| DELETE | `http://localhost:8080/restful/almacenes/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "sede": { "id": 1 },
+  "codigo": "ALM-003",
+  "nombre": "Almacén de Exhibición",
+  "descripcion": "Productos en exhibición para el público",
+  "esPredeterminado": false,
+  "estaActivo": true
+}
+```
+
+---
+
+### 10. CATEGORÍAS
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/categorias` |
+| GET | `http://localhost:8080/restful/categorias/1` |
+| POST | `http://localhost:8080/restful/categorias` |
+| PUT | `http://localhost:8080/restful/categorias` |
+| DELETE | `http://localhost:8080/restful/categorias/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "nombre": "Tequila",
+  "slug": "tequila",
+  "descripcion": "Tequilas mexicanos importados",
+  "visibleTiendaOnline": true,
+  "estaActivo": true,
+  "orden": 7
+}
+```
+
+---
+
+### 11. MARCAS
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/marcas` |
+| GET | `http://localhost:8080/restful/marcas/1` |
+| POST | `http://localhost:8080/restful/marcas` |
+| PUT | `http://localhost:8080/restful/marcas` |
+| DELETE | `http://localhost:8080/restful/marcas/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "nombre": "José Cuervo",
+  "slug": "jose-cuervo",
+  "paisOrigen": "México",
+  "descripcion": "Tequila mexicano premium",
+  "estaActivo": true
+}
+```
+
+---
+
+### 12. UNIDADES DE MEDIDA
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/unidades-medida` |
+| GET | `http://localhost:8080/restful/unidades-medida/1` |
+| POST | `http://localhost:8080/restful/unidades-medida` |
+| DELETE | `http://localhost:8080/restful/unidades-medida/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "codigo": "SXP",
+  "nombre": "Six Pack",
+  "abreviatura": "6pk",
+  "tipo": "paquete",
+  "estaActivo": true
+}
+```
+
+---
+
+### 13. PRODUCTOS
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/productos` |
+| GET | `http://localhost:8080/restful/productos/1` |
+| POST | `http://localhost:8080/restful/productos` |
+| PUT | `http://localhost:8080/restful/productos` |
+| DELETE | `http://localhost:8080/restful/productos/1` |
+
+**Body POST (Crear nuevo producto):**
+```json
+{
+  "negocio": { "id": 1 },
+  "sku": "PIS-TAB-ACH-500",
+  "codigoBarras": "7750000009",
+  "nombre": "Tabernero Acholado 500ml",
+  "slug": "tabernero-acholado-500",
+  "descripcionCorta": "Pisco acholado peruano",
+  "descripcion": "Pisco acholado Tabernero, mezcla de uvas quebranta e italia.",
+  "categoria": { "id": 5 },
+  "marca": { "id": 5 },
+  "unidadMedida": { "id": 2 },
+  "tipoProducto": "alcoholica",
+  "tipoBebida": "Pisco Acholado",
+  "gradoAlcoholico": 42.00,
+  "volumenMl": 500,
+  "paisOrigen": "Perú",
+  "precioCompra": 25.00,
+  "precioVenta": 42.90,
+  "tasaImpuesto": 18.00,
+  "impuestoIncluido": true,
+  "stockMinimo": 10,
+  "tipoAlmacenamiento": "ambiente",
+  "visiblePos": true,
+  "visibleTiendaOnline": true,
+  "esDestacado": false,
+  "requiereVerificacionEdad": true,
+  "permiteDescuento": true,
+  "estaActivo": true
+}
+```
+
+---
+
+### 14. PROVEEDORES
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/proveedores` |
+| GET | `http://localhost:8080/restful/proveedores/1` |
+| POST | `http://localhost:8080/restful/proveedores` |
+| PUT | `http://localhost:8080/restful/proveedores` |
+| DELETE | `http://localhost:8080/restful/proveedores/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "razonSocial": "Cervecerías Peruanas Backus SAA",
+  "nombreComercial": "Backus",
+  "tipoDocumento": "RUC",
+  "numeroDocumento": "20100113610",
+  "direccion": "Jr. Chiclayo 594, Rímac",
+  "telefono": "01-4611000",
+  "email": "ventas@backus.com",
+  "contactoPrincipal": "Juan Pérez",
+  "telefonoContacto": "999555111",
+  "emailContacto": "jperez@backus.com",
+  "diasCredito": 45,
+  "limiteCredito": "100000.00",
+  "estaActivo": true
+}
+```
+
+---
+
+### 15. CLIENTES
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/clientes` |
+| GET | `http://localhost:8080/restful/clientes/1` |
+| POST | `http://localhost:8080/restful/clientes` |
+| PUT | `http://localhost:8080/restful/clientes` |
+| DELETE | `http://localhost:8080/restful/clientes/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "tipoDocumento": "DNI",
+  "numeroDocumento": "71234567",
+  "nombres": "Andrea",
+  "apellidos": "Torres Vega",
+  "email": "andrea.torres@gmail.com",
+  "telefono": "977112233",
+  "fechaNacimiento": "1995-03-20",
+  "direccion": "Jr. Las Flores 234, Lince",
+  "totalCompras": 0.00,
+  "estaActivo": true
+}
+```
+
+---
+
+### 16. MÉTODOS DE PAGO
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/metodos-pago` |
+| GET | `http://localhost:8080/restful/metodos-pago/1` |
+| POST | `http://localhost:8080/restful/metodos-pago` |
+| PUT | `http://localhost:8080/restful/metodos-pago` |
+| DELETE | `http://localhost:8080/restful/metodos-pago/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "nombre": "Tarjeta Amex",
+  "codigo": "AMEX",
+  "tipo": "tarjeta_credito",
+  "estaActivo": true,
+  "disponiblePos": true,
+  "disponibleTiendaOnline": true,
+  "orden": 6
+}
+```
+
+---
+
+### 17. CAJAS REGISTRADORAS
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/cajas-registradoras` |
+| GET | `http://localhost:8080/restful/cajas-registradoras/1` |
+| POST | `http://localhost:8080/restful/cajas-registradoras` |
+| PUT | `http://localhost:8080/restful/cajas-registradoras` |
+| DELETE | `http://localhost:8080/restful/cajas-registradoras/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "sede": { "id": 2 },
+  "nombreCaja": "Caja San Isidro",
+  "codigo": "CAJA-003",
+  "montoAperturaDefecto": 150.00,
+  "estaActivo": true
+}
+```
+
+---
+
+### 18. SESIONES DE CAJA
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/sesiones-caja` |
+| GET | `http://localhost:8080/restful/sesiones-caja/1` |
+| POST | `http://localhost:8080/restful/sesiones-caja` |
+| PUT | `http://localhost:8080/restful/sesiones-caja` |
+| DELETE | `http://localhost:8080/restful/sesiones-caja/1` |
+
+**Body POST (Abrir nueva sesión):**
+```json
+{
+  "caja": { "id": 2 },
+  "usuario": { "id": 2 },
+  "fechaApertura": "2026-02-23T08:00:00",
+  "montoApertura": 100.00,
+  "totalEfectivo": 0.00,
+  "totalTarjeta": 0.00,
+  "totalYape": 0.00,
+  "totalPlin": 0.00,
+  "totalOtros": 0.00,
+  "totalIngresos": 0.00,
+  "totalEgresos": 0.00,
+  "diferenciaEsperadoReal": 0.00,
+  "estadoSesion": "abierta",
+  "estaActivo": true
+}
+```
+
+---
+
+### 19. STOCK INVENTARIO
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/stock-inventario` |
+| GET | `http://localhost:8080/restful/stock-inventario/1` |
+| POST | `http://localhost:8080/restful/stock-inventario` |
+| PUT | `http://localhost:8080/restful/stock-inventario` |
+| DELETE | `http://localhost:8080/restful/stock-inventario/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "producto": { "id": 1 },
+  "almacen": { "id": 2 },
+  "cantidadActual": 12,
+  "cantidadReservada": 0,
+  "cantidadDisponible": 12,
+  "costoPromedio": 85.00,
+  "estaActivo": true
+}
+```
+
+---
+
+### 20. LOTES INVENTARIO
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/lotes-inventario` |
+| GET | `http://localhost:8080/restful/lotes-inventario/1` |
+| POST | `http://localhost:8080/restful/lotes-inventario` |
+| PUT | `http://localhost:8080/restful/lotes-inventario` |
+| DELETE | `http://localhost:8080/restful/lotes-inventario/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "producto": { "id": 1 },
+  "almacen": { "id": 2 },
+  "numeroLote": "LOT-2026-009",
+  "fechaIngreso": "2026-02-23",
+  "fechaVencimiento": "2030-12-31",
+  "cantidadInicial": 12,
+  "cantidadActual": 12,
+  "costoUnitario": 85.00,
+  "estaActivo": true
+}
+```
+
+---
+
+### 21. ÓRDENES DE COMPRA
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/ordenes-compra` |
+| GET | `http://localhost:8080/restful/ordenes-compra/1` |
+| POST | `http://localhost:8080/restful/ordenes-compra` |
+| PUT | `http://localhost:8080/restful/ordenes-compra` |
+| DELETE | `http://localhost:8080/restful/ordenes-compra/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "proveedor": { "id": 1 },
+  "numeroOrden": "OC-2026-0003",
+  "fechaOrden": "2026-02-23",
+  "fechaEntregaEstimada": "2026-02-28",
+  "almacen": { "id": 1 },
+  "estadoOrden": "borrador",
+  "subtotal": 420.00,
+  "impuestos": 75.60,
+  "total": 495.60,
+  "observaciones": "Pedido de cervezas Corona para fin de semana",
+  "usuario": { "id": 1 },
+  "estaActivo": true
+}
+```
+
+---
+
+### 22. DETALLE ÓRDENES DE COMPRA
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/detalle-ordenes-compra` |
+| GET | `http://localhost:8080/restful/detalle-ordenes-compra/1` |
+| POST | `http://localhost:8080/restful/detalle-ordenes-compra` |
+| PUT | `http://localhost:8080/restful/detalle-ordenes-compra` |
+| DELETE | `http://localhost:8080/restful/detalle-ordenes-compra/1` |
+
+**Body POST:**
+```json
+{
+  "ordenCompra": { "id": 1 },
+  "producto": { "id": 5 },
+  "cantidadSolicitada": 120,
+  "cantidadRecibida": 0,
+  "precioUnitario": 3.50,
+  "subtotal": 420.00,
+  "impuesto": 75.60,
+  "total": 495.60,
+  "estaActivo": true
+}
+```
+
+---
+
+### 23. VENTAS
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/ventas` |
+| GET | `http://localhost:8080/restful/ventas/1` |
+| POST | `http://localhost:8080/restful/ventas` |
+| PUT | `http://localhost:8080/restful/ventas` |
+| DELETE | `http://localhost:8080/restful/ventas/1` |
+
+**Body POST (Nueva venta):**
+```json
+{
+  "negocio": { "id": 1 },
+  "sede": { "id": 1 },
+  "numeroVenta": "V-2026-0004",
+  "tipoVenta": "mostrador",
+  "cliente": { "id": 1 },
+  "sesionCaja": { "id": 1 },
+  "fechaVenta": "2026-02-23T14:30:00",
+  "subtotal": 45.90,
+  "descuento": 0.00,
+  "impuestos": 8.26,
+  "total": 45.90,
+  "estadoVenta": "pagada",
+  "usuario": { "id": 3 },
+  "estaActivo": true
+}
+```
+
+---
+
+### 24. DETALLE VENTAS
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/detalle-ventas` |
+| GET | `http://localhost:8080/restful/detalle-ventas/1` |
+| POST | `http://localhost:8080/restful/detalle-ventas` |
+| PUT | `http://localhost:8080/restful/detalle-ventas` |
+| DELETE | `http://localhost:8080/restful/detalle-ventas/1` |
+
+**Body POST:**
+```json
+{
+  "venta": { "id": 1 },
+  "producto": { "id": 7 },
+  "cantidad": 1,
+  "precioUnitario": 45.90,
+  "descuento": 0.00,
+  "subtotal": 45.90,
+  "impuesto": 8.26,
+  "total": 45.90,
+  "estaActivo": true
+}
+```
+
+---
+
+### 25. PAGOS VENTA
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/pagos-venta` |
+| GET | `http://localhost:8080/restful/pagos-venta/1` |
+| POST | `http://localhost:8080/restful/pagos-venta` |
+| PUT | `http://localhost:8080/restful/pagos-venta` |
+| DELETE | `http://localhost:8080/restful/pagos-venta/1` |
+
+**Body POST:**
+```json
+{
+  "venta": { "id": 1 },
+  "metodoPago": { "id": 3 },
+  "monto": 45.90,
+  "numeroReferencia": "PLIN-20260223-001",
+  "fechaPago": "2026-02-23T14:35:00",
+  "estaActivo": true
+}
+```
+
+---
+
+### 26. MOVIMIENTOS INVENTARIO
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/movimientos-inventario` |
+| GET | `http://localhost:8080/restful/movimientos-inventario/1` |
+| POST | `http://localhost:8080/restful/movimientos-inventario` |
+| PUT | `http://localhost:8080/restful/movimientos-inventario` |
+| DELETE | `http://localhost:8080/restful/movimientos-inventario/1` |
+
+**Body POST (Registrar entrada por compra):**
+```json
+{
+  "negocio": { "id": 1 },
+  "producto": { "id": 5 },
+  "almacenOrigen": { "id": 1 },
+  "lote": { "id": 5 },
+  "tipoMovimiento": "entrada",
+  "cantidad": 120,
+  "costoUnitario": 3.50,
+  "montoTotal": 420.00,
+  "motivoMovimiento": "Ingreso por orden de compra",
+  "referenciaDocumento": "OC-2026-0003",
+  "usuario": { "id": 1 },
+  "fechaMovimiento": "2026-02-23T10:00:00",
+  "estaActivo": true
+}
+```
+
+---
+
+### 27. CATEGORÍAS DE GASTOS
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/categorias-gasto` |
+| GET | `http://localhost:8080/restful/categorias-gasto/1` |
+| POST | `http://localhost:8080/restful/categorias-gasto` |
+| PUT | `http://localhost:8080/restful/categorias-gasto` |
+| DELETE | `http://localhost:8080/restful/categorias-gasto/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "nombre": "Transporte y Logística",
+  "codigo": "TRANSPORTE",
+  "tipo": "operativo",
+  "descripcion": "Costos de transporte y distribución",
+  "estaActivo": true
+}
+```
+
+---
+
+### 28. GASTOS
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/gastos` |
+| GET | `http://localhost:8080/restful/gastos/1` |
+| POST | `http://localhost:8080/restful/gastos` |
+| PUT | `http://localhost:8080/restful/gastos` |
+| DELETE | `http://localhost:8080/restful/gastos/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "sede": { "id": 1 },
+  "numeroGasto": "GAS-2026-0004",
+  "categoria": { "id": 4 },
+  "descripcion": "Publicidad en Instagram - Febrero 2026",
+  "monto": 350.00,
+  "montoImpuesto": 63.00,
+  "total": 413.00,
+  "moneda": "PEN",
+  "fechaGasto": "2026-02-20",
+  "metodoPago": "transferencia_bancaria",
+  "referenciaPago": "TRANS-BCP-003",
+  "estado": "pagado",
+  "esRecurrente": true,
+  "periodoRecurrencia": "mensual",
+  "registradoPor": { "id": 1 },
+  "estaActivo": true
+}
+```
+
+---
+
+### 29. SERIES FACTURACIÓN
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/series-facturacion` |
+| GET | `http://localhost:8080/restful/series-facturacion/1` |
+| POST | `http://localhost:8080/restful/series-facturacion` |
+| PUT | `http://localhost:8080/restful/series-facturacion` |
+| DELETE | `http://localhost:8080/restful/series-facturacion/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "sede": { "id": 2 },
+  "tipoDocumento": "boleta",
+  "serie": "B002",
+  "numeroActual": 0,
+  "esPredeterminada": true,
+  "estaActivo": true
+}
+```
+
+---
+
+### 30. DOCUMENTOS FACTURACIÓN
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/documentos-facturacion` |
+| GET | `http://localhost:8080/restful/documentos-facturacion/1` |
+| POST | `http://localhost:8080/restful/documentos-facturacion` |
+| PUT | `http://localhost:8080/restful/documentos-facturacion` |
+| DELETE | `http://localhost:8080/restful/documentos-facturacion/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "serieFacturacion": { "id": 2 },
+  "tipoDocumento": "factura",
+  "numeroDocumento": "F001-00000001",
+  "cliente": { "id": 3 },
+  "venta": { "id": 1 },
+  "fechaEmision": "2026-02-23",
+  "subtotal": 177.80,
+  "impuestos": 32.00,
+  "total": 209.80,
+  "estadoDocumento": "emitido",
+  "usuario": { "id": 3 },
+  "estaActivo": true
+}
+```
+
+---
+
+### 31. PROMOCIONES
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/promociones` |
+| GET | `http://localhost:8080/restful/promociones/1` |
+| POST | `http://localhost:8080/restful/promociones` |
+| PUT | `http://localhost:8080/restful/promociones` |
+| DELETE | `http://localhost:8080/restful/promociones/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "nombre": "2x1 Cervezas Viernes",
+  "codigo": "2X1VIERNES",
+  "tipoDescuento": "porcentaje",
+  "valorDescuento": 50.00,
+  "montoMinimoCompra": 20.00,
+  "maxUsos": 200,
+  "usosActuales": 0,
+  "aplicaA": "categoria",
+  "validoDesde": "2026-02-28T17:00:00",
+  "validoHasta": "2026-02-28T23:59:59",
+  "estaActivo": true,
+  "creadoPor": { "id": 1 }
+}
+```
+
+---
+
+### 32. DEVOLUCIONES
+
+| Método | URL |
+|--------|-----|
+| GET | `http://localhost:8080/restful/devoluciones` |
+| GET | `http://localhost:8080/restful/devoluciones/1` |
+| POST | `http://localhost:8080/restful/devoluciones` |
+| PUT | `http://localhost:8080/restful/devoluciones` |
+| DELETE | `http://localhost:8080/restful/devoluciones/1` |
+
+**Body POST:**
+```json
+{
+  "negocio": { "id": 1 },
+  "sede": { "id": 1 },
+  "numeroDevolucion": "DEV-2026-0002",
+  "venta": { "id": 2 },
+  "cliente": { "id": 2 },
+  "tipoDevolucion": "total",
+  "categoriaMotivo": "producto_danado",
+  "detalleMotivo": "Botella de Casillero del Diablo llegó con el corcho dañado",
+  "subtotal": 39.90,
+  "montoImpuesto": 7.18,
+  "total": 39.90,
+  "metodoReembolso": "credito_tienda",
+  "estado": "solicitada",
+  "solicitadoPor": { "id": 3 },
+  "solicitadoEn": "2026-02-23T16:00:00",
+  "estaActivo": true
+}
+```
+
+---
+
+### ⚡ RESUMEN RÁPIDO DE URLs
+
+| # | Recurso | GET todos | GET por ID | POST crear | PUT editar | DELETE |
+|---|---------|-----------|------------|------------|------------|--------|
+| 1 | Planes | `/restful/planes-suscripcion` | `/{id}` | ✅ | ✅ | ✅ |
+| 2 | Negocios | `/restful/negocios` | `/{id}` | ✅ | ✅ | ✅ |
+| 3 | Suscripciones | `/restful/suscripciones` | `/{id}` | ✅ | ✅ | ✅ |
+| 4 | Roles | `/restful/roles` | `/{id}` | ✅ | ✅ | ✅ |
+| 5 | Usuarios | `/restful/usuarios` | `/{id}` | ✅ | ✅ | ✅ |
+| 6 | Usuarios-Roles | `/restful/usuarios-roles` | `/{id}` | ✅ | ✅ | ✅ |
+| 7 | Sedes | `/restful/sedes` | `/{id}` | ✅ | ✅ | ✅ |
+| 8 | Usuarios-Sedes | `/restful/usuarios-sedes` | `/{id}` | ✅ | ✅ | ✅ |
+| 9 | Almacenes | `/restful/almacenes` | `/{id}` | ✅ | ✅ | ✅ |
+| 10 | Categorías | `/restful/categorias` | `/{id}` | ✅ | ✅ | ✅ |
+| 11 | Marcas | `/restful/marcas` | `/{id}` | ✅ | ✅ | ✅ |
+| 12 | Unidades Medida | `/restful/unidades-medida` | `/{id}` | ✅ | ✅ | ✅ |
+| 13 | Productos | `/restful/productos` | `/{id}` | ✅ | ✅ | ✅ |
+| 14 | Proveedores | `/restful/proveedores` | `/{id}` | ✅ | ✅ | ✅ |
+| 15 | Clientes | `/restful/clientes` | `/{id}` | ✅ | ✅ | ✅ |
+| 16 | Métodos Pago | `/restful/metodos-pago` | `/{id}` | ✅ | ✅ | ✅ |
+| 17 | Cajas | `/restful/cajas-registradoras` | `/{id}` | ✅ | ✅ | ✅ |
+| 18 | Sesiones Caja | `/restful/sesiones-caja` | `/{id}` | ✅ | ✅ | ✅ |
+| 19 | Stock | `/restful/stock-inventario` | `/{id}` | ✅ | ✅ | ✅ |
+| 20 | Lotes | `/restful/lotes-inventario` | `/{id}` | ✅ | ✅ | ✅ |
+| 21 | Órdenes Compra | `/restful/ordenes-compra` | `/{id}` | ✅ | ✅ | ✅ |
+| 22 | Detalle OC | `/restful/detalle-ordenes-compra` | `/{id}` | ✅ | ✅ | ✅ |
+| 23 | Ventas | `/restful/ventas` | `/{id}` | ✅ | ✅ | ✅ |
+| 24 | Detalle Ventas | `/restful/detalle-ventas` | `/{id}` | ✅ | ✅ | ✅ |
+| 25 | Pagos Venta | `/restful/pagos-venta` | `/{id}` | ✅ | ✅ | ✅ |
+| 26 | Mov. Inventario | `/restful/movimientos-inventario` | `/{id}` | ✅ | ✅ | ✅ |
+| 27 | Cat. Gastos | `/restful/categorias-gasto` | `/{id}` | ✅ | ✅ | ✅ |
+| 28 | Gastos | `/restful/gastos` | `/{id}` | ✅ | ✅ | ✅ |
+| 29 | Series Fact. | `/restful/series-facturacion` | `/{id}` | ✅ | ✅ | ✅ |
+| 30 | Docs. Fact. | `/restful/documentos-facturacion` | `/{id}` | ✅ | ✅ | ✅ |
+| 31 | Promociones | `/restful/promociones` | `/{id}` | ✅ | ✅ | ✅ |
+| 32 | Devoluciones | `/restful/devoluciones` | `/{id}` | ✅ | ✅ | ✅ |
+
+> **Base URL:** `http://localhost:8080` — Todos los `/{id}` se agregan a la URL del recurso.
+> Ejemplo: `http://localhost:8080/restful/productos/1`
+
+---
+
 # 📦 INSERTS SQL (Ejecutar en phpMyAdmin en ORDEN)
 
 ---
