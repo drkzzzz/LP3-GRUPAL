@@ -1,140 +1,50 @@
 package DrinkGo.DrinkGo_backend.controller;
 
-import DrinkGo.DrinkGo_backend.dto.ConfiguracionTiendaOnlineDTO;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import DrinkGo.DrinkGo_backend.entity.ConfiguracionTiendaOnline;
-import DrinkGo.DrinkGo_backend.service.ConfiguracionTiendaOnlineService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import DrinkGo.DrinkGo_backend.service.IConfiguracionTiendaOnlineService;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PutMapping;
 
-import java.util.Map;
-
-/**
- * Controller REST para gestión de Configuración de Tienda Online
- * BLOQUE 14: TIENDA ONLINE (STOREFRONT)
- */
 @RestController
-@RequestMapping("/api/tienda-online/configuracion")
+@RequestMapping("/restful")
 public class ConfiguracionTiendaOnlineController {
+    @Autowired
+    private IConfiguracionTiendaOnlineService service;
 
-    private final ConfiguracionTiendaOnlineService configuracionService;
-
-    public ConfiguracionTiendaOnlineController(ConfiguracionTiendaOnlineService configuracionService) {
-        this.configuracionService = configuracionService;
+    @GetMapping("/configuracion-tienda-online")
+    public List<ConfiguracionTiendaOnline> buscarTodos() {
+        return service.buscarTodos();
     }
 
-    /**
-     * GET /api/tienda-online/configuracion/{id}
-     * Obtener configuración de tienda online por ID
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<ConfiguracionTiendaOnline> obtenerPorId(@PathVariable Long id) {
-        try {
-            ConfiguracionTiendaOnline configuracion = configuracionService.obtenerPorId(id);
-            return ResponseEntity.ok(configuracion);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
+    @PostMapping("/configuracion-tienda-online")
+    public ConfiguracionTiendaOnline guardar(@RequestBody ConfiguracionTiendaOnline entity) {
+        service.guardar(entity);
+        return entity;
     }
 
-    /**
-     * GET /api/tienda-online/configuracion?negocioId={negocioId}
-     * Obtener configuración de la tienda online por negocio
-     */
-    @GetMapping
-    public ResponseEntity<ConfiguracionTiendaOnline> obtenerPorNegocio(@RequestParam Long negocioId) {
-        try {
-            ConfiguracionTiendaOnline configuracion = configuracionService.obtenerPorNegocio(negocioId);
-            return ResponseEntity.ok(configuracion);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
+    @PutMapping("/configuracion-tienda-online")
+    public ConfiguracionTiendaOnline modificar(@RequestBody ConfiguracionTiendaOnline entity) {
+        service.modificar(entity);
+        return entity;
     }
 
-    /**
-     * GET /api/tienda-online/configuracion/slug/{slug}
-     * Obtener configuración por slug de tienda (público)
-     */
-    @GetMapping("/slug/{slug}")
-    public ResponseEntity<ConfiguracionTiendaOnline> obtenerPorSlug(@PathVariable String slug) {
-        return configuracionService.obtenerPorSlug(slug)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @GetMapping("/configuracion-tienda-online/{id}")
+    public Optional<ConfiguracionTiendaOnline> buscarId(@PathVariable("id") Long id) {
+        return service.buscarId(id);
     }
 
-    /**
-     * POST /api/tienda-online/configuracion
-     * Crear configuración de tienda online
-     */
-    @PostMapping
-    public ResponseEntity<?> crear(@RequestBody ConfiguracionTiendaOnlineDTO dto) {
-        try {
-            ConfiguracionTiendaOnline configuracion = configuracionService.crear(dto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(configuracion);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * PUT /api/tienda-online/configuracion/{id}?negocioId={negocioId}
-     * Actualizar configuración de tienda online
-     */
-    @PutMapping("/{id}")
-    public ResponseEntity<?> actualizar(
-            @PathVariable Long id,
-            @RequestParam Long negocioId,
-            @RequestBody ConfiguracionTiendaOnlineDTO dto) {
-        try {
-            ConfiguracionTiendaOnline configuracion = configuracionService.actualizar(id, dto, negocioId);
-            return ResponseEntity.ok(configuracion);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * PATCH
-     * /api/tienda-online/configuracion/estado?negocioId={negocioId}&habilitado={true/false}
-     * Habilitar/Deshabilitar tienda online
-     */
-    @PatchMapping("/estado")
-    public ResponseEntity<?> cambiarEstado(
-            @RequestParam Long negocioId,
-            @RequestParam Boolean habilitado) {
-        try {
-            ConfiguracionTiendaOnline configuracion = configuracionService.cambiarEstado(negocioId, habilitado);
-            return ResponseEntity.ok(configuracion);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * GET /api/tienda-online/configuracion/existe?negocioId={negocioId}
-     * Verificar si existe configuración para un negocio
-     */
-    @GetMapping("/existe")
-    public ResponseEntity<Map<String, Boolean>> existeConfiguracion(@RequestParam Long negocioId) {
-        boolean existe = configuracionService.existeConfiguracion(negocioId);
-        return ResponseEntity.ok(Map.of("existe", existe));
-    }
-
-    /**
-     * DELETE /api/tienda-online/configuracion/{id}
-     * Eliminar configuración de tienda online
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminar(@PathVariable Long id, @RequestParam Long negocioId) {
-        try {
-            configuracionService.eliminar(id, negocioId);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
+    @DeleteMapping("/configuracion-tienda-online/{id}")
+    public String eliminar(@PathVariable Long id) {
+        service.eliminar(id);
+        return "Registro eliminado";
     }
 }

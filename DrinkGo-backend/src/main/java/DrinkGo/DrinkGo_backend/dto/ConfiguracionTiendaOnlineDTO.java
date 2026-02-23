@@ -1,38 +1,44 @@
 package DrinkGo.DrinkGo_backend.dto;
 
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public class ConfiguracionTiendaOnlineDTO {
 
     private Long id;
     private Long negocioId;
-    private Boolean estaHabilitado;
     private String nombreTienda;
-    private String slugTienda;
-    private String dominioPersonalizado;
-    private String mensajeBienvenida;
-    private String imagenesBanner;
-    private String categoriasDestacadas;
-    private String tituloSeo;
-    private String descripcionSeo;
-    private String palabrasClaveSeo;
-    private String idGoogleAnalytics;
-    private String idPixelFacebook;
-    private String enlacesSociales;
-    private BigDecimal montoMinimoPedido;
-    private BigDecimal montoMaximoPedido;
-    private String terminosCondiciones;
-    private String politicaPrivacidad;
-    private String politicaDevoluciones;
-    private Boolean mostrarPreciosConImpuesto;
-    private Boolean permitirCompraInvitado;
-    private Boolean requiereVerificacionEdad;
+    private String descripcion;
+    private String logo;
+    private String colorPrimario;
+    private String colorSecundario;
+    private Boolean permitirPagos;
+    private Boolean permitirDelivery;
+    private Boolean estaActivo;
+    private LocalDateTime creadoEn;
+    private LocalDateTime actualizadoEn;
 
+    // Constructores
     public ConfiguracionTiendaOnlineDTO() {
     }
 
-    // Getters y Setters
+    public ConfiguracionTiendaOnlineDTO(Long id, Long negocioId, String nombreTienda, String descripcion, String logo,
+            String colorPrimario, String colorSecundario, Boolean permitirPagos, Boolean permitirDelivery,
+            Boolean estaActivo, LocalDateTime creadoEn, LocalDateTime actualizadoEn) {
+        this.id = id;
+        this.negocioId = negocioId;
+        this.nombreTienda = nombreTienda;
+        this.descripcion = descripcion;
+        this.logo = logo;
+        this.colorPrimario = colorPrimario;
+        this.colorSecundario = colorSecundario;
+        this.permitirPagos = permitirPagos;
+        this.permitirDelivery = permitirDelivery;
+        this.estaActivo = estaActivo;
+        this.creadoEn = creadoEn;
+        this.actualizadoEn = actualizadoEn;
+    }
 
+    // Getters y Setters
     public Long getId() {
         return id;
     }
@@ -49,14 +55,6 @@ public class ConfiguracionTiendaOnlineDTO {
         this.negocioId = negocioId;
     }
 
-    public Boolean getEstaHabilitado() {
-        return estaHabilitado;
-    }
-
-    public void setEstaHabilitado(Boolean estaHabilitado) {
-        this.estaHabilitado = estaHabilitado;
-    }
-
     public String getNombreTienda() {
         return nombreTienda;
     }
@@ -65,155 +63,75 @@ public class ConfiguracionTiendaOnlineDTO {
         this.nombreTienda = nombreTienda;
     }
 
-    public String getSlugTienda() {
-        return slugTienda;
+    public String getDescripcion() {
+        return descripcion;
     }
 
-    public void setSlugTienda(String slugTienda) {
-        this.slugTienda = slugTienda;
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
     }
 
-    public String getDominioPersonalizado() {
-        return dominioPersonalizado;
+    public String getLogo() {
+        return logo;
     }
 
-    public void setDominioPersonalizado(String dominioPersonalizado) {
-        this.dominioPersonalizado = dominioPersonalizado;
+    public void setLogo(String logo) {
+        this.logo = logo;
     }
 
-    public String getMensajeBienvenida() {
-        return mensajeBienvenida;
+    public String getColorPrimario() {
+        return colorPrimario;
     }
 
-    public void setMensajeBienvenida(String mensajeBienvenida) {
-        this.mensajeBienvenida = mensajeBienvenida;
+    public void setColorPrimario(String colorPrimario) {
+        this.colorPrimario = colorPrimario;
     }
 
-    public String getImagenesBanner() {
-        return imagenesBanner;
+    public String getColorSecundario() {
+        return colorSecundario;
     }
 
-    public void setImagenesBanner(String imagenesBanner) {
-        this.imagenesBanner = imagenesBanner;
+    public void setColorSecundario(String colorSecundario) {
+        this.colorSecundario = colorSecundario;
     }
 
-    public String getCategoriasDestacadas() {
-        return categoriasDestacadas;
+    public Boolean getPermitirPagos() {
+        return permitirPagos;
     }
 
-    public void setCategoriasDestacadas(String categoriasDestacadas) {
-        this.categoriasDestacadas = categoriasDestacadas;
+    public void setPermitirPagos(Boolean permitirPagos) {
+        this.permitirPagos = permitirPagos;
     }
 
-    public String getTituloSeo() {
-        return tituloSeo;
+    public Boolean getPermitirDelivery() {
+        return permitirDelivery;
     }
 
-    public void setTituloSeo(String tituloSeo) {
-        this.tituloSeo = tituloSeo;
+    public void setPermitirDelivery(Boolean permitirDelivery) {
+        this.permitirDelivery = permitirDelivery;
     }
 
-    public String getDescripcionSeo() {
-        return descripcionSeo;
+    public Boolean getEstaActivo() {
+        return estaActivo;
     }
 
-    public void setDescripcionSeo(String descripcionSeo) {
-        this.descripcionSeo = descripcionSeo;
+    public void setEstaActivo(Boolean estaActivo) {
+        this.estaActivo = estaActivo;
     }
 
-    public String getPalabrasClaveSeo() {
-        return palabrasClaveSeo;
+    public LocalDateTime getCreadoEn() {
+        return creadoEn;
     }
 
-    public void setPalabrasClaveSeo(String palabrasClaveSeo) {
-        this.palabrasClaveSeo = palabrasClaveSeo;
+    public void setCreadoEn(LocalDateTime creadoEn) {
+        this.creadoEn = creadoEn;
     }
 
-    public String getIdGoogleAnalytics() {
-        return idGoogleAnalytics;
+    public LocalDateTime getActualizadoEn() {
+        return actualizadoEn;
     }
 
-    public void setIdGoogleAnalytics(String idGoogleAnalytics) {
-        this.idGoogleAnalytics = idGoogleAnalytics;
-    }
-
-    public String getIdPixelFacebook() {
-        return idPixelFacebook;
-    }
-
-    public void setIdPixelFacebook(String idPixelFacebook) {
-        this.idPixelFacebook = idPixelFacebook;
-    }
-
-    public String getEnlacesSociales() {
-        return enlacesSociales;
-    }
-
-    public void setEnlacesSociales(String enlacesSociales) {
-        this.enlacesSociales = enlacesSociales;
-    }
-
-    public BigDecimal getMontoMinimoPedido() {
-        return montoMinimoPedido;
-    }
-
-    public void setMontoMinimoPedido(BigDecimal montoMinimoPedido) {
-        this.montoMinimoPedido = montoMinimoPedido;
-    }
-
-    public BigDecimal getMontoMaximoPedido() {
-        return montoMaximoPedido;
-    }
-
-    public void setMontoMaximoPedido(BigDecimal montoMaximoPedido) {
-        this.montoMaximoPedido = montoMaximoPedido;
-    }
-
-    public String getTerminosCondiciones() {
-        return terminosCondiciones;
-    }
-
-    public void setTerminosCondiciones(String terminosCondiciones) {
-        this.terminosCondiciones = terminosCondiciones;
-    }
-
-    public String getPoliticaPrivacidad() {
-        return politicaPrivacidad;
-    }
-
-    public void setPoliticaPrivacidad(String politicaPrivacidad) {
-        this.politicaPrivacidad = politicaPrivacidad;
-    }
-
-    public String getPoliticaDevoluciones() {
-        return politicaDevoluciones;
-    }
-
-    public void setPoliticaDevoluciones(String politicaDevoluciones) {
-        this.politicaDevoluciones = politicaDevoluciones;
-    }
-
-    public Boolean getMostrarPreciosConImpuesto() {
-        return mostrarPreciosConImpuesto;
-    }
-
-    public void setMostrarPreciosConImpuesto(Boolean mostrarPreciosConImpuesto) {
-        this.mostrarPreciosConImpuesto = mostrarPreciosConImpuesto;
-    }
-
-    public Boolean getPermitirCompraInvitado() {
-        return permitirCompraInvitado;
-    }
-
-    public void setPermitirCompraInvitado(Boolean permitirCompraInvitado) {
-        this.permitirCompraInvitado = permitirCompraInvitado;
-    }
-
-    public Boolean getRequiereVerificacionEdad() {
-        return requiereVerificacionEdad;
-    }
-
-    public void setRequiereVerificacionEdad(Boolean requiereVerificacionEdad) {
-        this.requiereVerificacionEdad = requiereVerificacionEdad;
+    public void setActualizadoEn(LocalDateTime actualizadoEn) {
+        this.actualizadoEn = actualizadoEn;
     }
 }
