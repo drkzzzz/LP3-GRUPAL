@@ -5,7 +5,7 @@
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-  CURLOPT_URL => 'localhost:8080/restful/registros',
+  CURLOPT_URL => 'licores.spring.informaticapp.com:6677/restful/registros',
   CURLOPT_RETURNTRANSFER => true,
   CURLOPT_ENCODING => '',
   CURLOPT_MAXREDIRS => 10,
@@ -36,7 +36,7 @@ $data = json_decode($response, true);
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-  CURLOPT_URL => 'localhost:8080/restful/token',
+  CURLOPT_URL => 'licores.spring.informaticapp.com:6677/restful/token',
   CURLOPT_RETURNTRANSFER => true,
   CURLOPT_ENCODING => '',
   CURLOPT_MAXREDIRS => 10,

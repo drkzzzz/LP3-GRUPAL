@@ -7,9 +7,9 @@
 -- BLOQUE 1: INFRAESTRUCTURA BASE, PLATAFORMA SaaS Y NEGOCIOS
 -- ============================================================
 
-DROP DATABASE IF EXISTS drinkgo_db;
-CREATE DATABASE drinkgo_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE drinkgo_db;
+DROP DATABASE IF EXISTS licores_drinkgo;
+CREATE DATABASE licores_drinkgo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE licores_drinkgo;
 
 -- ============================================================
 -- 1.1 PLANES DE SUSCRIPCIÓN
@@ -1416,6 +1416,17 @@ CREATE TABLE condiciones_promocion (
 -- ============================================================
 -- BLOQUE 14: TIENDA ONLINE (STOREFRONT)
 -- ============================================================
+CREATE TABLE registros (
+    idregistro INT(11) NOT NULL AUTO_INCREMENT,
+    nombres VARCHAR(255) NOT NULL,
+    apellidos VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    cliente_id VARCHAR(255) NOT NULL,
+    llave_secreta VARCHAR(255) NOT NULL,
+    access_token VARCHAR(255) NOT NULL,
+    estado INT(11) NOT NULL DEFAULT 1,
+    PRIMARY KEY (idregistro)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE configuracion_tienda_online (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -1469,3 +1480,4 @@ CREATE TABLE paginas_tienda_online (
     INDEX idx_pagtienda_negocio (negocio_id),
     INDEX idx_pagtienda_tipo (negocio_id, tipo)
 ) ENGINE=InnoDB COMMENT='Páginas del CMS - Contenido dinámico, legal y sistema';
+
