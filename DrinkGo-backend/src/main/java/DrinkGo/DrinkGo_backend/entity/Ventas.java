@@ -11,11 +11,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ventas")
-@SQLDelete(sql = "UPDATE ventas SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
-@SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "negocioId", "sedeId", "numeroVenta", "tipoVenta", "clienteId", "mesaId", "sesionCajaId",
-        "fechaVenta", "subtotal", "descuento", "impuestos", "total", "estadoVenta", "usuarioId", "observaciones",
-        "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
+@JsonPropertyOrder({ "id", "sedeId", "numeroVenta", "tipoVenta", "clienteId", "mesaId", "sesionCajaId",
+        "subtotal", "montoDescuento", "montoImpuesto", "costoEnvio", "total", "estado", "vendedorId",
+        "creadoEn", "actualizadoEn" })
 public class Ventas {
 
     @Id
@@ -55,28 +53,62 @@ public class Ventas {
     @Column(precision = 10, scale = 2, nullable = false)
     private BigDecimal subtotal = BigDecimal.ZERO;
 
-    @Column(precision = 10, scale = 2)
-    private BigDecimal descuento = BigDecimal.ZERO;
+    @Column(name = "monto_descuento", precision = 10, scale = 2)
+    private BigDecimal montoDescuento = BigDecimal.ZERO;
 
-    @Column(precision = 10, scale = 2)
-    private BigDecimal impuestos = BigDecimal.ZERO;
+    @Column(name = "razon_descuento")
+    private String razonDescuento;
+
+    @Column(name = "monto_impuesto", precision = 10, scale = 2)
+    private BigDecimal montoImpuesto = BigDecimal.ZERO;
+
+    @Column(name = "costo_envio", precision = 10, scale = 2)
+    private BigDecimal costoEnvio = BigDecimal.ZERO;
 
     @Column(precision = 10, scale = 2, nullable = false)
     private BigDecimal total = BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "estado_venta", nullable = false)
-    private EstadoVenta estadoVenta = EstadoVenta.borrador;
+    @Column(name = "estado", nullable = false)
+    private Estado estado = Estado.pendiente;
+
+    @Column(name = "estado_entrega")
+    @Enumerated(EnumType.STRING)
+    private EstadoEntrega estadoEntrega;
+
+    @Column(columnDefinition = "JSON")
+    private String direccionEntrega;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_comprobante", nullable = false)
+    private TipoComprobante tipoComprobante = TipoComprobante.boleta;
+
+    @Column(name = "doc_cliente_numero")
+    private String docClienteNumero;
+
+    @Column(name = "doc_cliente_nombre")
+    private String docClienteNombre;
+
+    @Column(name = "completado_en")
+    private LocalDateTime completadoEn;
+
+    @Column(name = "cancelado_en")
+    private LocalDateTime canceladoEn;
+
+    @Column(name = "razon_cancelacion")
+    private String razonCancelacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cancelado_por")
+    private Usuarios canceladoPor;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vendedor_id")
+    private Usuarios vendedor;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuarios usuario;
-
-    @Column(columnDefinition = "TEXT")
-    private String observaciones;
-
-    @Column(name = "esta_activo")
-    private Boolean estaActivo = true;
 
     @Column(name = "creado_en", updatable = false)
     private LocalDateTime creadoEn;
@@ -84,15 +116,20 @@ public class Ventas {
     @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
-    @Column(name = "eliminado_en")
-    private LocalDateTime eliminadoEn;
-
     public enum TipoVenta {
-        mostrador, mesa, delivery, para_llevar
+        pos, tienda_online, mesa, telefono, otro
     }
 
-    public enum EstadoVenta {
-        borrador, confirmada, pagada, anulada
+    public enum Estado {
+        pendiente, completada, parcialmente_pagada, cancelada, reembolsada, anulada
+    }
+
+    public enum EstadoEntrega {
+        entregado, pendiente_envio, en_ruta, para_recoger
+    }
+
+    public enum TipoComprobante {
+        boleta, factura, nota_venta
     }
 
     @PrePersist
@@ -190,20 +227,36 @@ public class Ventas {
         this.subtotal = subtotal;
     }
 
-    public BigDecimal getDescuento() {
-        return descuento;
+    public BigDecimal getMontoDescuento() {
+        return montoDescuento;
     }
 
-    public void setDescuento(BigDecimal descuento) {
-        this.descuento = descuento;
+    public void setMontoDescuento(BigDecimal montoDescuento) {
+        this.montoDescuento = montoDescuento;
     }
 
-    public BigDecimal getImpuestos() {
-        return impuestos;
+    public String getRazonDescuento() {
+        return razonDescuento;
     }
 
-    public void setImpuestos(BigDecimal impuestos) {
-        this.impuestos = impuestos;
+    public void setRazonDescuento(String razonDescuento) {
+        this.razonDescuento = razonDescuento;
+    }
+
+    public BigDecimal getMontoImpuesto() {
+        return montoImpuesto;
+    }
+
+    public void setMontoImpuesto(BigDecimal montoImpuesto) {
+        this.montoImpuesto = montoImpuesto;
+    }
+
+    public BigDecimal getCostoEnvio() {
+        return costoEnvio;
+    }
+
+    public void setCostoEnvio(BigDecimal costoEnvio) {
+        this.costoEnvio = costoEnvio;
     }
 
     public BigDecimal getTotal() {
@@ -214,12 +267,92 @@ public class Ventas {
         this.total = total;
     }
 
-    public EstadoVenta getEstadoVenta() {
-        return estadoVenta;
+    public Estado getEstado() {
+        return estado;
     }
 
-    public void setEstadoVenta(EstadoVenta estadoVenta) {
-        this.estadoVenta = estadoVenta;
+    public void setEstado(Estado estado) {
+        this.estado = estado;
+    }
+
+    public EstadoEntrega getEstadoEntrega() {
+        return estadoEntrega;
+    }
+
+    public void setEstadoEntrega(EstadoEntrega estadoEntrega) {
+        this.estadoEntrega = estadoEntrega;
+    }
+
+    public String getDireccionEntrega() {
+        return direccionEntrega;
+    }
+
+    public void setDireccionEntrega(String direccionEntrega) {
+        this.direccionEntrega = direccionEntrega;
+    }
+
+    public TipoComprobante getTipoComprobante() {
+        return tipoComprobante;
+    }
+
+    public void setTipoComprobante(TipoComprobante tipoComprobante) {
+        this.tipoComprobante = tipoComprobante;
+    }
+
+    public String getDocClienteNumero() {
+        return docClienteNumero;
+    }
+
+    public void setDocClienteNumero(String docClienteNumero) {
+        this.docClienteNumero = docClienteNumero;
+    }
+
+    public String getDocClienteNombre() {
+        return docClienteNombre;
+    }
+
+    public void setDocClienteNombre(String docClienteNombre) {
+        this.docClienteNombre = docClienteNombre;
+    }
+
+    public LocalDateTime getCompletadoEn() {
+        return completadoEn;
+    }
+
+    public void setCompletadoEn(LocalDateTime completadoEn) {
+        this.completadoEn = completadoEn;
+    }
+
+    public LocalDateTime getCanceladoEn() {
+        return canceladoEn;
+    }
+
+    public void setCanceladoEn(LocalDateTime canceladoEn) {
+        this.canceladoEn = canceladoEn;
+    }
+
+    public String getRazonCancelacion() {
+        return razonCancelacion;
+    }
+
+    public void setRazonCancelacion(String razonCancelacion) {
+        this.razonCancelacion = razonCancelacion;
+    }
+
+    public Usuarios getCanceladoPor() {
+        return canceladoPor;
+    }
+
+    public void setCanceladoPor(Usuarios canceladoPor) {
+        this.canceladoPor = canceladoPor;
+    }
+
+    public Usuarios getVendedor() {
+        return vendedor;
+    }
+
+    public void setVendedor(Usuarios vendedor) {
+        this.vendedor = vendedor;
     }
 
     public Usuarios getUsuario() {
@@ -228,22 +361,6 @@ public class Ventas {
 
     public void setUsuario(Usuarios usuario) {
         this.usuario = usuario;
-    }
-
-    public String getObservaciones() {
-        return observaciones;
-    }
-
-    public void setObservaciones(String observaciones) {
-        this.observaciones = observaciones;
-    }
-
-    public Boolean getEstaActivo() {
-        return estaActivo;
-    }
-
-    public void setEstaActivo(Boolean estaActivo) {
-        this.estaActivo = estaActivo;
     }
 
     public LocalDateTime getCreadoEn() {
@@ -262,17 +379,9 @@ public class Ventas {
         this.actualizadoEn = actualizadoEn;
     }
 
-    public LocalDateTime getEliminadoEn() {
-        return eliminadoEn;
-    }
-
-    public void setEliminadoEn(LocalDateTime eliminadoEn) {
-        this.eliminadoEn = eliminadoEn;
-    }
-
     @Override
     public String toString() {
         return "Ventas [id=" + id + ", numeroVenta=" + numeroVenta + ", tipoVenta=" + tipoVenta + ", total=" + total
-                + ", estadoVenta=" + estadoVenta + ", estaActivo=" + estaActivo + "]";
+                + ", estado=" + estado + "]";
     }
 }
