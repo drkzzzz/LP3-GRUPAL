@@ -32,4 +32,8 @@ public class UsuariosPlataformaService implements IUsuariosPlataformaService {
     public void eliminar(Long id) {
         repoUsuariosPlataforma.deleteById(id);
     }
+
+    public Optional<UsuariosPlataforma> buscarPorEmail(String email) {
+        return repoUsuariosPlataforma.findByEmail(email);
+    }
 }
