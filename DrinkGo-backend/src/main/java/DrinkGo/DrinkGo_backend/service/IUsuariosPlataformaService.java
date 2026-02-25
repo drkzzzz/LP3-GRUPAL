@@ -14,4 +14,6 @@ public interface IUsuariosPlataformaService {
     Optional<UsuariosPlataforma> buscarId(Long id);
 
     void eliminar(Long id);
+
+    Optional<UsuariosPlataforma> buscarPorEmail(String email);
 }
