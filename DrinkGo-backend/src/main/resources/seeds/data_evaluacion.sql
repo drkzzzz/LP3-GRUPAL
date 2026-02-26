@@ -176,69 +176,68 @@ INSERT IGNORE INTO unidades_medida (
 -- 13. PRODUCTOS
 -- ============================================
 INSERT IGNORE INTO productos (
-    id, negocio_id, sku, codigo_barras, nombre, slug,
-    descripcion_corta, descripcion,
+    id, negocio_id, sku, nombre, slug,
+    descripcion,
     categoria_id, marca_id, unidad_medida_id,
-    tipo_producto, tipo_bebida, grado_alcoholico, volumen_ml, pais_origen,
+    grado_alcoholico,
     precio_compra, precio_venta, tasa_impuesto, impuesto_incluido,
-    stock_minimo, tipo_almacenamiento,
-    visible_pos, visible_tienda_online, es_destacado,
-    requiere_verificacion_edad, permite_descuento,
+    stock,
+    permite_descuento,
     esta_activo, creado_en, actualizado_en
 ) VALUES
 -- WHISKY
-(1, 1, 'WHI-JW-BL-750', '7750000001', 'Johnnie Walker Black Label 750ml', 'jw-black-750',
- 'Whisky escocés 12 años', 'Johnnie Walker Black Label es un whisky escocés mezclado con notas ahumadas y afrutadas.',
- 1, 1, 2, 'alcoholica', 'Whisky', 40.00, 750, 'Escocia',
+(1, 1, 'WHI-JW-BL-750', 'Johnnie Walker Black Label 750ml', 'jw-black-750',
+ 'Whisky escocés 12 años. Notas ahumadas y afrutadas. Volumen: 750ml. País: Escocia.',
+ 1, 1, 2, 40.00,
  85.00, 139.90, 18.00, 1,
- 5, 'ambiente', 1, 1, 1, 1, 1, 1, NOW(), NOW()),
+ 0, 1, 1, NOW(), NOW()),
 
-(2, 1, 'WHI-JW-RE-750', '7750000002', 'Johnnie Walker Red Label 750ml', 'jw-red-750',
- 'Whisky escocés clásico', 'Johnnie Walker Red Label, el whisky más icónico del mundo.',
- 1, 1, 2, 'alcoholica', 'Whisky', 40.00, 750, 'Escocia',
+(2, 1, 'WHI-JW-RE-750', 'Johnnie Walker Red Label 750ml', 'jw-red-750',
+ 'Whisky escocés clásico, el más icónico del mundo. Volumen: 750ml. País: Escocia.',
+ 1, 1, 2, 40.00,
  45.00, 69.90, 18.00, 1,
- 10, 'ambiente', 1, 1, 0, 1, 1, 1, NOW(), NOW()),
+ 0, 1, 1, NOW(), NOW()),
 
 -- VINOS
-(3, 1, 'VIN-CD-CS-750', '7750000003', 'Casillero del Diablo Cabernet Sauvignon 750ml', 'casillero-cabernet-750',
- 'Vino tinto chileno', 'Vino tinto Cabernet Sauvignon de la bodega Concha y Toro.',
- 2, 2, 2, 'alcoholica', 'Vino Tinto', 13.50, 750, 'Chile',
+(3, 1, 'VIN-CD-CS-750', 'Casillero del Diablo Cabernet Sauvignon 750ml', 'casillero-cabernet-750',
+ 'Vino tinto Cabernet Sauvignon de la bodega Concha y Toro. Volumen: 750ml. País: Chile.',
+ 2, 2, 2, 13.50,
  22.00, 39.90, 18.00, 1,
- 15, 'ambiente', 1, 1, 1, 0, 1, 1, NOW(), NOW()),
+ 0, 1, 1, NOW(), NOW()),
 
-(4, 1, 'VIN-CD-ME-750', '7750000004', 'Casillero del Diablo Merlot 750ml', 'casillero-merlot-750',
- 'Vino tinto Merlot chileno', 'Merlot suave y frutado de la línea Casillero del Diablo.',
- 2, 2, 2, 'alcoholica', 'Vino Tinto', 13.00, 750, 'Chile',
+(4, 1, 'VIN-CD-ME-750', 'Casillero del Diablo Merlot 750ml', 'casillero-merlot-750',
+ 'Merlot suave y frutado de la línea Casillero del Diablo. Volumen: 750ml. País: Chile.',
+ 2, 2, 2, 13.00,
  22.00, 39.90, 18.00, 1,
- 10, 'ambiente', 1, 1, 0, 0, 1, 1, NOW(), NOW()),
+ 0, 1, 1, NOW(), NOW()),
 
 -- CERVEZAS
-(5, 1, 'CER-COR-355', '7750000005', 'Corona Extra 355ml', 'corona-extra-355',
- 'Cerveza mexicana premium', 'Cerveza clara tipo lager, perfecta para el verano.',
- 3, 3, 2, 'alcoholica', 'Cerveza Lager', 4.60, 355, 'México',
+(5, 1, 'CER-COR-355', 'Corona Extra 355ml', 'corona-extra-355',
+ 'Cerveza clara tipo lager, perfecta para el verano. Volumen: 355ml. País: México.',
+ 3, 3, 2, 4.60,
  3.50, 6.90, 18.00, 1,
- 50, 'frio', 1, 1, 1, 0, 1, 1, NOW(), NOW()),
+ 0, 1, 1, NOW(), NOW()),
 
 -- RON
-(6, 1, 'RON-FC-7A-750', '7750000006', 'Flor de Caña 7 Años 750ml', 'flor-cana-7-750',
- 'Ron añejo 7 años', 'Ron premium centroamericano con 7 años de añejamiento.',
- 4, 4, 2, 'alcoholica', 'Ron Añejo', 40.00, 750, 'Nicaragua',
+(6, 1, 'RON-FC-7A-750', 'Flor de Caña 7 Años 750ml', 'flor-cana-7-750',
+ 'Ron premium centroamericano con 7 años de añejamiento. Volumen: 750ml. País: Nicaragua.',
+ 4, 4, 2, 40.00,
  55.00, 89.90, 18.00, 1,
- 8, 'ambiente', 1, 1, 0, 1, 1, 1, NOW(), NOW()),
+ 0, 1, 1, NOW(), NOW()),
 
 -- PISCO
-(7, 1, 'PIS-CG-QBR-500', '7750000007', 'Cuatro Gallos Quebranta 500ml', 'cuatro-gallos-quebranta-500',
- 'Pisco peruano Quebranta', 'Pisco puro de uva Quebranta, ideal para chilcanos.',
- 5, 5, 2, 'alcoholica', 'Pisco Puro', 42.00, 500, 'Perú',
+(7, 1, 'PIS-CG-QBR-500', 'Cuatro Gallos Quebranta 500ml', 'cuatro-gallos-quebranta-500',
+ 'Pisco puro de uva Quebranta, ideal para chilcanos. Volumen: 500ml. País: Perú.',
+ 5, 5, 2, 42.00,
  28.00, 45.90, 18.00, 1,
- 12, 'ambiente', 1, 1, 1, 1, 1, 1, NOW(), NOW()),
+ 0, 1, 1, NOW(), NOW()),
 
 -- VODKA
-(8, 1, 'VOD-ABS-ORI-750', '7750000008', 'Absolut Original 750ml', 'absolut-original-750',
- 'Vodka sueco premium', 'Vodka sueco puro, destilado de trigo.',
- 6, 6, 2, 'alcoholica', 'Vodka', 40.00, 750, 'Suecia',
+(8, 1, 'VOD-ABS-ORI-750', 'Absolut Original 750ml', 'absolut-original-750',
+ 'Vodka sueco puro, destilado de trigo. Volumen: 750ml. País: Suecia.',
+ 6, 6, 2, 40.00,
  42.00, 69.90, 18.00, 1,
- 8, 'ambiente', 1, 1, 0, 1, 1, 1, NOW(), NOW());
+ 0, 1, 1, NOW(), NOW());
 
 -- ============================================
 -- 14. PROVEEDORES

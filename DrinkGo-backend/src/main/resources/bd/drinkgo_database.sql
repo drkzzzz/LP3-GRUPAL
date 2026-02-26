@@ -537,10 +537,8 @@ CREATE TABLE productos (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
     sku VARCHAR(50) NOT NULL,
-    codigo_barras VARCHAR(50) NULL,
     nombre VARCHAR(250) NOT NULL,
     slug VARCHAR(250) NOT NULL,
-    descripcion_corta VARCHAR(500) NULL,
     descripcion TEXT NULL,
     url_imagen VARCHAR(500) NULL COMMENT 'URL de la imagen del producto',
     categoria_id BIGINT UNSIGNED NULL,
@@ -548,13 +546,7 @@ CREATE TABLE productos (
     unidad_medida_id BIGINT UNSIGNED NULL,
 
     -- Atributos específicos de licorería
-    tipo_producto ENUM('alcoholica','no_alcoholica','comida','accesorio','combo','otro') NOT NULL DEFAULT 'alcoholica',
-    tipo_bebida VARCHAR(100) NULL COMMENT 'Tipo: Whisky, Ron, Cerveza, Vino, Pisco, etc.',
     grado_alcoholico DECIMAL(5,2) NULL COMMENT 'Grado alcohólico %',
-    volumen_ml INT UNSIGNED NULL COMMENT 'Volumen en ml',
-    pais_origen VARCHAR(100) NULL,
-    anio_cosecha SMALLINT UNSIGNED NULL COMMENT 'Año de cosecha (vinos)',
-    aniejamiento VARCHAR(100) NULL COMMENT 'Tiempo de añejamiento',
 
     -- Precios
     precio_compra DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -564,26 +556,11 @@ CREATE TABLE productos (
     tasa_impuesto DECIMAL(5,2) NOT NULL DEFAULT 18.00 COMMENT 'IGV % Perú',
     impuesto_incluido TINYINT(1) NOT NULL DEFAULT 1,
 
-    -- Stock y almacenamiento
-    stock_minimo INT NOT NULL DEFAULT 0,
-    stock_maximo INT NULL,
-    punto_reorden INT NULL,
-    tipo_almacenamiento ENUM('ambiente','frio','congelado') NOT NULL DEFAULT 'ambiente',
-    temp_optima_min DECIMAL(5,2) NULL,
-    temp_optima_max DECIMAL(5,2) NULL,
-    es_perecible TINYINT(1) NOT NULL DEFAULT 0,
-    dias_vida_util INT UNSIGNED NULL,
+    -- Stock
+    stock INT NOT NULL DEFAULT 0,
+    fecha_vencimiento DATE NULL COMMENT 'Fecha de vencimiento del producto',
 
-    -- Dimensiones y peso
-    peso_kg DECIMAL(8,3) NULL,
-    alto_cm DECIMAL(6,2) NULL,
-    ancho_cm DECIMAL(6,2) NULL,
-
-    -- Visibilidad y flags
-    visible_pos TINYINT(1) NOT NULL DEFAULT 1,
-    visible_tienda_online TINYINT(1) NOT NULL DEFAULT 0,
-    es_destacado TINYINT(1) NOT NULL DEFAULT 0,
-    requiere_verificacion_edad TINYINT(1) NOT NULL DEFAULT 0,
+    -- Flags
     permite_descuento TINYINT(1) NOT NULL DEFAULT 1,
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -599,12 +576,9 @@ CREATE TABLE productos (
     INDEX idx_prod_negocio (negocio_id),
     INDEX idx_prod_categoria (categoria_id),
     INDEX idx_prod_marca (marca_id),
-    INDEX idx_prod_codigo_barras (negocio_id, codigo_barras),
-    INDEX idx_prod_tipo (negocio_id, tipo_producto),
     INDEX idx_prod_activo (negocio_id, esta_activo),
     INDEX idx_prod_slug (negocio_id, slug),
-    INDEX idx_prod_tienda_online (negocio_id, visible_tienda_online, esta_activo),
-    FULLTEXT INDEX ft_prod_busqueda (nombre, descripcion_corta, tipo_bebida)
+    FULLTEXT INDEX ft_prod_busqueda (nombre, descripcion)
 ) ENGINE=InnoDB COMMENT='Productos del catálogo (RF-PRO-001..004)';
 
 -- ============================================================
