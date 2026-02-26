@@ -1,6 +1,7 @@
 package DrinkGo.DrinkGo_backend.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class ProductosDTO {
@@ -8,7 +9,6 @@ public class ProductosDTO {
     private Long id;
     private Long negocioId;
     private String sku;
-    private String codigoBarras;
     private String nombre;
     private String descripcion;
     private Long categoriaId;
@@ -16,13 +16,12 @@ public class ProductosDTO {
     private Long unidadMedidaId;
     private BigDecimal precioCompra;
     private BigDecimal precioVenta;
-    private BigDecimal stockMinimo;
-    private BigDecimal stockMaximo;
+    private Integer stock;
+    private LocalDate fechaVencimiento;
     private Boolean tieneIgv;
     private Boolean controlaStock;
     private Boolean permiteVentaSinStock;
     private String urlImagen;
-    private Boolean visibleTiendaOnline;
     private Boolean estaActivo;
     private LocalDateTime creadoEn;
     private LocalDateTime actualizadoEn;
@@ -32,15 +31,14 @@ public class ProductosDTO {
     public ProductosDTO() {
     }
 
-    public ProductosDTO(Long id, Long negocioId, String sku, String codigoBarras, String nombre, String descripcion,
+    public ProductosDTO(Long id, Long negocioId, String sku, String nombre, String descripcion,
             Long categoriaId, Long marcaId, Long unidadMedidaId, BigDecimal precioCompra, BigDecimal precioVenta,
-            BigDecimal stockMinimo, BigDecimal stockMaximo, Boolean tieneIgv, Boolean controlaStock,
-            Boolean permiteVentaSinStock, String urlImagen, Boolean visibleTiendaOnline, Boolean estaActivo,
+            Integer stock, LocalDate fechaVencimiento, Boolean tieneIgv, Boolean controlaStock,
+            Boolean permiteVentaSinStock, String urlImagen, Boolean estaActivo,
             LocalDateTime creadoEn, LocalDateTime actualizadoEn, LocalDateTime eliminadoEn) {
         this.id = id;
         this.negocioId = negocioId;
         this.sku = sku;
-        this.codigoBarras = codigoBarras;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.categoriaId = categoriaId;
@@ -48,13 +46,12 @@ public class ProductosDTO {
         this.unidadMedidaId = unidadMedidaId;
         this.precioCompra = precioCompra;
         this.precioVenta = precioVenta;
-        this.stockMinimo = stockMinimo;
-        this.stockMaximo = stockMaximo;
+        this.stock = stock;
+        this.fechaVencimiento = fechaVencimiento;
         this.tieneIgv = tieneIgv;
         this.controlaStock = controlaStock;
         this.permiteVentaSinStock = permiteVentaSinStock;
         this.urlImagen = urlImagen;
-        this.visibleTiendaOnline = visibleTiendaOnline;
         this.estaActivo = estaActivo;
         this.creadoEn = creadoEn;
         this.actualizadoEn = actualizadoEn;
@@ -84,14 +81,6 @@ public class ProductosDTO {
 
     public void setSku(String sku) {
         this.sku = sku;
-    }
-
-    public String getCodigoBarras() {
-        return codigoBarras;
-    }
-
-    public void setCodigoBarras(String codigoBarras) {
-        this.codigoBarras = codigoBarras;
     }
 
     public String getNombre() {
@@ -150,20 +139,20 @@ public class ProductosDTO {
         this.precioVenta = precioVenta;
     }
 
-    public BigDecimal getStockMinimo() {
-        return stockMinimo;
+    public Integer getStock() {
+        return stock;
     }
 
-    public void setStockMinimo(BigDecimal stockMinimo) {
-        this.stockMinimo = stockMinimo;
+    public void setStock(Integer stock) {
+        this.stock = stock;
     }
 
-    public BigDecimal getStockMaximo() {
-        return stockMaximo;
+    public LocalDate getFechaVencimiento() {
+        return fechaVencimiento;
     }
 
-    public void setStockMaximo(BigDecimal stockMaximo) {
-        this.stockMaximo = stockMaximo;
+    public void setFechaVencimiento(LocalDate fechaVencimiento) {
+        this.fechaVencimiento = fechaVencimiento;
     }
 
     public Boolean getTieneIgv() {
@@ -196,14 +185,6 @@ public class ProductosDTO {
 
     public void setUrlImagen(String urlImagen) {
         this.urlImagen = urlImagen;
-    }
-
-    public Boolean getVisibleTiendaOnline() {
-        return visibleTiendaOnline;
-    }
-
-    public void setVisibleTiendaOnline(Boolean visibleTiendaOnline) {
-        this.visibleTiendaOnline = visibleTiendaOnline;
     }
 
     public Boolean getEstaActivo() {
