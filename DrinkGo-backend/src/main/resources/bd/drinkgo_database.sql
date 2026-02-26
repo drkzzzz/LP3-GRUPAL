@@ -1008,7 +1008,6 @@ CREATE TABLE pedidos (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
     sede_id BIGINT UNSIGNED NOT NULL,
-    repartidor_id BIGINT UNSIGNED NULL COMMENT 'Usuario asignado como repartidor',
     numero_pedido VARCHAR(30) NOT NULL,
     cliente_id BIGINT UNSIGNED NOT NULL,
     tipo_pedido ENUM('delivery','recojo','consumo_local') NOT NULL DEFAULT 'delivery',
@@ -1022,7 +1021,6 @@ CREATE TABLE pedidos (
     monto_descuento DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     monto_impuesto DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     tarifa_delivery DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    monto_propina DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     moneda VARCHAR(3) NOT NULL DEFAULT 'PEN',
 
@@ -1032,28 +1030,16 @@ CREATE TABLE pedidos (
         'en_delivery','entregado','recogido','completado','cancelado','reembolsado'
     ) NOT NULL DEFAULT 'pendiente',
 
-    -- Verificación de edad
-    edad_verificada TINYINT(1) NOT NULL DEFAULT 0,
-    metodo_verificacion_edad VARCHAR(50) NULL,
-
     -- Info fiscal
-    requiere_factura TINYINT(1) NOT NULL DEFAULT 0,
     ruc_cliente VARCHAR(20) NULL,
     razon_social_cliente VARCHAR(200) NULL,
     confirmado_en TIMESTAMP NULL,
-    preparando_en TIMESTAMP NULL,
-    listo_en TIMESTAMP NULL,
-    entregado_en TIMESTAMP NULL,
-    completado_en TIMESTAMP NULL,
-    cancelado_en TIMESTAMP NULL,
     razon_cancelacion VARCHAR(500) NULL,
-    tipo_cancelador ENUM('cliente','admin','sistema') NULL,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_ped_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     CONSTRAINT fk_ped_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
-    CONSTRAINT fk_ped_repartidor FOREIGN KEY (repartidor_id) REFERENCES usuarios(id) ON DELETE SET NULL,
     CONSTRAINT fk_ped_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id),
     -- FK fk_ped_direccion eliminada: tabla direcciones_cliente fue removida (Bloque 7 simplificado)
     CONSTRAINT fk_ped_zona FOREIGN KEY (zona_delivery_id) REFERENCES zonas_delivery(id) ON DELETE SET NULL,
