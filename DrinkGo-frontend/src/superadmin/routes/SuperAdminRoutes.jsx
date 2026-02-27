@@ -8,6 +8,7 @@ import { Facturacion } from '../pages/Facturacion';
 import { ConfiguracionGlobal } from '../pages/ConfiguracionGlobal';
 import { AuditoriaLogs } from '../pages/AuditoriaLogs';
 import { Reportes } from '../pages/Reportes';
+import { MiPerfil } from '../pages/MiPerfil';
 import { useAuthStore } from '@/stores/authStore';
 
 const ProtectedRoute = ({ children }) => {
@@ -37,6 +38,7 @@ export const SuperAdminRoutes = () => {
         <Route path="reportes" element={<Reportes />} />
         <Route path="configuracion" element={<ConfiguracionGlobal />} />
         <Route path="auditoria" element={<AuditoriaLogs />} />
+        <Route path="perfil" element={<MiPerfil />} />
       </Route>
     </Routes>
   );
