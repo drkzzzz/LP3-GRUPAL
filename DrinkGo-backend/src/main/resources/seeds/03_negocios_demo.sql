@@ -7,7 +7,7 @@
 -- para facilitar las pruebas del módulo SuperAdmin
 -- ============================================================
 
-USE licores_drinkgo;
+USE drinkgo_db;
 
 -- ============================================================
 -- VARIABLES DE REFERENCIA (Obtener IDs de planes)
@@ -19,7 +19,7 @@ SET @plan_enterprise_id = (SELECT id FROM planes_suscripcion WHERE nombre = 'Pla
 -- ============================================================
 -- NEGOCIO 1: LICORERÍA DON PEPE (ACTIVO - PLAN BÁSICO)
 -- ============================================================
-INSERT INTO negocios (
+INSERT IGNORE INTO negocios (
     uuid,
     razon_social,
     nombre_comercial,
@@ -59,10 +59,10 @@ INSERT INTO negocios (
     1
 );
 
-SET @negocio_donpepe_id = LAST_INSERT_ID();
+SET @negocio_donpepe_id = (SELECT id FROM negocios WHERE ruc = '20123456789' LIMIT 1);
 
 -- Sede principal de Don Pepe
-INSERT INTO sedes (
+INSERT IGNORE INTO sedes (
     negocio_id,
     codigo,
     nombre,
@@ -101,7 +101,7 @@ INSERT INTO sedes (
 );
 
 -- Suscripción activa de Don Pepe
-INSERT INTO suscripciones (
+INSERT IGNORE INTO suscripciones (
     negocio_id,
     plan_id,
     estado,
@@ -122,7 +122,7 @@ INSERT INTO suscripciones (
 -- ============================================================
 -- NEGOCIO 2: LICORES LA BODEGA (ACTIVO - PLAN PROFESIONAL)
 -- ============================================================
-INSERT INTO negocios (
+INSERT IGNORE INTO negocios (
     uuid,
     razon_social,
     nombre_comercial,
@@ -162,10 +162,10 @@ INSERT INTO negocios (
     1
 );
 
-SET @negocio_labodega_id = LAST_INSERT_ID();
+SET @negocio_labodega_id = (SELECT id FROM negocios WHERE ruc = '20987654321' LIMIT 1);
 
 -- Sede principal La Bodega
-INSERT INTO sedes (
+INSERT IGNORE INTO sedes (
     negocio_id,
     codigo,
     nombre,
@@ -204,7 +204,7 @@ INSERT INTO sedes (
 );
 
 -- Sede secundaria La Bodega
-INSERT INTO sedes (
+INSERT IGNORE INTO sedes (
     negocio_id,
     codigo,
     nombre,
@@ -243,7 +243,7 @@ INSERT INTO sedes (
 );
 
 -- Suscripción activa de La Bodega
-INSERT INTO suscripciones (
+INSERT IGNORE INTO suscripciones (
     negocio_id,
     plan_id,
     estado,
@@ -264,7 +264,7 @@ INSERT INTO suscripciones (
 -- ============================================================
 -- NEGOCIO 3: DISTRIBUIDORA EL IMPERIO (PENDIENTE - SIN PLAN)
 -- ============================================================
-INSERT INTO negocios (
+INSERT IGNORE INTO negocios (
     uuid,
     razon_social,
     nombre_comercial,
@@ -302,10 +302,10 @@ INSERT INTO negocios (
     1
 );
 
-SET @negocio_elimperio_id = LAST_INSERT_ID();
+SET @negocio_elimperio_id = (SELECT id FROM negocios WHERE ruc = '20456789123' LIMIT 1);
 
 -- Sede principal El Imperio (pendiente)
-INSERT INTO sedes (
+INSERT IGNORE INTO sedes (
     negocio_id,
     codigo,
     nombre,
@@ -338,7 +338,7 @@ INSERT INTO sedes (
 -- ============================================================
 -- NEGOCIO 4: LICORERÍA PREMIUM WINES (SUSPENDIDO)
 -- ============================================================
-INSERT INTO negocios (
+INSERT IGNORE INTO negocios (
     uuid,
     razon_social,
     nombre_comercial,
@@ -376,10 +376,10 @@ INSERT INTO negocios (
     0
 );
 
-SET @negocio_premiumwines_id = LAST_INSERT_ID();
+SET @negocio_premiumwines_id = (SELECT id FROM negocios WHERE ruc = '20111222333' LIMIT 1);
 
 -- Sede principal Premium Wines
-INSERT INTO sedes (
+INSERT IGNORE INTO sedes (
     negocio_id,
     codigo,
     nombre,
@@ -408,7 +408,7 @@ INSERT INTO sedes (
 );
 
 -- Suscripción suspendida de Premium Wines
-INSERT INTO suscripciones (
+INSERT IGNORE INTO suscripciones (
     negocio_id,
     plan_id,
     estado,

@@ -88,8 +88,9 @@ public class UsuariosPlataformaController {
 
         // Verificar contraseña
         if (!passwordEncoder.matches(contrasena, usuario.getHashContrasena())) {
-            // Incrementar intentos fallidos
-            usuario.setIntentosFallidosAcceso(usuario.getIntentosFallidosAcceso() + 1);
+            // Incrementar intentos fallidos (null-safe)
+            int intentos = usuario.getIntentosFallidosAcceso() != null ? usuario.getIntentosFallidosAcceso() : 0;
+            usuario.setIntentosFallidosAcceso(intentos + 1);
 
             // Bloquear si supera 5 intentos
             if (usuario.getIntentosFallidosAcceso() >= 5) {

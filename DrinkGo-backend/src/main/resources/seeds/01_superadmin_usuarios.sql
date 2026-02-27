@@ -8,13 +8,13 @@
 -- soporte@drinkgo.com = Soporte123!
 -- ============================================================
 
-USE licores_drinkgo;
+USE drinkgo_db;
 
 -- Limpiar datos existentes (solo para desarrollo)
 -- DELETE FROM usuarios_plataforma WHERE rol IN ('superadmin', 'soporte_plataforma');
 
 -- Insertar usuarios SuperAdmin
-INSERT INTO usuarios_plataforma (
+INSERT IGNORE INTO usuarios_plataforma (
     uuid, 
     email, 
     hash_contrasena, 
@@ -29,7 +29,7 @@ INSERT INTO usuarios_plataforma (
 (
     UUID(), 
     'admin@drinkgo.com', 
-    '$2a$10$xQm7lGx2.wSy8Z9EKvH9yOr7ScM0yqXnT5y8xLb4aN9wW8Kz6P8.K', -- Admin123!
+    '$2a$10$nb74QxjneuyJQDzt3uBCt.ZRGdqT1O5P6aIvSyCqUh1cD4bzyrlpC', -- Admin123!
     'Carlos', 
     'Rodríguez', 
     '+51987654321', 
@@ -41,7 +41,7 @@ INSERT INTO usuarios_plataforma (
 (
     UUID(), 
     'soporte@drinkgo.com', 
-    '$2a$10$Vn8JYl5mjP9xQ7kZ2LmNvOwR8sT3.wYx1cC6dE4fF5gG7hH8iI9.J', -- Soporte123!
+    '$2a$10$DUgIhoZHp25.Guz75zbccutmlUAApbUqoCScoejKlm1NTuvZQR8Am', -- Soporte123!
     'María', 
     'García', 
     '+51912345678', 
@@ -53,7 +53,7 @@ INSERT INTO usuarios_plataforma (
 (
     UUID(), 
     'visualizador@drinkgo.com', 
-    '$2a$10$Vn8JYl5mjP9xQ7kZ2LmNvOwR8sT3.wYx1cC6dE4fF5gG7hH8iI9.J', -- Soporte123!
+    '$2a$10$DUgIhoZHp25.Guz75zbccutmlUAApbUqoCScoejKlm1NTuvZQR8Am', -- Soporte123!
     'Jorge', 
     'Pérez', 
     NULL, 

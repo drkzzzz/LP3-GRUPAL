@@ -10,7 +10,7 @@
 -- 4. Plan Free (Prueba gratuita)
 -- ============================================================
 
-USE licores_drinkgo;
+USE drinkgo_db;
 
 -- Limpiar datos existentes (solo para desarrollo)
 -- DELETE FROM planes_suscripcion;
@@ -18,7 +18,7 @@ USE licores_drinkgo;
 -- ============================================================
 -- PLAN 1: BÁSICO / EMPRENDEDOR
 -- ============================================================
-INSERT INTO planes_suscripcion (
+INSERT IGNORE INTO planes_suscripcion (
     nombre,
     descripcion,
     precio,
@@ -71,7 +71,7 @@ INSERT INTO planes_suscripcion (
 -- ============================================================
 -- PLAN 2: PROFESIONAL / CRECIMIENTO
 -- ============================================================
-INSERT INTO planes_suscripcion (
+INSERT IGNORE INTO planes_suscripcion (
     nombre,
     descripcion,
     precio,
@@ -127,7 +127,7 @@ INSERT INTO planes_suscripcion (
 -- ============================================================
 -- PLAN 3: ENTERPRISE / CORPORATIVO
 -- ============================================================
-INSERT INTO planes_suscripcion (
+INSERT IGNORE INTO planes_suscripcion (
     nombre,
     descripcion,
     precio,
@@ -191,7 +191,7 @@ INSERT INTO planes_suscripcion (
 -- ============================================================
 -- PLAN 4: FREE / PRUEBA GRATUITA
 -- ============================================================
-INSERT INTO planes_suscripcion (
+INSERT IGNORE INTO planes_suscripcion (
     nombre,
     descripcion,
     precio,
