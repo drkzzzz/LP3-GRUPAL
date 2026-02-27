@@ -1,6 +1,20 @@
 import { Badge } from '../ui/Badge';
 import { formatCurrency, formatDate } from '@/shared/utils/formatters';
 import { Check, X } from 'lucide-react';
+import { clsx } from 'clsx';
+
+const ADMIN_MODULES = [
+  { key: 'dashboard',      label: 'Dashboard' },
+  { key: 'configuracion', label: 'Configuración' },
+  { key: 'usuarios',      label: 'Usuarios' },
+  { key: 'catalogo',      label: 'Catálogo' },
+  { key: 'inventario',    label: 'Inventario' },
+  { key: 'compras',       label: 'Compras' },
+  { key: 'ventas',        label: 'Ventas' },
+  { key: 'facturacion',   label: 'Facturación' },
+  { key: 'gastos',        label: 'Gastos' },
+  { key: 'reportes',      label: 'Reportes' },
+];
 
 const Field = ({ label, value }) => (
   <div>
@@ -67,6 +81,41 @@ export const PlanDetail = ({ plan }) => {
           <BoolField label="Multi-Almacén" value={plan.permiteMultiAlmacen} />
           <BoolField label="Reportes Avanzados" value={plan.permiteReportesAvanzados} />
           <BoolField label="Acceso API" value={plan.permiteAccesoApi} />
+        </div>
+      </div>
+
+      {/* Módulos del Panel Admin */}
+      <div className="border-t border-gray-200 pt-4">
+        <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+          Módulos del Panel Admin
+          {!plan.modulosHabilitados && (
+            <span className="text-xs font-normal bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+              todos habilitados
+            </span>
+          )}
+        </h4>
+        <div className="grid grid-cols-2 gap-2">
+          {ADMIN_MODULES.map(({ key, label }) => {
+            let enabled = true;
+            if (plan.modulosHabilitados) {
+              try { enabled = JSON.parse(plan.modulosHabilitados).includes(key); }
+              catch { enabled = true; }
+            }
+            return (
+              <div
+                key={key}
+                className={clsx(
+                  'flex items-center gap-2 text-sm',
+                  enabled ? 'text-gray-700' : 'text-gray-300',
+                )}
+              >
+                {enabled
+                  ? <Check size={14} className="text-green-500 shrink-0" />
+                  : <X size={14} className="text-gray-300 shrink-0" />}
+                {label}
+              </div>
+            );
+          })}
         </div>
       </div>
 

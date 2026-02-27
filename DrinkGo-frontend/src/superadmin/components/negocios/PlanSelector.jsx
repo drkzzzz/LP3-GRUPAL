@@ -9,12 +9,31 @@ import {
   MapPin,
   Package,
   ShieldCheck,
+  Percent,
+  LayoutGrid,
+  Save,
+  RotateCcw,
+  Pencil,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { Input } from '../ui/Input';
 import { formatCurrency, formatDate } from '@/shared/utils/formatters';
+
+const ADMIN_MODULES = [
+  { key: 'dashboard',      label: 'Dashboard' },
+  { key: 'configuracion', label: 'Configuración' },
+  { key: 'usuarios',      label: 'Usuarios' },
+  { key: 'catalogo',      label: 'Catálogo' },
+  { key: 'inventario',    label: 'Inventario' },
+  { key: 'compras',       label: 'Compras' },
+  { key: 'ventas',        label: 'Ventas' },
+  { key: 'facturacion',   label: 'Facturación' },
+  { key: 'gastos',        label: 'Gastos' },
+  { key: 'reportes',      label: 'Reportes' },
+];
 
 const SUSCRIPCION_COLORS = {
   activa: 'success',
@@ -37,9 +56,93 @@ export const PlanSelector = ({
   planes,
   onChangePlan,
   isUpdating,
+  onUpdateNegocio,
+  isUpdatingNegocio,
 }) => {
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+  // ── Módulos personalizados ──
+  const planModules = (() => {
+    if (!suscripcion?.plan?.modulosHabilitados) return null;
+    try { return JSON.parse(suscripcion.plan.modulosHabilitados); } catch { return null; }
+  })();
+  const [editingModules, setEditingModules] = useState(false);
+  const [tempModules, setTempModules] = useState(null);
+  const [isSavingModules, setIsSavingModules] = useState(false);
+  const customModules = (() => {
+    if (!suscripcion?.modulosPersonalizados) return null;
+    try { return JSON.parse(suscripcion.modulosPersonalizados); } catch { return null; }
+  })();
+
+  const startEditModules = () => {
+    setTempModules(
+      customModules ?? planModules ?? ADMIN_MODULES.map((m) => m.key)
+    );
+    setEditingModules(true);
+  };
+  const toggleTempModule = (key) =>
+    setTempModules((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  const handleSaveModules = async () => {
+    if (!suscripcion) return;
+    setIsSavingModules(true);
+    try {
+      await onChangePlan({
+        id: suscripcion.id,
+        negocio: { id: negocio.id },
+        plan: { id: suscripcion.plan?.id },
+        estado: suscripcion.estado,
+        inicioPeriodoActual: suscripcion.inicioPeriodoActual,
+        finPeriodoActual: suscripcion.finPeriodoActual,
+        autoRenovar: suscripcion.autoRenovar ?? true,
+        modulosPersonalizados: JSON.stringify(tempModules),
+      });
+      setEditingModules(false);
+    } finally {
+      setIsSavingModules(false);
+    }
+  };
+  const handleResetModules = async () => {
+    if (!suscripcion) return;
+    setIsSavingModules(true);
+    try {
+      await onChangePlan({
+        id: suscripcion.id,
+        negocio: { id: negocio.id },
+        plan: { id: suscripcion.plan?.id },
+        estado: suscripcion.estado,
+        inicioPeriodoActual: suscripcion.inicioPeriodoActual,
+        finPeriodoActual: suscripcion.finPeriodoActual,
+        autoRenovar: suscripcion.autoRenovar ?? true,
+        modulosPersonalizados: null,
+      });
+      setEditingModules(false);
+    } finally {
+      setIsSavingModules(false);
+    }
+  };
+
+  // ── IGV ──
+  const [editingIgv, setEditingIgv] = useState(false);
+  const [localAplicaIgv, setLocalAplicaIgv] = useState(negocio?.aplicaIgv !== false);
+  const [localPorcentajeIgv, setLocalPorcentajeIgv] = useState(negocio?.porcentajeIgv ?? 18);
+  const [isSavingIgv, setIsSavingIgv] = useState(false);
+
+  const handleSaveIgv = async () => {
+    setIsSavingIgv(true);
+    try {
+      await onUpdateNegocio?.({
+        ...negocio,
+        aplicaIgv: localAplicaIgv,
+        porcentajeIgv: Number(localPorcentajeIgv),
+      });
+      setEditingIgv(false);
+    } finally {
+      setIsSavingIgv(false);
+    }
+  };
 
   const currentPlan = suscripcion?.plan || null;
   const activePlanes = planes.filter((p) => p.estaActivo !== false);
@@ -249,6 +352,168 @@ export const PlanSelector = ({
             );
           })}
         </div>
+      </div>
+
+      {/* Módulos personalizados */}
+      {suscripcion && (
+        <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <LayoutGrid size={15} className="text-indigo-500" />
+              Módulos habilitados
+            </h4>
+            <div className="flex gap-2">
+              {customModules && !editingModules && (
+                <button
+                  onClick={handleResetModules}
+                  disabled={isSavingModules}
+                  className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+                >
+                  <RotateCcw size={11} /> Restablecer al plan
+                </button>
+              )}
+              {!editingModules ? (
+                <button
+                  onClick={startEditModules}
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  <Pencil size={11} /> Personalizar
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingModules(false)}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSaveModules}
+                    disabled={isSavingModules}
+                    className="text-xs text-green-600 hover:text-green-800 flex items-center gap-1 font-medium"
+                  >
+                    <Save size={11} /> {isSavingModules ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {!editingModules ? (
+            <div className="grid grid-cols-2 gap-1.5">
+              {ADMIN_MODULES.map(({ key, label }) => {
+                const active = customModules
+                  ? customModules.includes(key)
+                  : planModules
+                  ? planModules.includes(key)
+                  : true;
+                return (
+                  <div key={key} className={clsx('flex items-center gap-1.5 text-xs', active ? 'text-gray-700' : 'text-gray-300')}>
+                    {active
+                      ? <Check size={12} className="text-green-500 shrink-0" />
+                      : <span className="w-3 h-3 rounded-full border border-gray-200 shrink-0 inline-block" />}
+                    {label}
+                    {customModules && !planModules?.includes(key) && active && (
+                      <span className="text-xs text-amber-500">(extra)</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500">Selecciona los módulos que este negocio puede usar:</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {ADMIN_MODULES.map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={tempModules?.includes(key) ?? true}
+                      onChange={() => toggleTempModule(key)}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!customModules && !editingModules && (
+            <p className="text-xs text-gray-400">
+              Usando configuración del plan{planModules ? ` (${planModules.length} módulos)` : ' (todos)'}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* IGV */}
+      <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+            <Percent size={15} className="text-orange-500" />
+            Configuración IGV
+          </h4>
+          {!editingIgv ? (
+            <button
+              onClick={() => { setLocalAplicaIgv(negocio?.aplicaIgv !== false); setLocalPorcentajeIgv(negocio?.porcentajeIgv ?? 18); setEditingIgv(true); }}
+              className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              <Pencil size={11} /> Editar
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button onClick={() => setEditingIgv(false)} className="text-xs text-gray-400 hover:text-gray-600">
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveIgv}
+                disabled={isSavingIgv || !onUpdateNegocio}
+                className="text-xs text-green-600 hover:text-green-800 flex items-center gap-1 font-medium"
+              >
+                <Save size={11} /> {isSavingIgv ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {!editingIgv ? (
+          <div className="flex items-center gap-4 text-sm">
+            <span className={clsx('px-2 py-0.5 rounded-full text-xs font-medium', negocio?.aplicaIgv !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
+              {negocio?.aplicaIgv !== false ? 'Aplica IGV' : 'Sin IGV'}
+            </span>
+            {negocio?.aplicaIgv !== false && (
+              <span className="text-gray-700 font-semibold">{negocio?.porcentajeIgv ?? 18}%</span>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={localAplicaIgv}
+                onChange={(e) => setLocalAplicaIgv(e.target.checked)}
+                className="rounded border-gray-300 text-orange-500 focus:ring-orange-400"
+              />
+              Este negocio aplica IGV en sus ventas
+            </label>
+            {localAplicaIgv && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500">Porcentaje:</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={localPorcentajeIgv}
+                  onChange={(e) => setLocalPorcentajeIgv(e.target.value)}
+                  className="w-24 text-sm"
+                />
+                <span className="text-sm text-gray-500">%</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Confirm change dialog */}

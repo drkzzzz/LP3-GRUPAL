@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,7 +34,28 @@ const PERIODOS = [
   { value: 'anual', label: 'Anual' },
 ];
 
+const ADMIN_MODULES = [
+  { key: 'dashboard',      label: 'Dashboard',     description: 'Panel de control del negocio' },
+  { key: 'configuracion', label: 'Configuración',  description: 'Negocio, sedes y storefront' },
+  { key: 'usuarios',      label: 'Usuarios',       description: 'Seguridad, usuarios y clientes' },
+  { key: 'catalogo',      label: 'Catálogo',       description: 'Productos, descuentos y promociones' },
+  { key: 'inventario',    label: 'Inventario',     description: 'Gestión de inventario y almacenes' },
+  { key: 'compras',       label: 'Compras',        description: 'Proveedores y órdenes de compra' },
+  { key: 'ventas',        label: 'Ventas',         description: 'Ventas, POS y pedidos' },
+  { key: 'facturacion',   label: 'Facturación',    description: 'Facturación electrónica (SUNAT)' },
+  { key: 'gastos',        label: 'Gastos',         description: 'Gastos e ingresos' },
+  { key: 'reportes',      label: 'Reportes',       description: 'Reportes y analítica avanzada' },
+];
+
 export const PlanForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
+  const [selectedModules, setSelectedModules] = useState(() => {
+    try {
+      return JSON.parse(initialData?.modulosHabilitados || '[]');
+    } catch {
+      return [];
+    }
+  });
+
   const {
     register,
     handleSubmit,
@@ -60,8 +82,20 @@ export const PlanForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
     },
   });
 
+  const toggleModule = (key) =>
+    setSelectedModules((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+
+  const handleFormSubmit = (data) => {
+    onSubmit({
+      ...data,
+      modulosHabilitados: selectedModules.length > 0 ? JSON.stringify(selectedModules) : null,
+    });
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* Row 1: Nombre */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -157,7 +191,59 @@ export const PlanForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
         </div>
       </div>
 
-      {/* Row 6: Orden */}
+      {/* Row 6: Módulos del Panel Admin */}
+      <div className="border-t border-gray-100 pt-4">
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Módulos del Panel Admin
+            <span className="text-xs font-normal text-gray-400 ml-2">
+              (qué módulos puede usar el negocio)
+            </span>
+          </label>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedModules(ADMIN_MODULES.map((m) => m.key))}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedModules([])}
+              className="text-xs text-gray-500 hover:underline"
+            >
+              Ninguno
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {ADMIN_MODULES.map(({ key, label, description }) => (
+            <label
+              key={key}
+              className="flex items-start gap-2 text-sm text-gray-700 p-2 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer select-none"
+            >
+              <input
+                type="checkbox"
+                checked={selectedModules.includes(key)}
+                onChange={() => toggleModule(key)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 shrink-0"
+              />
+              <div>
+                <p className="font-medium leading-tight">{label}</p>
+                <p className="text-xs text-gray-400 leading-tight mt-0.5">{description}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+        {selectedModules.length === 0 && (
+          <p className="text-xs text-amber-600 mt-2">
+            Sin módulos seleccionados = todos los módulos habilitados (equivale a Enterprise).
+          </p>
+        )}
+      </div>
+
+      {/* Row 7: Orden */}
       <div className="w-32">
         <label className="block text-sm font-medium text-gray-700 mb-1">Orden</label>
         <Input {...register('orden')} type="number" min="0" />

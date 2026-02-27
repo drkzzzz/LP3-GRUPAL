@@ -12,6 +12,7 @@ import {
   User,
   Calendar,
   Globe,
+  Percent,
 } from 'lucide-react';
 
 const ESTADO_COLORS = {
@@ -152,6 +153,28 @@ export const NegocioInfo = ({ negocio }) => {
             label="Última Actualización"
             value={formatDate(negocio.actualizadoEn)}
           />
+        </div>
+      </div>
+
+      {/* Fiscal - IGV */}
+      <div>
+        <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <Percent size={16} className="text-gray-500" />
+          Configuración Fiscal
+        </h4>
+        <div className="bg-white rounded-lg border border-gray-200 px-4 divide-y divide-gray-100">
+          <InfoRow
+            icon={Percent}
+            label="Aplica IGV"
+            value={negocio.aplicaIgv === false ? 'No' : 'Sí'}
+          />
+          {negocio.aplicaIgv !== false && (
+            <InfoRow
+              icon={Percent}
+              label="Porcentaje IGV"
+              value={negocio.porcentajeIgv ? `${negocio.porcentajeIgv}%` : '18.00%'}
+            />
+          )}
         </div>
       </div>
     </div>

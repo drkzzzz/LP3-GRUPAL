@@ -17,6 +17,10 @@ import {
   ChevronLeft,
   Loader2,
   Check,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Percent,
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -47,6 +51,22 @@ const negocioSchema = z.object({
   direccion: z.string().optional(),
   ciudad: z.string().optional(),
   departamento: z.string().optional(),
+  // Cuenta de administrador (opcional)
+  adminNombres: z.string().optional().or(z.literal('')),
+  adminApellidos: z.string().optional().or(z.literal('')),
+  adminEmail: z
+    .string()
+    .email('Email inválido')
+    .optional()
+    .or(z.literal('')),
+  adminPassword: z
+    .string()
+    .min(6, 'Mínimo 6 caracteres')
+    .optional()
+    .or(z.literal('')),
+  // Configuración fiscal
+  aplicaIgv: z.boolean().optional(),
+  porcentajeIgv: z.coerce.number().min(0).max(100).optional().or(z.literal('')),
 });
 
 const DOC_TYPES = [
@@ -112,9 +132,12 @@ const StepIndicator = ({ current }) => (
 
 /* ---------- Step 1: Datos del Negocio ---------- */
 const Step1Form = ({ onNext }) => {
+  const [showAdminPass, setShowAdminPass] = useState(false);
+
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(negocioSchema),
@@ -131,6 +154,12 @@ const Step1Form = ({ onNext }) => {
       direccion: '',
       ciudad: '',
       departamento: '',
+        adminNombres: '',
+        adminApellidos: '',
+        adminEmail: '',
+        adminPassword: 'Admin123!',
+        aplicaIgv: true,
+        porcentajeIgv: 18,
     },
   });
 
@@ -249,6 +278,92 @@ const Step1Form = ({ onNext }) => {
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
         <Input {...register('direccion')} placeholder="Av. Principal 123, Miraflores" />
+      </div>
+
+      {/* ─── Cuenta de Administrador ─── */}
+      <div className="border-t border-gray-200 pt-4 space-y-3">
+        <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <KeyRound size={14} className="text-indigo-600" />
+          Cuenta de Administrador
+          <span className="text-xs font-normal text-gray-400">(opcional)</span>
+        </h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Nombres</label>
+            <Input {...register('adminNombres')} placeholder="Juan" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Apellidos</label>
+            <Input {...register('adminApellidos')} placeholder="Pérez" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Email administrador</label>
+            <Input
+              {...register('adminEmail')}
+              type="email"
+              placeholder="admin@negocio.com"
+            />
+            {errors.adminEmail && (
+              <p className="text-xs text-red-500 mt-1">{errors.adminEmail.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Contraseña</label>
+            <div className="relative">
+              <Input
+                {...register('adminPassword')}
+                type={showAdminPass ? 'text' : 'password'}
+                placeholder="Mín. 6 caracteres"
+              />
+              <button
+                type="button"
+                onClick={() => setShowAdminPass(!showAdminPass)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showAdminPass ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            {errors.adminPassword && (
+              <p className="text-xs text-red-500 mt-1">{errors.adminPassword.message}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Configuración de IGV ─── */}
+      <div className="border-t border-gray-200 pt-4 space-y-3">
+        <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <Percent size={14} className="text-blue-600" />
+          Configuración de IGV
+        </h4>
+        <div className="flex items-center gap-6 flex-wrap">
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              {...register('aplicaIgv')}
+              className="rounded border-gray-300 text-blue-600"
+            />
+            Este negocio aplica IGV en sus ventas
+          </label>
+          {watch('aplicaIgv') && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">Porcentaje:</label>
+              <div className="flex items-center gap-1">
+                <Input
+                  {...register('porcentajeIgv')}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  className="w-24 text-sm"
+                />
+                <span className="text-sm text-gray-500 font-medium">%</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-end pt-2">
@@ -372,6 +487,18 @@ const Step3Confirm = ({ negocioData, planId, planes, onBack, onSubmit, isLoading
                 <dd className="text-gray-900">{negocioData.ciudad}</dd>
               </div>
             )}
+            {negocioData.adminEmail && (
+              <div className="flex gap-2">
+                <dt className="text-gray-500 w-24 shrink-0">Admin:</dt>
+                <dd className="text-indigo-700 font-medium truncate">{negocioData.adminEmail}</dd>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <dt className="text-gray-500 w-24 shrink-0">IGV:</dt>
+              <dd className="text-gray-900">
+                {negocioData.aplicaIgv ? `Sí (${negocioData.porcentajeIgv ?? 18}%)` : 'No aplica'}
+              </dd>
+            </div>
           </dl>
         </div>
 

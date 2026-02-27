@@ -24,7 +24,7 @@ import { Modal } from '../components/ui/Modal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { EstadoDropdown } from '../components/negocios/EstadoDropdown';
 import { NegocioForm } from '../components/forms/NegocioForm';
-import { NegocioDrawer } from '../components/negocios/NegocioDrawer';
+import { NegocioDetailModal } from '../components/negocios/NegocioDetailModal';
 import { WizardNuevoNegocio } from '../components/negocios/WizardNuevoNegocio';
 import { ActivarConPlanModal } from '../components/negocios/ActivarConPlanModal';
 import { formatPhone } from '@/shared/utils/formatters';
@@ -85,16 +85,29 @@ export const Negocios = () => {
     updateSuscripcion,
     isCreatingSuscripcion,
     isUpdatingSuscripcion,
+    createUsuario,
+    updateUsuario,
+    getUsuariosForNegocio,
+    isCreatingUsuario,
+    isUpdatingUsuario,
   } = useNegocios();
 
   /* ---------- helpers: enrich negocios with plan & sede count ---------- */
   const enrichedNegocios = useMemo(() => {
     return negocios.map((n) => {
       const sus = getSuscripcionForNegocio(n.id);
-      const sedesCount = sedes.filter((s) => s.negocio?.id === n.id).length;
+      // Handle both nested (s.negocio?.id) and flat (s.negocioId) formats from backend
+      const sedesCount = sedes.filter(
+        (s) => (s.negocio?.id ?? s.negocioId) === n.id,
+      ).length;
+      // Handle both nested (sus.plan?.nombre) and flat (sus.planId) plan references
+      const planNombre =
+        sus?.plan?.nombre ||
+        (sus?.planId ? planes.find((p) => p.id === sus.planId)?.nombre : null) ||
+        null;
       return {
         ...n,
-        _planNombre: sus?.plan?.nombre || null,
+        _planNombre: planNombre,
         _sedesCount: sedesCount,
         _suscripcion: sus,
       };
@@ -134,6 +147,16 @@ export const Negocios = () => {
         negocio: { id: newNegocio.id },
         plan: { id: selectedPlanId },
         estado: 'activa',
+      });
+    }
+    if (negocioData.adminEmail && negocioData.adminPassword && newNegocio?.id) {
+      await createUsuario({
+        negocio: { id: newNegocio.id },
+        email: negocioData.adminEmail,
+        hashContrasena: negocioData.adminPassword,
+        nombres: negocioData.adminNombres || 'Administrador',
+        apellidos: negocioData.adminApellidos || 'Principal',
+        estaActivo: 1,
       });
     }
     setIsCreateOpen(false);
@@ -439,7 +462,7 @@ export const Negocios = () => {
         onClose={() => setIsCreateOpen(false)}
         planes={planes}
         onSubmit={handleCreate}
-        isLoading={isCreating || isCreatingSuscripcion}
+        isLoading={isCreating || isCreatingSuscripcion || isCreatingUsuario}
       />
 
       {/* Edit Modal */}
@@ -465,8 +488,8 @@ export const Negocios = () => {
         )}
       </Modal>
 
-      {/* Detail Drawer */}
-      <NegocioDrawer
+      {/* Detail Modal — full tabs: Info / Sedes / Plan / Credenciales */}
+      <NegocioDetailModal
         isOpen={isDrawerOpen}
         onClose={() => {
           setIsDrawerOpen(false);
@@ -483,7 +506,14 @@ export const Negocios = () => {
         isCreatingSede={isCreatingSede}
         isUpdatingSede={isUpdatingSede}
         isDeletingSede={isDeletingSede}
-        isUpdatingSuscripcion={isCreatingSuscripcion || isUpdatingSuscripcion}
+        isUpdatingSuscripcion={isUpdatingSuscripcion}
+        onUpdateNegocio={updateNegocio}
+        isUpdatingNegocio={isUpdating}
+        usuarios={selected ? getUsuariosForNegocio(selected.id) : []}
+        onCreateUsuario={createUsuario}
+        onUpdateUsuario={updateUsuario}
+        isCreatingUsuario={isCreatingUsuario}
+        isUpdatingUsuario={isUpdatingUsuario}
       />
 
       {/* Activar con Plan */}

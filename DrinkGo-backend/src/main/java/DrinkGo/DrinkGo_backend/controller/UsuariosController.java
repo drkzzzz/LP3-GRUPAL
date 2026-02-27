@@ -42,6 +42,11 @@ public class UsuariosController {
         return service.buscarId(id);
     }
 
+    @GetMapping("/usuarios/por-negocio/{negocioId}")
+    public List<Usuarios> buscarPorNegocio(@PathVariable("negocioId") Long negocioId) {
+        return service.buscarPorNegocio(negocioId);
+    }
+
     @DeleteMapping("/usuarios/{id}")
     public String eliminar(@PathVariable Long id) {
         service.eliminar(id);

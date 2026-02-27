@@ -1,10 +1,18 @@
 import { api } from '@/config/api';
 
+const toArray = (data) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.content)) return data.content;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+};
+
 export const negociosService = {
   /* ─── Negocios CRUD ─── */
   getAll: async () => {
     const { data } = await api.get('/negocios');
-    return data;
+    return toArray(data);
   },
 
   getById: async (id) => {
@@ -30,7 +38,7 @@ export const negociosService = {
   /* ─── Sedes CRUD ─── */
   getAllSedes: async () => {
     const { data } = await api.get('/sedes');
-    return data;
+    return toArray(data);
   },
 
   createSede: async (sede) => {
@@ -51,7 +59,7 @@ export const negociosService = {
   /* ─── Suscripciones ─── */
   getAllSuscripciones: async () => {
     const { data } = await api.get('/suscripciones');
-    return data;
+    return toArray(data);
   },
 
   createSuscripcion: async (suscripcion) => {
@@ -67,6 +75,27 @@ export const negociosService = {
   /* ─── Planes de suscripción ─── */
   getAllPlanes: async () => {
     const { data } = await api.get('/planes-suscripcion');
+    return toArray(data);
+  },
+
+  /* ─── Usuarios del negocio ─── */
+  getAllUsuarios: async () => {
+    const { data } = await api.get('/usuarios');
+    return toArray(data);
+  },
+
+  getUsuariosByNegocio: async (negocioId) => {
+    const { data } = await api.get(`/usuarios/por-negocio/${negocioId}`);
+    return toArray(data);
+  },
+
+  createUsuario: async (usuario) => {
+    const { data } = await api.post('/usuarios', usuario);
+    return data;
+  },
+
+  updateUsuario: async (usuario) => {
+    const { data } = await api.put('/usuarios', usuario);
     return data;
   },
 };

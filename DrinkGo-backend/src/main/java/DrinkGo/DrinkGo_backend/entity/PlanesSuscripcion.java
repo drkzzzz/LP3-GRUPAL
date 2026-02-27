@@ -3,6 +3,7 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -11,12 +12,14 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "planes_suscripcion")
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @SQLDelete(sql = "UPDATE planes_suscripcion SET esta_activo = 0 WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "nombre", "descripcion", "precio", "moneda", "periodoFacturacion",
         "maxSedes", "maxUsuarios", "maxProductos", "maxAlmacenesPorSede", "permitePos",
         "permiteTiendaOnline", "permiteDelivery", "permiteMesas", "permiteFacturacionElectronica",
         "permiteMultiAlmacen", "permiteReportesAvanzados", "permiteAccesoApi", "funcionalidadesJson",
+        "modulosHabilitados",
         "estaActivo", "orden", "creadoEn", "actualizadoEn" })
 public class PlanesSuscripcion {
 
@@ -76,6 +79,14 @@ public class PlanesSuscripcion {
 
     @Column(name = "funcionalidades_json", columnDefinition = "JSON")
     private String funcionalidadesJson;
+
+    /**
+     * JSON array of admin module keys this plan grants access to.
+     * e.g. ["dashboard","catalogo","ventas","inventario"]
+     * null = all modules enabled (legacy/enterprise).
+     */
+    @Column(name = "modulos_habilitados", columnDefinition = "JSON")
+    private String modulosHabilitados;
 
     @Column(name = "esta_activo")
     private Boolean estaActivo = true;
@@ -254,6 +265,14 @@ public class PlanesSuscripcion {
 
     public void setFuncionalidadesJson(String funcionalidadesJson) {
         this.funcionalidadesJson = funcionalidadesJson;
+    }
+
+    public String getModulosHabilitados() {
+        return modulosHabilitados;
+    }
+
+    public void setModulosHabilitados(String modulosHabilitados) {
+        this.modulosHabilitados = modulosHabilitados;
     }
 
     public Boolean getEstaActivo() {

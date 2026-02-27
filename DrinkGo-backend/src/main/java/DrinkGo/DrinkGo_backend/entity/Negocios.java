@@ -3,19 +3,22 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "negocios")
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @SQLDelete(sql = "UPDATE negocios SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "uuid", "razonSocial", "nombreComercial", "ruc", "tipoDocumentoFiscal",
         "representanteLegal", "documentoRepresentante", "tipoNegocio", "email", "telefono", "direccion",
-        "ciudad", "departamento", "pais", "codigoPostal", "urlLogo", "estado", "estaActivo", "creadoEn",
-        "actualizadoEn", "eliminadoEn" })
+        "ciudad", "departamento", "pais", "codigoPostal", "urlLogo", "aplicaIgv", "porcentajeIgv",
+        "estado", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class Negocios {
 
     @Id
@@ -64,6 +67,14 @@ public class Negocios {
 
     @Column(name = "url_logo")
     private String urlLogo;
+
+    /** Indica si el negocio aplica IGV en sus operaciones. */
+    @Column(name = "aplica_igv")
+    private Boolean aplicaIgv = true;
+
+    /** Porcentaje de IGV cuando aplica. Default 18.00 (Perú). */
+    @Column(name = "porcentaje_igv", precision = 5, scale = 2)
+    private BigDecimal porcentajeIgv = new BigDecimal("18.00");
 
     @Enumerated(EnumType.STRING)
     private EstadoNegocio estado = EstadoNegocio.pendiente;
@@ -239,6 +250,22 @@ public class Negocios {
         this.urlLogo = urlLogo;
     }
 
+    public Boolean getAplicaIgv() {
+        return aplicaIgv;
+    }
+
+    public void setAplicaIgv(Boolean aplicaIgv) {
+        this.aplicaIgv = aplicaIgv;
+    }
+
+    public BigDecimal getPorcentajeIgv() {
+        return porcentajeIgv;
+    }
+
+    public void setPorcentajeIgv(BigDecimal porcentajeIgv) {
+        this.porcentajeIgv = porcentajeIgv;
+    }
+
     public EstadoNegocio getEstado() {
         return estado;
     }
@@ -286,7 +313,8 @@ public class Negocios {
                 + ", representanteLegal=" + representanteLegal + ", documentoRepresentante=" + documentoRepresentante
                 + ", tipoNegocio=" + tipoNegocio + ", email=" + email + ", telefono=" + telefono + ", direccion="
                 + direccion + ", ciudad=" + ciudad + ", departamento=" + departamento + ", pais=" + pais
-                + ", codigoPostal=" + codigoPostal + ", urlLogo=" + urlLogo + ", estado=" + estado + ", estaActivo="
+                + ", codigoPostal=" + codigoPostal + ", urlLogo=" + urlLogo + ", aplicaIgv=" + aplicaIgv
+                + ", porcentajeIgv=" + porcentajeIgv + ", estado=" + estado + ", estaActivo=" + estaActivo
                 + estaActivo + ", creadoEn=" + creadoEn + ", actualizadoEn=" + actualizadoEn + ", eliminadoEn="
                 + eliminadoEn + "]";
     }
