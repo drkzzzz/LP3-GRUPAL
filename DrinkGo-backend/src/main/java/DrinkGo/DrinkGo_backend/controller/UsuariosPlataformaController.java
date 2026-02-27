@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/restful")
@@ -129,5 +131,176 @@ public class UsuariosPlataformaController {
                 "rol", usuario.getRol().toString()));
 
         return ResponseEntity.ok(response);
+    }
+
+    // ── Profile Endpoints ──────────────────────────────────────
+
+    @GetMapping("/superadmin/perfil")
+    public ResponseEntity<?> obtenerPerfil(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "No autenticado"));
+        }
+
+        Optional<UsuariosPlataforma> usuarioOpt = service.buscarPorEmail(principal.getName());
+        if (usuarioOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Usuario no encontrado"));
+        }
+
+        UsuariosPlataforma u = usuarioOpt.get();
+        Map<String, Object> perfil = new HashMap<>();
+        perfil.put("id", u.getId());
+        perfil.put("uuid", u.getUuid());
+        perfil.put("email", u.getEmail());
+        perfil.put("nombres", u.getNombres());
+        perfil.put("apellidos", u.getApellidos());
+        perfil.put("telefono", u.getTelefono());
+        perfil.put("rol", u.getRol().toString());
+        perfil.put("creadoEn", u.getCreadoEn());
+        perfil.put("actualizadoEn", u.getActualizadoEn());
+        perfil.put("ultimoAccesoEn", u.getUltimoAccesoEn());
+
+        return ResponseEntity.ok(perfil);
+    }
+
+    @PatchMapping("/superadmin/perfil")
+    public ResponseEntity<?> actualizarPerfil(Principal principal, @RequestBody Map<String, String> datos) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "No autenticado"));
+        }
+
+        Optional<UsuariosPlataforma> usuarioOpt = service.buscarPorEmail(principal.getName());
+        if (usuarioOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Usuario no encontrado"));
+        }
+
+        UsuariosPlataforma usuario = usuarioOpt.get();
+
+        if (datos.containsKey("nombres")) {
+            String nombres = datos.get("nombres");
+            if (nombres == null || nombres.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El nombre es requerido"));
+            }
+            usuario.setNombres(nombres.trim());
+        }
+        if (datos.containsKey("apellidos")) {
+            String apellidos = datos.get("apellidos");
+            if (apellidos == null || apellidos.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Los apellidos son requeridos"));
+            }
+            usuario.setApellidos(apellidos.trim());
+        }
+        if (datos.containsKey("telefono")) {
+            String telefono = datos.get("telefono");
+            if (telefono != null && !telefono.trim().isEmpty() && !telefono.trim().matches("^9\\d{8}$")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Teléfono inválido (formato: 9XXXXXXXX)"));
+            }
+            usuario.setTelefono(telefono != null ? telefono.trim() : null);
+        }
+        if (datos.containsKey("email")) {
+            String email = datos.get("email");
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El email es requerido"));
+            }
+            // Check if email is already used by another user
+            Optional<UsuariosPlataforma> existing = service.buscarPorEmail(email.trim());
+            if (existing.isPresent() && !existing.get().getId().equals(usuario.getId())) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El email ya está en uso por otro usuario"));
+            }
+            usuario.setEmail(email.trim());
+        }
+
+        service.modificar(usuario);
+
+        Map<String, Object> perfil = new HashMap<>();
+        perfil.put("id", usuario.getId());
+        perfil.put("uuid", usuario.getUuid());
+        perfil.put("email", usuario.getEmail());
+        perfil.put("nombres", usuario.getNombres());
+        perfil.put("apellidos", usuario.getApellidos());
+        perfil.put("telefono", usuario.getTelefono());
+        perfil.put("rol", usuario.getRol().toString());
+        perfil.put("creadoEn", usuario.getCreadoEn());
+        perfil.put("actualizadoEn", usuario.getActualizadoEn());
+        perfil.put("ultimoAccesoEn", usuario.getUltimoAccesoEn());
+        perfil.put("message", "Perfil actualizado exitosamente");
+
+        return ResponseEntity.ok(perfil);
+    }
+
+    @PostMapping("/superadmin/perfil/cambiar-contrasena")
+    public ResponseEntity<?> cambiarContrasena(Principal principal, @RequestBody Map<String, String> datos) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "No autenticado"));
+        }
+
+        String contrasenaActual = datos.get("contrasenaActual");
+        String nuevaContrasena = datos.get("nuevaContrasena");
+        String confirmarContrasena = datos.get("confirmarContrasena");
+
+        // Validations
+        if (contrasenaActual == null || contrasenaActual.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La contraseña actual es requerida"));
+        }
+        if (nuevaContrasena == null || nuevaContrasena.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La nueva contraseña es requerida"));
+        }
+        if (confirmarContrasena == null || confirmarContrasena.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Debe confirmar la nueva contraseña"));
+        }
+        if (!nuevaContrasena.equals(confirmarContrasena)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Las contraseñas nuevas no coinciden"));
+        }
+
+        // Strong password validation
+        if (nuevaContrasena.length() < 8) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La contraseña debe tener al menos 8 caracteres"));
+        }
+        if (!nuevaContrasena.matches(".*[A-Z].*")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "La contraseña debe contener al menos una letra mayúscula"));
+        }
+        if (!nuevaContrasena.matches(".*[a-z].*")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "La contraseña debe contener al menos una letra minúscula"));
+        }
+        if (!nuevaContrasena.matches(".*\\d.*")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "La contraseña debe contener al menos un número"));
+        }
+        if (!nuevaContrasena.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "La contraseña debe contener al menos un carácter especial (!@#$%^&*...)"));
+        }
+
+        Optional<UsuariosPlataforma> usuarioOpt = service.buscarPorEmail(principal.getName());
+        if (usuarioOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Usuario no encontrado"));
+        }
+
+        UsuariosPlataforma usuario = usuarioOpt.get();
+
+        // Verify current password
+        if (!passwordEncoder.matches(contrasenaActual, usuario.getHashContrasena())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La contraseña actual es incorrecta"));
+        }
+
+        // Verify new password is different from current
+        if (passwordEncoder.matches(nuevaContrasena, usuario.getHashContrasena())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "La nueva contraseña debe ser diferente a la actual"));
+        }
+
+        // Update password
+        usuario.setHashContrasena(passwordEncoder.encode(nuevaContrasena));
+        usuario.setContrasenaCambiadaEn(LocalDateTime.now());
+        service.modificar(usuario);
+
+        return ResponseEntity.ok(Map.of("message", "Contraseña actualizada exitosamente"));
     }
 }

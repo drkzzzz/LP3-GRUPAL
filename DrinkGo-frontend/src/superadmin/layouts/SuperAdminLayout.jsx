@@ -13,6 +13,7 @@ import {
   Wine,
   ChevronLeft,
   BarChart3,
+  UserCircle,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -105,19 +106,25 @@ export const SuperAdminLayout = () => {
       <div className="border-t border-gray-700 p-4">
         {sidebarOpen ? (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shrink-0">
-              <span className="text-white text-sm font-medium">
-                {user?.nombre?.[0]?.toUpperCase() || 'A'}
-              </span>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium text-white truncate">
-                {user?.nombre || 'Admin'}
-              </p>
-              <p className="text-xs text-gray-400 truncate">
-                {user?.email || 'admin@drinkgo.com'}
-              </p>
-            </div>
+            <button
+              onClick={() => { navigate('/superadmin/perfil'); setMobileOpen(false); }}
+              className="flex items-center gap-3 flex-1 min-w-0 rounded-lg hover:bg-gray-800 p-1 transition-colors"
+              title="Mi Perfil"
+            >
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shrink-0">
+                <span className="text-white text-sm font-medium">
+                  {user?.nombre?.[0]?.toUpperCase() || user?.nombres?.[0]?.toUpperCase() || 'A'}
+                </span>
+              </div>
+              <div className="flex-1 overflow-hidden text-left">
+                <p className="text-sm font-medium text-white truncate">
+                  {user?.nombre || user?.nombres || 'Admin'}
+                </p>
+                <p className="text-xs text-gray-400 truncate">
+                  {user?.email || 'admin@drinkgo.com'}
+                </p>
+              </div>
+            </button>
             <button
               onClick={handleLogout}
               title="Cerrar sesión"
@@ -194,12 +201,17 @@ export const SuperAdminLayout = () => {
           <div className="flex-1" />
 
           {/* User info (desktop) */}
-          <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
-            <span>{user?.nombre || 'Admin'}</span>
+          <button
+            onClick={() => navigate('/superadmin/perfil')}
+            className="hidden sm:flex items-center gap-2 text-sm text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+            title="Mi Perfil"
+          >
+            <UserCircle size={18} className="text-gray-500" />
+            <span>{user?.nombre || user?.nombres || 'Admin'}</span>
             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
               SuperAdmin
             </span>
-          </div>
+          </button>
         </header>
 
         {/* Page Content */}
