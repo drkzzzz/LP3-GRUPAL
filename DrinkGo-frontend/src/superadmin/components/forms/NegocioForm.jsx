@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Percent } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
@@ -31,6 +32,8 @@ const schema = z.object({
   ciudad: z.string().optional(),
   departamento: z.string().optional(),
   estado: z.string().optional(),
+  aplicaIgv: z.boolean().optional(),
+  porcentajeIgv: z.coerce.number().min(0, 'Mínimo 0').max(100, 'Máximo 100').optional(),
 });
 
 const DOC_TYPES = [
@@ -59,6 +62,7 @@ export const NegocioForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
@@ -76,6 +80,8 @@ export const NegocioForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
       ciudad: '',
       departamento: '',
       estado: 'activo',
+      aplicaIgv: true,
+      porcentajeIgv: 18,
       ...initialData,
     },
   });
@@ -222,6 +228,42 @@ export const NegocioForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
             Estado
           </label>
           <Select {...register('estado')} options={ESTADOS} />
+        </div>
+      </div>
+
+      {/* IGV */}
+      <div className="border-t border-gray-200 pt-3 space-y-3">
+        <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <Percent size={14} className="text-gray-500" /> Configuración Fiscal (IGV)
+        </h4>
+        <div className="flex items-center gap-6 flex-wrap">
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              {...register('aplicaIgv')}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            Aplica IGV en facturas/boletas
+          </label>
+          {watch('aplicaIgv') && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">Porcentaje:</label>
+              <div className="flex items-center gap-1">
+                <Input
+                  {...register('porcentajeIgv')}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  className="w-24 text-sm"
+                />
+                <span className="text-sm text-gray-500 font-medium">%</span>
+              </div>
+              {errors.porcentajeIgv && (
+                <p className="text-xs text-red-500">{errors.porcentajeIgv.message}</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

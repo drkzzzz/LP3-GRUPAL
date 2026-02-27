@@ -7,6 +7,8 @@ import DrinkGo.DrinkGo_backend.entity.Usuarios;
 public interface IUsuariosService {
     List<Usuarios> buscarTodos();
 
+    List<Usuarios> buscarPorNegocio(Long negocioId);
+
     void guardar(Usuarios usuarios);
 
     void modificar(Usuarios usuarios);

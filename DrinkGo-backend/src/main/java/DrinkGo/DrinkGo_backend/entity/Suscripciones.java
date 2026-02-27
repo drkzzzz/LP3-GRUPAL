@@ -3,6 +3,8 @@ package DrinkGo.DrinkGo_backend.entity;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -10,18 +12,20 @@ import java.time.LocalDateTime;
 @Table(name = "suscripciones")
 @JsonPropertyOrder({ "id", "negocioId", "planId", "estado", "inicioPeriodoActual", "finPeriodoActual",
         "proximaFechaFacturacion", "canceladoEn", "razonCancelacion", "suspendidoEn", "razonSuspension",
-        "autoRenovar", "tokenMetodoPago", "creadoEn", "actualizadoEn" })
+        "autoRenovar", "tokenMetodoPago", "modulosPersonalizados", "creadoEn", "actualizadoEn" })
 public class Suscripciones {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @NotFound(action = NotFoundAction.IGNORE)
     @JoinColumn(name = "negocio_id", nullable = false)
     private Negocios negocio;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @NotFound(action = NotFoundAction.IGNORE)
     @JoinColumn(name = "plan_id", nullable = false)
     private PlanesSuscripcion plan;
 
@@ -54,6 +58,14 @@ public class Suscripciones {
 
     @Column(name = "token_metodo_pago")
     private String tokenMetodoPago;
+
+    /**
+     * Optional JSON array overriding which admin modules this negocio can access,
+     * irrespective of what the plan grants. null = use plan's modulosHabilitados.
+     * e.g. ["dashboard","catalogo","ventas"]
+     */
+    @Column(name = "modulos_personalizados", columnDefinition = "JSON")
+    private String modulosPersonalizados;
 
     @Column(name = "creado_en", updatable = false)
     private LocalDateTime creadoEn;
@@ -181,6 +193,14 @@ public class Suscripciones {
         this.tokenMetodoPago = tokenMetodoPago;
     }
 
+    public String getModulosPersonalizados() {
+        return modulosPersonalizados;
+    }
+
+    public void setModulosPersonalizados(String modulosPersonalizados) {
+        this.modulosPersonalizados = modulosPersonalizados;
+    }
+
     public LocalDateTime getCreadoEn() {
         return creadoEn;
     }
@@ -204,7 +224,8 @@ public class Suscripciones {
                 + inicioPeriodoActual + ", finPeriodoActual=" + finPeriodoActual + ", proximaFechaFacturacion="
                 + proximaFechaFacturacion + ", canceladoEn=" + canceladoEn + ", razonCancelacion=" + razonCancelacion
                 + ", suspendidoEn=" + suspendidoEn + ", razonSuspension=" + razonSuspension + ", autoRenovar="
-                + autoRenovar + ", tokenMetodoPago=" + tokenMetodoPago + ", creadoEn=" + creadoEn + ", actualizadoEn="
+                + autoRenovar + ", tokenMetodoPago=" + tokenMetodoPago + ", modulosPersonalizados="
+                + modulosPersonalizados + ", creadoEn=" + creadoEn + ", actualizadoEn="
                 + actualizadoEn + "]";
     }
 }
