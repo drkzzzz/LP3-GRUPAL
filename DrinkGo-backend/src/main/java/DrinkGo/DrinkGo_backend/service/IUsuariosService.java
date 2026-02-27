@@ -15,5 +15,7 @@ public interface IUsuariosService {
 
     Optional<Usuarios> buscarId(Long id);
 
+    Optional<Usuarios> buscarPorEmail(String email);
+
     void eliminar(Long id);
 }

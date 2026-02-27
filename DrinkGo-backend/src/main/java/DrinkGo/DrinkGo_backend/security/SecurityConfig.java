@@ -34,7 +34,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/restful/token", "/restful/registros", "/restful/superadmin/auth/login")
+                        .requestMatchers("/restful/token", "/restful/registros",
+                                "/restful/superadmin/auth/login", "/restful/admin/auth/login")
                         .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
