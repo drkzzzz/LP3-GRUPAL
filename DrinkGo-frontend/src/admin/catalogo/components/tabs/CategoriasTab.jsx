@@ -5,7 +5,7 @@
  */
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, FolderTree, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, FolderTree, CheckCircle, XCircle } from 'lucide-react';
 import { useCategorias } from '../../hooks/useCategorias';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { Card } from '@/admin/components/ui/Card';
@@ -25,6 +25,7 @@ export const CategoriasTab = () => {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
@@ -70,6 +71,11 @@ export const CategoriasTab = () => {
     await updateCategoria(data);
     setIsEditOpen(false);
     setSelected(null);
+  };
+
+  const handleView = (cat) => {
+    setSelected(cat);
+    setIsDetailOpen(true);
   };
 
   const handleDeleteClick = (cat) => {
@@ -154,10 +160,17 @@ export const CategoriasTab = () => {
     {
       key: 'actions',
       title: 'Acciones',
-      width: '100px',
+      width: '120px',
       align: 'center',
       render: (_, row) => (
         <div className="flex justify-center gap-1">
+          <button
+            title="Ver detalles"
+            onClick={() => handleView(row)}
+            className="p-1.5 rounded hover:bg-blue-50 text-blue-500 hover:text-blue-700 transition-colors"
+          >
+            <Eye size={16} />
+          </button>
           <button
             title="Editar"
             onClick={() => handleEdit(row)}
@@ -265,6 +278,72 @@ export const CategoriasTab = () => {
             onCancel={() => { setIsEditOpen(false); setSelected(null); }}
             isLoading={isUpdating}
           />
+        )}
+      </Modal>
+
+      {/* Detalle */}
+      <Modal
+        isOpen={isDetailOpen}
+        onClose={() => { setIsDetailOpen(false); setSelected(null); }}
+        title="Detalle de Categoría"
+        size="lg"
+      >
+        {selected && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-lg bg-purple-100 flex items-center justify-center text-purple-700 text-2xl font-bold">
+                {selected.icono || selected.nombre?.charAt(0)?.toUpperCase()}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">{selected.nombre}</h3>
+                <p className="text-sm text-gray-500">Slug: {selected.slug}</p>
+                <Badge variant={selected.estaActivo ? 'success' : 'error'}>
+                  {selected.estaActivo ? 'Activo' : 'Inactivo'}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">Categoría padre</p>
+                <p className="font-medium">{getParentName(selected)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Orden</p>
+                <p className="font-medium">{selected.orden ?? 0}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Tienda online</p>
+                <p className="font-medium">{selected.visibleTiendaOnline ? 'Visible' : 'Oculto'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Icono</p>
+                <p className="font-medium">{selected.icono || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Estado</p>
+                <p className="font-medium">{selected.estaActivo ? 'Activo' : 'Inactivo'}</p>
+              </div>
+            </div>
+
+            {selected.descripcion && (
+              <div>
+                <p className="text-sm text-gray-500">Descripción</p>
+                <p className="text-sm text-gray-700 mt-1">{selected.descripcion}</p>
+              </div>
+            )}
+
+            {selected.urlImagen && (
+              <div>
+                <p className="text-sm text-gray-500 mb-2">Imagen</p>
+                <img
+                  src={selected.urlImagen}
+                  alt={selected.nombre}
+                  className="w-32 h-32 rounded-lg object-cover"
+                />
+              </div>
+            )}
+          </div>
         )}
       </Modal>
 

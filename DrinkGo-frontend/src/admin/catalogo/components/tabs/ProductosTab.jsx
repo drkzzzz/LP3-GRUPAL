@@ -11,7 +11,7 @@ import {
   Search,
   Eye,
   Edit,
-  Power,
+  Trash2,
   Package,
   DollarSign,
   AlertCircle,
@@ -43,7 +43,7 @@ export const ProductosTab = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isDeactivateOpen, setIsDeactivateOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
   /* ─── Data hooks ─── */
@@ -110,24 +110,16 @@ export const ProductosTab = () => {
     setIsDetailOpen(true);
   };
 
-  const handleToggleActive = (producto) => {
+  const handleDeleteClick = (producto) => {
     setSelected(producto);
-    setIsDeactivateOpen(true);
+    setIsDeleteOpen(true);
   };
 
-  const handleToggleConfirm = async () => {
+  const handleDeleteConfirm = async () => {
     if (selected) {
-      await updateProducto({
-        ...selected,
-        estaActivo: !selected.estaActivo,
-        // Mantener relaciones como objetos para el backend
-        negocio: selected.negocio || { id: negocioId },
-        categoria: selected.categoria || null,
-        marca: selected.marca || null,
-        unidadMedida: selected.unidadMedida || null,
-      });
+      await deleteProducto(selected.id);
     }
-    setIsDeactivateOpen(false);
+    setIsDeleteOpen(false);
     setSelected(null);
   };
 
@@ -250,11 +242,11 @@ export const ProductosTab = () => {
             <Edit size={16} />
           </button>
           <button
-            title={row.estaActivo ? 'Desactivar' : 'Activar'}
-            onClick={() => handleToggleActive(row)}
+            title="Eliminar"
+            onClick={() => handleDeleteClick(row)}
             className="p-1.5 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
           >
-            <Power size={16} />
+            <Trash2 size={16} />
           </button>
         </div>
       ),
@@ -443,20 +435,15 @@ export const ProductosTab = () => {
         )}
       </Modal>
 
-      {/* ─── Confirmar activar/desactivar ─── */}
+      {/* ─── Confirmar eliminar ─── */}
       <ConfirmDialog
-        isOpen={isDeactivateOpen}
-        onClose={() => { setIsDeactivateOpen(false); setSelected(null); }}
-        onConfirm={handleToggleConfirm}
-        title={selected?.estaActivo ? 'Desactivar Producto' : 'Activar Producto'}
-        message={
-          selected?.estaActivo
-            ? `¿Está seguro de desactivar "${selected?.nombre}"?`
-            : `¿Desea activar nuevamente "${selected?.nombre}"?`
-        }
-        confirmText={selected?.estaActivo ? 'Desactivar' : 'Activar'}
-        variant={selected?.estaActivo ? 'danger' : 'primary'}
-        isLoading={isUpdating}
+        isOpen={isDeleteOpen}
+        onClose={() => { setIsDeleteOpen(false); setSelected(null); }}
+        onConfirm={handleDeleteConfirm}
+        title="Eliminar Producto"
+        message={`¿Está seguro de eliminar el producto "${selected?.nombre}"?`}
+        confirmText="Eliminar"
+        isLoading={isDeleting}
       />
     </div>
   );

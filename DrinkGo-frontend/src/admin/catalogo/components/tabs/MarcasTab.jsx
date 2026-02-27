@@ -5,7 +5,7 @@
  */
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Award } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Award } from 'lucide-react';
 import { useMarcas } from '../../hooks/useMarcas';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { Card } from '@/admin/components/ui/Card';
@@ -25,6 +25,7 @@ export const MarcasTab = () => {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
@@ -60,6 +61,8 @@ export const MarcasTab = () => {
     await createMarca(data);
     setIsCreateOpen(false);
   };
+
+  const handleView = (marca) => { setSelected(marca); setIsDetailOpen(true); };
 
   const handleEdit = (marca) => { setSelected(marca); setIsEditOpen(true); };
 
@@ -128,10 +131,17 @@ export const MarcasTab = () => {
     {
       key: 'actions',
       title: 'Acciones',
-      width: '100px',
+      width: '120px',
       align: 'center',
       render: (_, row) => (
         <div className="flex justify-center gap-1">
+          <button
+            title="Ver detalles"
+            onClick={() => handleView(row)}
+            className="p-1.5 rounded hover:bg-blue-50 text-blue-500 hover:text-blue-700 transition-colors"
+          >
+            <Eye size={16} />
+          </button>
           <button
             title="Editar"
             onClick={() => handleEdit(row)}
@@ -230,6 +240,68 @@ export const MarcasTab = () => {
             onCancel={() => { setIsEditOpen(false); setSelected(null); }}
             isLoading={isUpdating}
           />
+        )}
+      </Modal>
+
+      {/* Detalle */}
+      <Modal
+        isOpen={isDetailOpen}
+        onClose={() => { setIsDetailOpen(false); setSelected(null); }}
+        title="Detalle de Marca"
+        size="lg"
+      >
+        {selected && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              {selected.urlLogo ? (
+                <img
+                  src={selected.urlLogo}
+                  alt={selected.nombre}
+                  className="w-16 h-16 rounded-lg object-contain bg-gray-50"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-lg bg-orange-100 flex items-center justify-center text-orange-700 text-2xl font-bold">
+                  {selected.nombre?.charAt(0)?.toUpperCase()}
+                </div>
+              )}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">{selected.nombre}</h3>
+                <p className="text-sm text-gray-500">Slug: {selected.slug}</p>
+                <Badge variant={selected.estaActivo ? 'success' : 'error'}>
+                  {selected.estaActivo ? 'Activo' : 'Inactivo'}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">País de origen</p>
+                <p className="font-medium">{selected.paisOrigen || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Estado</p>
+                <p className="font-medium">{selected.estaActivo ? 'Activo' : 'Inactivo'}</p>
+              </div>
+            </div>
+
+            {selected.descripcion && (
+              <div>
+                <p className="text-sm text-gray-500">Descripción</p>
+                <p className="text-sm text-gray-700 mt-1">{selected.descripcion}</p>
+              </div>
+            )}
+
+            {selected.urlLogo && (
+              <div>
+                <p className="text-sm text-gray-500 mb-2">Logo</p>
+                <img
+                  src={selected.urlLogo}
+                  alt={selected.nombre}
+                  className="w-32 h-32 rounded-lg object-contain bg-gray-50 border"
+                />
+              </div>
+            )}
+          </div>
         )}
       </Modal>
 
