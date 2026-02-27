@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { categoriaSchema } from '../../validations/catalogoSchemas';
 import { Input } from '@/admin/components/ui/Input';
-import { Select } from '@/admin/components/ui/Select';
 import { Textarea } from '@/admin/components/ui/Textarea';
 import { Button } from '@/admin/components/ui/Button';
 
@@ -21,7 +20,6 @@ const generateSlug = (name) =>
 
 export const CategoriaForm = ({
   initialData,
-  categorias = [],
   negocioId,
   onSubmit,
   onCancel,
@@ -41,10 +39,6 @@ export const CategoriaForm = ({
       nombre: initialData?.nombre || '',
       slug: initialData?.slug || '',
       descripcion: initialData?.descripcion || '',
-      urlImagen: initialData?.urlImagen || '',
-      icono: initialData?.icono || '',
-      orden: String(initialData?.orden ?? '0'),
-      padreId: String(initialData?.padre?.id || initialData?.padreId || ''),
       visibleTiendaOnline: initialData?.visibleTiendaOnline ?? true,
       estaActivo: initialData?.estaActivo ?? true,
     },
@@ -65,20 +59,11 @@ export const CategoriaForm = ({
       nombre: formData.nombre,
       slug: formData.slug,
       descripcion: formData.descripcion || null,
-      urlImagen: formData.urlImagen || null,
-      icono: formData.icono || null,
-      orden: Number(formData.orden) || 0,
-      padre: formData.padreId ? { id: Number(formData.padreId) } : null,
       visibleTiendaOnline: formData.visibleTiendaOnline,
       estaActivo: formData.estaActivo,
     };
     onSubmit(payload);
   };
-
-  /* Excluir la categoría actual de las opciones de padre (evitar ciclo) */
-  const padreOptions = categorias
-    .filter((c) => c.id !== initialData?.id)
-    .map((c) => ({ value: String(c.id), label: c.nombre }));
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
@@ -99,35 +84,6 @@ export const CategoriaForm = ({
           placeholder="vinos-tintos"
         />
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Select
-          label="Categoría padre"
-          placeholder="Sin categoría padre"
-          options={padreOptions}
-          {...register('padreId')}
-          error={errors.padreId?.message}
-        />
-        <Input
-          label="Icono"
-          {...register('icono')}
-          error={errors.icono?.message}
-          placeholder="Ej: wine"
-        />
-        <Input
-          label="Orden"
-          type="number"
-          {...register('orden')}
-          error={errors.orden?.message}
-        />
-      </div>
-
-      <Input
-        label="URL Imagen"
-        {...register('urlImagen')}
-        error={errors.urlImagen?.message}
-        placeholder="https://..."
-      />
 
       <Textarea
         label="Descripción"

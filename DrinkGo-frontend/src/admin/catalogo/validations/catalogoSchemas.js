@@ -65,10 +65,6 @@ export const categoriaSchema = z.object({
     .string()
     .min(1, 'El slug es obligatorio'),
   descripcion: z.string().optional().default(''),
-  urlImagen: z.string().optional().default(''),
-  icono: z.string().optional().default(''),
-  orden: z.string().optional().default('0'),
-  padreId: z.string().optional().default(''),
   visibleTiendaOnline: z.boolean().optional().default(true),
   estaActivo: z.boolean().optional().default(true),
 });

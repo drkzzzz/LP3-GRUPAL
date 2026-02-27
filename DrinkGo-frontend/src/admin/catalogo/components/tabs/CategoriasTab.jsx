@@ -89,12 +89,6 @@ export const CategoriasTab = () => {
     setSelected(null);
   };
 
-  /* ─── Helper: nombre del padre ─── */
-  const getParentName = (cat) =>
-    cat.padre?.nombre ||
-    categorias.find((c) => c.id === cat.padreId)?.nombre ||
-    '—';
-
   /* ─── Columnas ─── */
   const columns = [
     {
@@ -111,7 +105,7 @@ export const CategoriasTab = () => {
       render: (_, row) => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-xs flex-shrink-0">
-            {row.icono || row.nombre?.charAt(0)?.toUpperCase()}
+            {row.nombre?.charAt(0)?.toUpperCase()}
           </div>
           <div>
             <p className="text-sm font-medium text-gray-900">{row.nombre}</p>
@@ -119,21 +113,6 @@ export const CategoriasTab = () => {
           </div>
         </div>
       ),
-    },
-    {
-      key: 'padre',
-      title: 'Categoría padre',
-      width: '160px',
-      render: (_, row) => (
-        <span className="text-sm text-gray-600">{getParentName(row)}</span>
-      ),
-    },
-    {
-      key: 'orden',
-      title: 'Orden',
-      width: '80px',
-      align: 'center',
-      dataIndex: 'orden',
     },
     {
       key: 'visible',
@@ -196,7 +175,7 @@ export const CategoriasTab = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Categorías</h1>
         <p className="text-gray-600 mt-1">
-          Organización y clasificación de productos por categorías y subcategorías
+          Organización y clasificación de productos por categorías
         </p>
       </div>
 
@@ -259,7 +238,6 @@ export const CategoriasTab = () => {
       {/* Crear */}
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Nueva Categoría" size="lg">
         <CategoriaForm
-          categorias={categorias}
           negocioId={negocioId}
           onSubmit={handleCreate}
           onCancel={() => setIsCreateOpen(false)}
@@ -272,7 +250,6 @@ export const CategoriasTab = () => {
         {selected && (
           <CategoriaForm
             initialData={selected}
-            categorias={categorias}
             negocioId={negocioId}
             onSubmit={handleUpdate}
             onCancel={() => { setIsEditOpen(false); setSelected(null); }}
@@ -292,7 +269,7 @@ export const CategoriasTab = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-lg bg-purple-100 flex items-center justify-center text-purple-700 text-2xl font-bold">
-                {selected.icono || selected.nombre?.charAt(0)?.toUpperCase()}
+                {selected.nombre?.charAt(0)?.toUpperCase()}
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{selected.nombre}</h3>
@@ -305,20 +282,8 @@ export const CategoriasTab = () => {
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div>
-                <p className="text-gray-500">Categoría padre</p>
-                <p className="font-medium">{getParentName(selected)}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Orden</p>
-                <p className="font-medium">{selected.orden ?? 0}</p>
-              </div>
-              <div>
                 <p className="text-gray-500">Tienda online</p>
                 <p className="font-medium">{selected.visibleTiendaOnline ? 'Visible' : 'Oculto'}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Icono</p>
-                <p className="font-medium">{selected.icono || '—'}</p>
               </div>
               <div>
                 <p className="text-gray-500">Estado</p>
@@ -330,17 +295,6 @@ export const CategoriasTab = () => {
               <div>
                 <p className="text-sm text-gray-500">Descripción</p>
                 <p className="text-sm text-gray-700 mt-1">{selected.descripcion}</p>
-              </div>
-            )}
-
-            {selected.urlImagen && (
-              <div>
-                <p className="text-sm text-gray-500 mb-2">Imagen</p>
-                <img
-                  src={selected.urlImagen}
-                  alt={selected.nombre}
-                  className="w-32 h-32 rounded-lg object-cover"
-                />
               </div>
             )}
           </div>

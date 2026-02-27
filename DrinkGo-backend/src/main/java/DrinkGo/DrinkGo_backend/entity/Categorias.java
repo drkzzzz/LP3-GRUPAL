@@ -1,18 +1,29 @@
 package DrinkGo.DrinkGo_backend.entity;
 
+import java.time.LocalDateTime;
+
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "categorias")
 @SQLDelete(sql = "UPDATE categorias SET esta_activo = 0 WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "negocioId", "padreId", "nombre", "slug", "descripcion", "urlImagen", "icono", "orden",
+@JsonPropertyOrder({ "id", "negocioId", "nombre", "slug", "descripcion",
         "visibleTiendaOnline", "estaActivo", "creadoEn", "actualizadoEn" })
 public class Categorias {
 
@@ -24,10 +35,6 @@ public class Categorias {
     @JoinColumn(name = "negocio_id", nullable = false)
     private Negocios negocio;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "padre_id")
-    private Categorias padre;
-
     @Column(nullable = false)
     private String nombre;
 
@@ -36,13 +43,6 @@ public class Categorias {
 
     @Column(columnDefinition = "TEXT")
     private String descripcion;
-
-    @Column(name = "url_imagen")
-    private String urlImagen;
-
-    private String icono;
-
-    private Integer orden = 0;
 
     @Column(name = "visible_tienda_online")
     private Boolean visibleTiendaOnline = true;
@@ -84,14 +84,6 @@ public class Categorias {
         this.negocio = negocio;
     }
 
-    public Categorias getPadre() {
-        return padre;
-    }
-
-    public void setPadre(Categorias padre) {
-        this.padre = padre;
-    }
-
     public String getNombre() {
         return nombre;
     }
@@ -114,30 +106,6 @@ public class Categorias {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
-    }
-
-    public String getUrlImagen() {
-        return urlImagen;
-    }
-
-    public void setUrlImagen(String urlImagen) {
-        this.urlImagen = urlImagen;
-    }
-
-    public String getIcono() {
-        return icono;
-    }
-
-    public void setIcono(String icono) {
-        this.icono = icono;
-    }
-
-    public Integer getOrden() {
-        return orden;
-    }
-
-    public void setOrden(Integer orden) {
-        this.orden = orden;
     }
 
     public Boolean getVisibleTiendaOnline() {
@@ -174,10 +142,9 @@ public class Categorias {
 
     @Override
     public String toString() {
-        return "Categorias [id=" + id + ", negocio=" + (negocio != null ? negocio.getId() : null) + ", padre="
-                + (padre != null ? padre.getId() : null) + ", nombre=" + nombre + ", slug=" + slug + ", descripcion="
-                + descripcion + ", urlImagen=" + urlImagen + ", icono=" + icono + ", orden=" + orden
-                + ", visibleTiendaOnline=" + visibleTiendaOnline + ", estaActivo=" + estaActivo + ", creadoEn="
-                + creadoEn + ", actualizadoEn=" + actualizadoEn + "]";
+        return "Categorias [id=" + id + ", negocio=" + (negocio != null ? negocio.getId() : null)
+                + ", nombre=" + nombre + ", slug=" + slug + ", descripcion=" + descripcion
+                + ", visibleTiendaOnline=" + visibleTiendaOnline + ", estaActivo=" + estaActivo
+                + ", creadoEn=" + creadoEn + ", actualizadoEn=" + actualizadoEn + "]";
     }
 }

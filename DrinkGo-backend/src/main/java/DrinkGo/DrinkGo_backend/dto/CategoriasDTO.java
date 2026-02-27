@@ -6,13 +6,9 @@ public class CategoriasDTO {
 
     private Long id;
     private Long negocioId;
-    private Long padreId;
     private String nombre;
     private String slug;
     private String descripcion;
-    private String urlImagen;
-    private String icono;
-    private Integer orden;
     private Boolean visibleTiendaOnline;
     private Boolean estaActivo;
     private LocalDateTime creadoEn;
@@ -22,18 +18,14 @@ public class CategoriasDTO {
     public CategoriasDTO() {
     }
 
-    public CategoriasDTO(Long id, Long negocioId, Long padreId, String nombre, String slug, String descripcion,
-            String urlImagen, String icono, Integer orden, Boolean visibleTiendaOnline, Boolean estaActivo,
+    public CategoriasDTO(Long id, Long negocioId, String nombre, String slug, String descripcion,
+            Boolean visibleTiendaOnline, Boolean estaActivo,
             LocalDateTime creadoEn, LocalDateTime actualizadoEn) {
         this.id = id;
         this.negocioId = negocioId;
-        this.padreId = padreId;
         this.nombre = nombre;
         this.slug = slug;
         this.descripcion = descripcion;
-        this.urlImagen = urlImagen;
-        this.icono = icono;
-        this.orden = orden;
         this.visibleTiendaOnline = visibleTiendaOnline;
         this.estaActivo = estaActivo;
         this.creadoEn = creadoEn;
@@ -55,14 +47,6 @@ public class CategoriasDTO {
 
     public void setNegocioId(Long negocioId) {
         this.negocioId = negocioId;
-    }
-
-    public Long getPadreId() {
-        return padreId;
-    }
-
-    public void setPadreId(Long padreId) {
-        this.padreId = padreId;
     }
 
     public String getNombre() {
@@ -87,30 +71,6 @@ public class CategoriasDTO {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
-    }
-
-    public String getUrlImagen() {
-        return urlImagen;
-    }
-
-    public void setUrlImagen(String urlImagen) {
-        this.urlImagen = urlImagen;
-    }
-
-    public String getIcono() {
-        return icono;
-    }
-
-    public void setIcono(String icono) {
-        this.icono = icono;
-    }
-
-    public Integer getOrden() {
-        return orden;
-    }
-
-    public void setOrden(Integer orden) {
-        this.orden = orden;
     }
 
     public Boolean getVisibleTiendaOnline() {

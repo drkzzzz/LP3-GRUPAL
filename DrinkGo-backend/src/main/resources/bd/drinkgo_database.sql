@@ -476,22 +476,16 @@ CREATE TABLE metodos_pago (
 CREATE TABLE categorias (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
-    padre_id BIGINT UNSIGNED NULL,
     nombre VARCHAR(150) NOT NULL,
     slug VARCHAR(150) NOT NULL,
     descripcion TEXT NULL,
-    url_imagen VARCHAR(500) NULL,
-    icono VARCHAR(50) NULL,
-    orden INT NOT NULL DEFAULT 0,
     visible_tienda_online TINYINT(1) NOT NULL DEFAULT 1,
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_cat_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    CONSTRAINT fk_cat_padre FOREIGN KEY (padre_id) REFERENCES categorias(id) ON DELETE SET NULL,
     UNIQUE KEY uk_cat_negocio_slug (negocio_id, slug),
     INDEX idx_cat_negocio (negocio_id),
-    INDEX idx_cat_padre (padre_id),
     INDEX idx_cat_activo (negocio_id, esta_activo)
 ) ENGINE=InnoDB COMMENT='Categorías de productos (RF-PRO-006..009)';
 
