@@ -4,6 +4,7 @@
  * CRUD completo de Marcas.
  */
 import { useState, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Award } from 'lucide-react';
 import { useMarcas } from '../../hooks/useMarcas';
 import { useDebounce } from '@/shared/hooks/useDebounce';
@@ -15,7 +16,8 @@ import { Modal } from '@/admin/components/ui/Modal';
 import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { MarcaForm } from '../forms/MarcaForm';
 
-export const MarcasTab = ({ negocioId }) => {
+export const MarcasTab = () => {
+  const { negocioId } = useOutletContext();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -151,6 +153,14 @@ export const MarcasTab = ({ negocioId }) => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Marcas</h1>
+        <p className="text-gray-600 mt-1">
+          Administración de marcas de productos, país de origen y logotipos
+        </p>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4">
         <Card className="!p-4 flex items-center gap-3">

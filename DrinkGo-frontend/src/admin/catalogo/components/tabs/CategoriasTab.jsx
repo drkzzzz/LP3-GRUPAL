@@ -4,6 +4,7 @@
  * CRUD completo de Categorías con tabla, búsqueda, modales.
  */
 import { useState, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, FolderTree, CheckCircle, XCircle } from 'lucide-react';
 import { useCategorias } from '../../hooks/useCategorias';
 import { useDebounce } from '@/shared/hooks/useDebounce';
@@ -15,7 +16,8 @@ import { Modal } from '@/admin/components/ui/Modal';
 import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { CategoriaForm } from '../forms/CategoriaForm';
 
-export const CategoriasTab = ({ negocioId }) => {
+export const CategoriasTab = () => {
+  const { negocioId } = useOutletContext();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -177,6 +179,14 @@ export const CategoriasTab = ({ negocioId }) => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Categorías</h1>
+        <p className="text-gray-600 mt-1">
+          Organización y clasificación de productos por categorías y subcategorías
+        </p>
+      </div>
+
       {/* Stats rápidos */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="!p-4 flex items-center gap-3">

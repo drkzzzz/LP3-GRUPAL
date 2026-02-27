@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Settings,
@@ -14,10 +14,26 @@ import {
   Menu,
   Wine,
   ChevronLeft,
+  ChevronDown,
   Truck,
   UserCircle,
+  FolderTree,
+  Award,
+  Ruler,
+  Gift,
+  Tag,
 } from 'lucide-react';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
+
+/* ─── Sub-items del menú Catálogo ─── */
+const CATALOGO_SUBITEMS = [
+  { to: '/admin/catalogo/productos', label: 'Productos', icon: Package },
+  { to: '/admin/catalogo/categorias', label: 'Categorías', icon: FolderTree },
+  { to: '/admin/catalogo/marcas', label: 'Marcas', icon: Award },
+  { to: '/admin/catalogo/unidades', label: 'Unidades', icon: Ruler },
+  { to: '/admin/catalogo/combos', label: 'Combos', icon: Gift },
+  { to: '/admin/catalogo/promociones', label: 'Promociones', icon: Tag },
+];
 
 const NAV_ITEMS = [
   {
@@ -36,9 +52,11 @@ const NAV_ITEMS = [
     label: 'Usuarios y Clientes',
   },
   {
-    to: '/admin/catalogo',
+    /* Catálogo es ahora un grupo colapsable, no un NavLink directo */
+    key: 'catalogo',
     icon: Package,
     label: 'Catálogo',
+    children: CATALOGO_SUBITEMS,
   },
   {
     to: '/admin/inventario',
@@ -75,8 +93,14 @@ const NAV_ITEMS = [
 export const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [catalogoOpen, setCatalogoOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, negocio, logout } = useAdminAuthStore();
+
+  /* Auto-expandir el grupo Catálogo si la ruta actual coincide */
+  const isCatalogoRoute = location.pathname.startsWith('/admin/catalogo');
+  const effectiveCatalogoOpen = catalogoOpen || isCatalogoRoute;
 
   const handleLogout = () => {
     logout();
@@ -102,23 +126,78 @@ export const AdminLayout = () => {
 
       {/* Navigation */}
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            onClick={() => setMobileOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-green-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-              }`
-            }
-          >
-            <item.icon size={20} className="shrink-0" />
-            {sidebarOpen && <span className="whitespace-nowrap">{item.label}</span>}
-          </NavLink>
-        ))}
+        {NAV_ITEMS.map((item) =>
+          item.children ? (
+            /* ─── Grupo colapsable (Catálogo) ─── */
+            <div key={item.key}>
+              <button
+                onClick={() => setCatalogoOpen((prev) => !prev)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isCatalogoRoute
+                    ? 'bg-green-600/20 text-green-400'
+                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`}
+              >
+                <item.icon size={20} className="shrink-0" />
+                {sidebarOpen && (
+                  <>
+                    <span className="whitespace-nowrap flex-1 text-left">{item.label}</span>
+                    <ChevronDown
+                      size={16}
+                      className={`shrink-0 transition-transform duration-200 ${
+                        effectiveCatalogoOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </>
+                )}
+              </button>
+              {sidebarOpen && (
+                <div
+                  className={`ml-3 pl-4 border-l border-gray-700 space-y-0.5 overflow-hidden transition-all duration-300 ease-in-out ${
+                    effectiveCatalogoOpen
+                      ? 'max-h-96 opacity-100 mt-1'
+                      : 'max-h-0 opacity-0 mt-0'
+                  }`}
+                >
+                  {item.children.map((sub) => (
+                    <NavLink
+                      key={sub.to}
+                      to={sub.to}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                          isActive
+                            ? 'bg-green-600 text-white'
+                            : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                        }`
+                      }
+                    >
+                      <sub.icon size={16} className="shrink-0" />
+                      <span className="whitespace-nowrap">{sub.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ─── Item normal ─── */
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-green-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`
+              }
+            >
+              <item.icon size={20} className="shrink-0" />
+              {sidebarOpen && <span className="whitespace-nowrap">{item.label}</span>}
+            </NavLink>
+          ),
+        )}
       </nav>
 
       {/* User Section */}

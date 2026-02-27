@@ -5,6 +5,7 @@
  * Patrón copiado de Negocios.jsx del SuperAdmin (adaptado a Admin).
  */
 import { useState, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -31,7 +32,8 @@ import { StatCard } from '@/admin/components/ui/StatCard';
 import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { ProductoForm } from '../forms/ProductoForm';
 
-export const ProductosTab = ({ negocioId }) => {
+export const ProductosTab = () => {
+  const { negocioId } = useOutletContext();
   /* ─── State ─── */
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -261,6 +263,14 @@ export const ProductosTab = ({ negocioId }) => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
+        <p className="text-gray-600 mt-1">
+          Gestión de productos del catálogo, precios, stock y disponibilidad
+        </p>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total productos" value={stats.total} icon={Package} />

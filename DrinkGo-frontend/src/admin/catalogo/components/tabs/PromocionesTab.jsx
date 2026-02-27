@@ -4,6 +4,7 @@
  * CRUD de Promociones con vista de condiciones.
  */
 import { useState, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Eye, Tag, Percent, DollarSign } from 'lucide-react';
 import { usePromociones } from '../../hooks/usePromociones';
 import { useDebounce } from '@/shared/hooks/useDebounce';
@@ -22,7 +23,8 @@ const TIPO_BADGE = {
   monto_fijo: 'success',
 };
 
-export const PromocionesTab = ({ negocioId }) => {
+export const PromocionesTab = () => {
+  const { negocioId } = useOutletContext();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -210,6 +212,14 @@ export const PromocionesTab = ({ negocioId }) => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Promociones</h1>
+        <p className="text-gray-600 mt-1">
+          Gestión de promociones, descuentos y condiciones especiales de venta
+        </p>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="!p-4 flex items-center gap-3">

@@ -4,6 +4,7 @@
  * CRUD de Combos con vista de detalles (productos del combo).
  */
 import { useState, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Eye, Gift, Percent } from 'lucide-react';
 import { useCombos } from '../../hooks/useCombos';
 import { useProductos } from '../../hooks/useProductos';
@@ -17,7 +18,8 @@ import { Modal } from '@/admin/components/ui/Modal';
 import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { ComboForm } from '../forms/ComboForm';
 
-export const CombosTab = ({ negocioId }) => {
+export const CombosTab = () => {
+  const { negocioId } = useOutletContext();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -204,6 +206,14 @@ export const CombosTab = ({ negocioId }) => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Combos</h1>
+        <p className="text-gray-600 mt-1">
+          Creación y gestión de combos de productos con precios especiales
+        </p>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="!p-4 flex items-center gap-3">
