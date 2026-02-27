@@ -249,7 +249,7 @@ El SuperAdmin tiene acceso completo a la gestión de la plataforma SaaS, control
 <a name="admin"></a>
 ## 🏪 PANEL ADMIN - GESTIÓN DE NEGOCIO
 
-**Total de Módulos: 15**
+**Total de Módulos: 10**
 
 El Admin gestiona completamente su licorería (negocio), con acceso a todas las funcionalidades operativas según su plan de suscripción.
 
@@ -280,9 +280,9 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 
 ---
 
-### ⚙️ **MÓDULO 2: CONFIGURACIÓN DEL NEGOCIO**
-**Descripción:** Configuración general del negocio y branding  
-**RF:** RF-ADM-001, RF-ADM-002, RF-ADM-022, RF-ADM-023, RF-ADM-025
+### ⚙️ **MÓDULO 2: CONFIGURACIÓN DEL NEGOCIO, SEDES Y STOREFRONT**
+**Descripción:** Configuración general del negocio, sedes, branding y tienda online  
+**RF:** RF-ADM-001, RF-ADM-002, RF-ADM-004, RF-ADM-006, RF-ADM-007, RF-ADM-008, RF-ADM-009, RF-ADM-010, RF-ADM-022, RF-ADM-023, RF-ADM-025, RF-ECO-001 a RF-ECO-005, RF-ECO-017
 
 **Componentes/Vistas:**
 - 🏢 **Datos del Negocio**
@@ -290,6 +290,7 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
   - Dirección fiscal
   - Teléfono, email, website
   - Logo y branding
+  - Ver plan de suscripción actual
   
 - 🎨 **Branding**
   - Logo del negocio (múltiples versiones)
@@ -309,21 +310,7 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
   - Efectivo, tarjetas, transferencias, billeteras digitales
   - Configuración de pasarelas de pago online
   - Comisiones por método
-
-**Acciones:**
-- Editar datos del negocio
-- Subir logo/imágenes
-- Configurar parámetros
-- Gestionar métodos de pago
-- Ver plan de suscripción actual
-
----
-
-### 🏪 **MÓDULO 3: CONFIGURACIÓN DE SEDES**
-**Descripción:** Configuración operativa de las sedes del negocio  
-**RF:** RF-ADM-004, RF-ADM-006, RF-ADM-007, RF-ADM-008, RF-ADM-009, RF-ADM-010
-
-**Componentes/Vistas:**
+  
 - 📋 **Lista de Sedes**
   - Tabla con todas las sedes del negocio (solo lectura de estructura)
   - Estado (activa/inactiva)
@@ -370,22 +357,88 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
   - Número, capacidad
   - Estado (disponible, ocupada, reservada)
   - Ubicación (interior, exterior, barra)
+  
+- 🛒 **Configuración de Tienda Online (StoreFront)**
+  - Nombre de la tienda online
+  - Slug/URL de la tienda (ej: mitienda.drinkgo.pe)
+  - Dominio personalizado (opcional)
+  - Logo y favicon
+  - Banner principal
+  - Colores y tema (personalización visual)
+  - Descripción SEO
+  - Keywords
+  - Estado (activa/inactiva)
+  
+- 🎨 **Personalización Visual de StoreFront**
+  - Tema/Plantilla
+  - Colores corporativos (primario, secundario, enlaces, botones)
+  - Tipografía
+  - Banner de inicio
+  - Slider de imágenes
+  - Secciones destacadas
+  
+- 💳 **Métodos de Pago Online**
+  - Configurar pasarelas de pago
+  - Mercado Pago, Niubiz, PayPal
+  - Yape/Plin (código QR)
+  - Transferencia bancaria
+  - Pago contra entrega
+  - Configurar credenciales API
+  
+- 🚚 **Métodos de Entrega Online**
+  - Delivery (con zonas configuradas)
+  - Recojo en tienda
+  - Configurar costos y tiempos estimados
+  
+- 🕐 **Horarios de Venta Online**
+  - Configurar horarios de atención online
+  - Diferentes a horarios físicos
+  - Horarios especiales
+  
+- 📄 **Páginas del CMS**
+  - CRUD de páginas (Inicio, Catálogo, Nosotros, Contacto, Términos y condiciones, Política de privacidad, Política de devoluciones, FAQ)
+  - Editor de contenido (WYSIWYG o Markdown)
+  - Slug de la página
+  - Estado (publicada/borrador)
+  
+- 📦 **Productos Visibles en StoreFront**
+  - Gestionar qué productos mostrar
+  - Productos destacados
+  - Orden de visualización
+  - Categorías visibles
+  
+- 🔞 **Verificación de Edad en StoreFront**
+  - Activar/Desactivar verificación
+  - Mensaje de advertencia
+  - Método de verificación (checkbox, fecha de nacimiento)
 
 **Acciones:**
-- **Ver lista de sedes** (creadas por SuperAdmin)
-- **Editar información de sede** (datos operativos)
+- Editar datos del negocio
+- Subir logo/imágenes
+- Configurar parámetros del sistema
+- Gestionar métodos de pago
+- Ver plan de suscripción actual
+- Ver lista de sedes (creadas por SuperAdmin)
+- Editar información de sede (datos operativos)
 - Gestionar almacenes
-- Configurar horarios
+- Configurar horarios de operación
 - Definir restricciones de alcohol
 - Administrar zonas de delivery
 - Gestionar mesas
-- **Solicitar nueva sede a SuperAdmin** (opcional: formulario de solicitud)
+- Solicitar nueva sede a SuperAdmin
+- Configurar tienda online
+- Personalizar diseño de storefront
+- Configurar métodos de pago online
+- Configurar métodos de entrega
+- Gestionar páginas CMS
+- Activar/Desactivar tienda online
+- Gestionar productos visibles
 
 ---
 
-### 👥 **MÓDULO 4: USUARIOS Y SEGURIDAD**
-**Descripción:** Gestión de usuarios, roles y permisos del negocio  
-**RF:** RF-ADM-011 a RF-ADM-021
+### 👥 **MÓDULO 3: SEGURIDAD, USUARIOS Y CLIENTES**
+**Descripción:** Gestión de usuarios, roles, permisos y base de clientes del negocio  
+**RF:** RF-ADM-011 a RF-ADM-021, RF-VTA-023, RF-ECO-017
 
 **Componentes/Vistas:**
 - 👤 **Lista de Usuarios**
@@ -427,6 +480,37 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
   - Registro de acciones de los usuarios
   - Filtros por usuario, fecha, acción
   - Trazabilidad completa
+  
+- 📋 **Lista de Clientes**
+  - Tabla con todos los clientes
+  - Búsqueda por DNI/RUC, nombre, email
+  - Filtros por tipo (persona, empresa), estado
+  - Indicadores de cliente frecuente
+  
+- ➕ **Crear/Editar Cliente**
+  - Tipo de documento (DNI, RUC, Carnet de extranjería, Pasaporte)
+  - Número de documento
+  - Nombres y apellidos / Razón social
+  - Email
+  - Teléfono
+  - Fecha de nacimiento (para validación de edad)
+  - Dirección
+  - Distrito, provincia, departamento
+  - Direcciones adicionales (para delivery)
+  - Estado (activo/inactivo)
+  
+- 🔍 **Detalle de Cliente**
+  - Información completa
+  - Historial de compras
+  - Total gastado
+  - Productos preferidos
+  - Última compra
+  - Preferencias de entrega
+  
+- 📧 **Gestión de Comunicaciones**
+  - Enviar email/SMS
+  - Plantillas de mensajes
+  - Historial de comunicaciones
 
 **Acciones:**
 - Registrar nuevo usuario
@@ -438,12 +522,18 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 - Asignar permisos a rol
 - Ver logs de auditoría
 - Resetear contraseña
+- Crear cliente
+- Editar cliente
+- Desactivar cliente
+- Ver historial de compras
+- Enviar comunicaciones
+- Exportar lista de clientes
 
 ---
 
-### 📦 **MÓDULO 5: CATÁLOGO DE PRODUCTOS**
-**Descripción:** Gestión completa del catálogo de productos  
-**RF:** RF-PRO-001 a RF-PRO-022
+### 📦 **MÓDULO 4: CATÁLOGO DE PRODUCTOS, DESCUENTOS Y PROMOCIONES**
+**Descripción:** Gestión completa del catálogo de productos, promociones y descuentos  
+**RF:** RF-PRO-001 a RF-PRO-022, RF-VTA-005
 
 **Componentes/Vistas:**
 - 📋 **Lista de Productos**
@@ -538,6 +628,55 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
   - Reporte de errores
   - Vista previa antes de importar
   - Confirmar importación
+  
+- 📋 **Lista de Promociones**
+  - Todas las promociones
+  - Filtros por estado (activa, programada, finalizada)
+  - Filtros por tipo
+  
+- ➕ **Crear Promoción**
+  - Nombre de la promoción
+  - Descripción
+  - Tipo de descuento:
+    - Porcentaje
+    - Monto fijo
+    - 2x1, 3x2
+    - Regalo al comprar
+    - Descuento escalonado por volumen
+  - Valor del descuento
+  - Vigencia (desde/hasta)
+  - Restricciones:
+    - Días de la semana
+    - Horarios
+    - Sedes aplicables
+    - Canales (POS, online, ambos)
+  - Aplicable a:
+    - Todos los productos
+    - Categorías específicas
+    - Productos específicos
+    - Marcas específicas
+  - Cantidad máxima de usos
+  - Usos por cliente
+  - Monto mínimo de compra
+  - Estado (activa/inactiva)
+  
+- 🎯 **Condiciones de Promoción**
+  - Configurar reglas avanzadas
+  - Tipo de entidad (producto, categoría, marca)
+  - Cantidad mínima
+  - Producto regalo (si aplica)
+  - Combinable con otras promociones
+  
+- 🔍 **Detalle de Promoción**
+  - Información completa
+  - Estadísticas de uso
+  - Ventas generadas
+  - Clientes que lo usaron
+  
+- 📊 **Análisis de Promociones**
+  - Promociones más efectivas
+  - ROI de promociones
+  - Incremento de ventas
 
 **Acciones:**
 - Crear producto
@@ -553,10 +692,16 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 - Importar productos masivamente
 - Exportar catálogo (Excel, CSV)
 - Configurar visibilidad en storefront
+- Crear promoción
+- Editar promoción
+- Activar/Desactivar promociones
+- Configurar reglas de promoción
+- Ver estadísticas de promociones
+- Exportar reporte de promociones
 
 ---
 
-### 📊 **MÓDULO 6: GESTIÓN DE INVENTARIO**
+### 📊 **MÓDULO 5: GESTIÓN DE INVENTARIO**
 **Descripción:** Control de stock, lotes FIFO, movimientos y alertas  
 **RF:** RF-INV-001 a RF-INV-009
 
@@ -668,7 +813,7 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 
 ---
 
-### 🏭 **MÓDULO 7: PROVEEDORES Y COMPRAS**
+### 🏭 **MÓDULO 6: PROVEEDORES Y COMPRAS**
 **Descripción:** Gestión de proveedores, órdenes de compra y recepción  
 **RF:** RF-COP-001 a RF-COP-012
 
@@ -784,9 +929,9 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 
 ---
 
-### 💰 **MÓDULO 8: VENTAS Y PUNTO DE VENTA (POS)**
-**Descripción:** Sistema de ventas, cajas registradoras y punto de venta  
-**RF:** RF-VTA-001 a RF-VTA-014
+### 💰 **MÓDULO 7: VENTAS, PUNTO DE VENTA (POS) Y PEDIDOS**
+**Descripción:** Sistema de ventas, cajas registradoras, punto de venta, pedidos y devoluciones  
+**RF:** RF-VTA-001 a RF-VTA-021, RF-FIN-008 a RF-FIN-012
 
 **Componentes/Vistas:**
 - 🖥️ **Punto de Venta (POS)**
@@ -898,32 +1043,7 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
   - Productos más vendidos
   - Ventas por método de pago
   - Ventas por hora
-
-**Acciones:**
-- Registrar venta
-- Buscar producto
-- Agregar al carrito
-- Aplicar descuento
-- Seleccionar cliente
-- Emitir comprobante
-- Procesar pago múltiple
-- Verificar edad del cliente
-- Suspender venta
-- Recuperar venta
-- Realizar devolución
-- Abrir caja
-- Cerrar caja
-- Registrar movimiento de caja
-- Reimprimir comprobante
-- Ver reportes de ventas
-
----
-
-### 🛍️ **MÓDULO 9: PEDIDOS (DELIVERY/RECOJO/MESAS)**
-**Descripción:** Gestión de pedidos online, delivery, para llevar y mesas  
-**RF:** RF-VTA-015 a RF-VTA-021
-
-**Componentes/Vistas:**
+  
 - 📋 **Lista de Pedidos**
   - Todos los pedidos del negocio
   - Filtros por:
@@ -1003,7 +1123,7 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
   - Notificar cliente cuando esté listo
   - Marcar como entregado
   
-- ❌ **Cancelaciones y Devoluciones**
+- ❌ **Cancelaciones de Pedidos**
   - Cancelar pedido
   - Motivo de cancelación
   - Gestionar reembolso
@@ -1016,70 +1136,87 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
   - Pedidos cancelados (análisis de motivos)
   - Productos más pedidos
   - Horarios pico
+  
+- 📋 **Lista de Devoluciones**
+  - Todas las devoluciones
+  - Estados (solicitada, aprobada, rechazada, completada)
+  - Filtros por fecha, cliente, estado
+  
+- 📝 **Registrar Devolución**
+  - Buscar venta original
+  - Seleccionar productos a devolver
+  - Cantidad
+  - Motivo (producto defectuoso, cambio de opinión, error en pedido, etc.)
+  - Tipo de solución (reembolso, cambio de producto, nota de crédito)
+  - Observaciones
+  - Adjuntar imágenes (opcional)
+  
+- 🔍 **Detalle de Devolución**
+  - Información completa
+  - Venta original
+  - Productos devueltos
+  - Cliente
+  - Motivo
+  - Estado actual
+  - Responsable de la gestión
+  - Historial de cambios
+  
+- ✅ **Aprobar/Rechazar Devolución**
+  - Revisión de la solicitud
+  - Comentarios
+  - Acción: aprobar/rechazar
+  
+- 💵 **Gestionar Reembolso**
+  - Método de reembolso (efectivo, transferencia, voucher)
+  - Monto a reembolsar
+  - Descuento de comisiones (si aplica)
+  - Referencia de pago
+  - Comprobante de reembolso
+  
+- 📦 **Reintegrar al Inventario**
+  - Productos devueltos
+  - Condición (nuevo, usado, dañado)
+  - Almacén de destino
+  - Cantidad a reintegrar
+  - Ajuste automático de inventario
 
 **Acciones:**
+- Registrar venta
+- Buscar producto
+- Agregar al carrito
+- Aplicar descuento
+- Seleccionar cliente
+- Emitir comprobante
+- Procesar pago múltiple
+- Verificar edad del cliente
+- Suspender venta
+- Recuperar venta
+- Realizar devolución de venta
+- Abrir caja
+- Cerrar caja
+- Registrar movimiento de caja
+- Reimprimir comprobante
+- Ver reportes de ventas
 - Ver todos los pedidos
 - Crear pedido manual
 - Confirmar pedido
-- Cambiar estado
+- Cambiar estado de pedido
 - Asignar repartidor
 - Ver tracking en tiempo real
 - Gestionar mesas
 - Abrir/cerrar cuenta de mesa
 - Dividir cuenta
 - Cancelar pedido
-- Gestionar devolución
-- Ver reportes
+- Registrar devolución
+- Aprobar/Rechazar devolución
+- Gestionar reembolso
+- Reintegrar productos al inventario
+- Ver historial de devoluciones
+- Exportar reporte de devoluciones
 
 ---
 
-### 👥 **MÓDULO 10: CLIENTES**
-**Descripción:** Gestión de la base de clientes del negocio  
-**RF:** RF-VTA-023, RF-ECO-017
-
-**Componentes/Vistas:**
-- 📋 **Lista de Clientes**
-  - Tabla con todos los clientes
-  - Búsqueda por DNI/RUC, nombre, email
-  - Filtros por tipo (persona, empresa), estado
-  - Indicadores de cliente frecuente
-  
-- ➕ **Crear/Editar Cliente**
-  - Tipo de documento (DNI, RUC, Carnet de extranjería, Pasaporte)
-  - Número de documento
-  - Nombres y apellidos / Razón social
-  - Email
-  - Teléfono
-  - Fecha de nacimiento (para validación de edad)
-  - Dirección
-  - Distrito, provincia, departamento
-  - Direcciones adicionales (para delivery)
-  - Estado (activo/inactivo)
-  
-- 🔍 **Detalle de Cliente**
-  - Información completa
-  - Historial de compras
-  - Total gastado
-  - Productos preferidos
-  - Última compra
-  - Preferencias de entrega
-  
-- 📧 **Gestión de Comunicaciones**
-  - Enviar email/SMS
-  - Plantillas de mensajes
-  - Historial de comunicaciones
-
-**Acciones:**
-- Crear cliente
-- Editar cliente
-- Desactivar cliente
-- Ver historial de compras
-- Enviar comunicaciones
-- Exportar lista de clientes
-
----
-
-### 📄 **MÓDULO 11: FACTURACIÓN ELECTRÓNICA (SUNAT)**
+### � **MÓDULO 8: FACTURACIÓN ELECTRÓNICA (SUNAT)**
 **Descripción:** Emisión y gestión de comprobantes electrónicos  
 **RF:** RF-FIN-001 a RF-FIN-007
 
@@ -1165,65 +1302,7 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 
 ---
 
-### ↩️ **MÓDULO 12: DEVOLUCIONES Y REEMBOLSOS**
-**Descripción:** Gestión de devoluciones de clientes  
-**RF:** RF-FIN-008 a RF-FIN-012
-
-**Componentes/Vistas:**
-- 📋 **Lista de Devoluciones**
-  - Todas las devoluciones
-  - Estados (solicitada, aprobada, rechazada, completada)
-  - Filtros por fecha, cliente, estado
-  
-- 📝 **Registrar Devolución**
-  - Buscar venta original
-  - Seleccionar productos a devolver
-  - Cantidad
-  - Motivo (producto defectuoso, cambio de opinión, error en pedido, etc.)
-  - Tipo de solución (reembolso, cambio de producto, nota de crédito)
-  - Observaciones
-  - Adjuntar imágenes (opcional)
-  
-- 🔍 **Detalle de Devolución**
-  - Información completa
-  - Venta original
-  - Productos devueltos
-  - Cliente
-  - Motivo
-  - Estado actual
-  - Responsable de la gestión
-  - Historial de cambios
-  
-- ✅ **Aprobar/Rechazar Devolución**
-  - Revisión de la solicitud
-  - Comentarios
-  - Acción: aprobar/rechazar
-  
-- 💵 **Gestionar Reembolso**
-  - Método de reembolso (efectivo, transferencia, voucher)
-  - Monto a reembolsar
-  - Descuento de comisiones (si aplica)
-  - Referencia de pago
-  - Comprobante de reembolso
-  
-- 📦 **Reintegrar al Inventario**
-  - Productos devueltos
-  - Condición (nuevo, usado, dañado)
-  - Almacén de destino
-  - Cantidad a reintegrar
-  - Ajuste automático de inventario
-
-**Acciones:**
-- Registrar devolución
-- Aprobar/Rechazar
-- Gestionar reembolso
-- Reintegrar productos
-- Ver historial
-- Exportar reporte de devoluciones
-
----
-
-### 💼 **MÓDULO 13: GASTOS E INGRESOS**
+### 💼 **MÓDULO 9: GASTOS E INGRESOS**
 **Descripción:** Control de gastos operativos y otros ingresos  
 **RF:** RF-FIN-013 a RF-FIN-016, RF-VTA-010
 
@@ -1302,171 +1381,7 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 
 ---
 
-### 🎁 **MÓDULO 14: PROMOCIONES Y DESCUENTOS**
-**Descripción:** Gestión de promociones, descuentos y reglas  
-**RF:** RF-PRO-021, RF-PRO-022, RF-VTA-005
-
-**Componentes/Vistas:**
-- 📋 **Lista de Promociones**
-  - Todas las promociones
-  - Filtros por estado (activa, programada, finalizada)
-  - Filtros por tipo
-  
-- ➕ **Crear Promoción**
-  - Nombre de la promoción
-  - Descripción
-  - Tipo de descuento:
-    - Porcentaje
-    - Monto fijo
-    - 2x1, 3x2
-    - Regalo al comprar
-    - Descuento escalonado por volumen
-  - Valor del descuento
-  - Vigencia (desde/hasta)
-  - Restricciones:
-    - Días de la semana
-    - Horarios
-    - Sedes aplicables
-    - Canales (POS, online, ambos)
-  - Aplicable a:
-    - Todos los productos
-    - Categorías específicas
-    - Productos específicos
-    - Marcas específicas
-  - Cantidad máxima de usos
-  - Usos por cliente
-  - Monto mínimo de compra
-  - Estado (activa/inactiva)
-  
-- 🎯 **Condiciones de Promoción**
-  - Configurar reglas avanzadas
-  - Tipo de entidad (producto, categoría, marca)
-  - Cantidad mínima
-  - Producto regalo (si aplica)
-  - Combinable con otras promociones
-  
-- 🔍 **Detalle de Promoción**
-  - Información completa
-  - Estadísticas de uso
-  - Ventas generadas
-  - Clientes que lo usaron
-  
-- 📊 **Análisis de Promociones**
-  - Promociones más efectivas
-  - ROI de promociones
-  - Incremento de ventas
-
-**Acciones:**
-- Crear promoción
-- Editar promoción
-- Activar/Desactivar
-- Configurar reglas
-- Ver estadísticas
-- Exportar reporte
-
----
-
-### 🛒 **MÓDULO 15: TIENDA ONLINE (STOREFRONT)**
-**Descripción:** Configuración y gestión de la tienda online  
-**RF:** RF-ECO-001 a RF-ECO-005, RF-ECO-017
-
-**Componentes/Vistas:**
-- ⚙️ **Configuración General**
-  - Nombre de la tienda online
-  - Slug/URL de la tienda (ej: mitienda.drinkgo.pe)
-  - Dominio personalizado (opcional)
-  - Logo y favicon
-  - Banner principal
-  - Colores y tema (personalización visual)
-  - Descripción SEO
-  - Keywords
-  - Estado (activa/inactiva)
-  
-- 🎨 **Personalización Visual**
-  - Tema/Plantilla
-  - Colores corporativos:
-    - Color primario
-    - Color secundario
-    - Color de enlaces
-    - Color de botones
-  - Tipografía
-  - Banner de inicio
-  - Slider de imágenes
-  - Secciones destacadas
-  
-- 💳 **Métodos de Pago Online**
-  - Configurar pasarelas de pago
-  - Mercado Pago
-  - Niubiz
-  - PayPal
-  - Yape/Plin (código QR)
-  - Transferencia bancaria
-  - Pago contra entrega
-  - Configurar credenciales API
-  
-- 🚚 **Métodos de Entrega**
-  - Delivery (con zonas configuradas)
-  - Recojo en tienda
-  - Configurar costos
-  - Tiempos estimados
-  
-- 🕐 **Horarios de Venta Online**
-  - Configurar horarios de atención
-  - Diferentes a horarios físicos
-  - Horarios especiales
-  
-- 📄 **Páginas del CMS**
-  - CRUD de páginas
-  - Tipos:
-    - Inicio
-    - Catálogo
-    - Nosotros
-    - Contacto
-    - Términos y condiciones
-    - Política de privacidad
-    - Política de devoluciones
-    - Preguntas frecuentes
-  - Editor de contenido (WYSIWYG o Markdown)
-  - Slug de la página
-  - Estado (publicada/borrador)
-  
-- 📦 **Productos Visibles**
-  - Gestionar qué productos mostrar
-  - Productos destacados
-  - Orden de visualización
-  - Categorías visibles
-  
-- 🔞 **Verificación de Edad**
-  - Activar/Desactivar verificación
-  - Mensaje de advertencia
-  - Método de verificación (checkbox, fecha de nacimiento)
-  
-- 👥 **Clientes de Tienda Online**
-  - Registros desde storefront
-  - Activar/Desactivar registro
-  - Campos requeridos
-  - Validación de email
-  
-- 📊 **Analítica de Tienda Online**
-  - Visitas
-  - Tasa de conversión
-  - Productos más vistos
-  - Carritos abandonados
-  - Ventas online vs presenciales
-
-**Acciones:**
-- Configurar tienda
-- Personalizar diseño
-- Configurar métodos de pago
-- Configurar métodos de entrega
-- Gestionar páginas
-- Activar/Desactivar tienda
-- Ver analítica
-- Gestionar productos visibles
-
----
-
-### 📊 **MÓDULO 16: REPORTES Y ANALÍTICA**
+### 📊 **MÓDULO 10: REPORTES Y ANALÍTICA**
 **Descripción:** Reportes avanzados y analítica del negocio  
 **RF:** RF-ECO-018 a RF-ECO-025
 
@@ -1573,7 +1488,7 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 | ROL | CANTIDAD | ENFOQUE |
 |-----|----------|---------|
 | **SUPERADMIN** | **6 módulos** | Gestión de plataforma SaaS, negocios y facturación de suscripciones |
-| **ADMIN** | **16 módulos** | Gestión completa del negocio y operaciones diarias |
+| **ADMIN** | **10 módulos** | Gestión completa del negocio y operaciones diarias |
 
 ---
 
@@ -1612,19 +1527,15 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 
 ### 🚀 MÓDULOS EXCLUSIVOS DE ADMIN
 
-1. Configuración de Sedes (operativa, no creación)
-2. Catálogo de Productos
-3. Gestión de Inventario
-4. Proveedores y Compras
-5. Ventas y POS
-6. Pedidos (Delivery/Recojo/Mesas)
-7. Clientes
-8. Facturación Electrónica (SUNAT)
-9. Devoluciones
-10. Gastos e Ingresos
-11. Promociones y Descuentos
-12. Tienda Online
-13. Reportes Operativos
+1. Configuración del Negocio, Sedes y StoreFront
+2. Seguridad, Usuarios y Clientes
+3. Catálogo de Productos, Descuentos y Promociones
+4. Gestión de Inventario
+5. Proveedores y Compras
+6. Ventas, Punto de Venta (POS) y Pedidos
+7. Facturación Electrónica (SUNAT)
+8. Gastos e Ingresos
+9. Reportes y Analítica
 
 ---
 
@@ -1662,21 +1573,19 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 
 **FASE 2 - MVP (Admin):**
 1. Dashboard Negocio
-2. Productos
-3. Inventario
-4. Ventas/POS
+2. Catálogo de Productos, Descuentos y Promociones
+3. Gestión de Inventario
+4. Ventas, Punto de Venta (POS) y Pedidos
 
 **FASE 3 - Extensión:**
-1. Proveedores y Compras
-2. Clientes
-3. Pedidos
-4. Facturación Electrónica
+1. Configuración del Negocio, Sedes y StoreFront
+2. Seguridad, Usuarios y Clientes
+3. Proveedores y Compras
+4. Facturación Electrónica (SUNAT)
 
 **FASE 4 - Avanzado:**
-1. Tienda Online
-2. Reportes Avanzados
-3. Promociones
-4. Analítica
+1. Gastos e Ingresos
+2. Reportes y Analítica
 
 ---
 
@@ -1684,9 +1593,9 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
 
 Esta estructura modular proporciona una separación clara entre:
 - **Gestión de Plataforma (SuperAdmin):** 6 módulos para administrar el SaaS
-- **Gestión de Negocio (Admin):** 16 módulos para operar la licorería
+- **Gestión de Negocio (Admin):** 10 módulos para operar la licorería
 
-Cada módulo tiene responsabilidades bien definidas y está alineado con los requerimientos funcionales del sistema. Esta organización facilita el desarrollo incremental, el mantenimiento y la escalabilidad del frontend.
+Cada módulo tiene responsabilidades bien definidas y está alineado con los requerimientos funcionales del sistema. La consolidación de módulos relacionados facilita el desarrollo, reduce la complejidad de navegación y mejora la experiencia del usuario, manteniendo todas las funcionalidades requeridas.
 
 ---
 
