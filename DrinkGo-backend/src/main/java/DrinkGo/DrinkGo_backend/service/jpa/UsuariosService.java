@@ -46,6 +46,10 @@ public class UsuariosService implements IUsuariosService {
         return repoUsuarios.findById(id);
     }
 
+    public Optional<Usuarios> buscarPorEmail(String email) {
+        return repoUsuarios.findByEmailWithNegocio(email);
+    }
+
     public void eliminar(Long id) {
         repoUsuarios.deleteById(id);
     }
