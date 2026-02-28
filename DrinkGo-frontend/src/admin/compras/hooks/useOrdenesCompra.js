@@ -129,26 +129,40 @@ export const useOrdenesCompra = (negocioId) => {
   /* ─── Mutation: cambiar estado de orden (recibida / cancelada) ─── */
   const changeEstado = useMutation({
     mutationFn: async ({ orden, nuevoEstado }) => {
-      return ordenesCompraService.update({
+      // Asegurar que todos los campos required del backend están presentes
+      const payload = {
         id: orden.id,
         negocio: { id: orden.negocio?.id || negocioId },
         numeroOrden: orden.numeroOrden,
-        proveedor: orden.proveedor ? { id: orden.proveedor.id } : null,
-        sede: orden.sede ? { id: orden.sede.id } : null,
-        almacen: orden.almacen ? { id: orden.almacen.id } : null,
+        proveedor: { id: orden.proveedor?.id },
+        sede: { id: orden.sede?.id },
+        almacen: { id: orden.almacen?.id },
         estado: nuevoEstado,
-        subtotal: orden.subtotal,
-        impuestos: orden.impuestos,
-        total: orden.total,
-        notas: orden.notas,
-      });
+        subtotal: orden.subtotal || 0,
+        impuestos: orden.impuestos || 0,
+        total: orden.total || 0,
+        fechaOrden: orden.fechaOrden,
+        notas: orden.notas || '',
+      };
+
+      // Agregar campos opcionales si existen
+      if (orden.usuario?.id) {
+        payload.usuario = { id: orden.usuario.id };
+      }
+      if (orden.creadoPor?.id) {
+        payload.creadoPor = { id: orden.creadoPor.id };
+      }
+
+      return ordenesCompraService.update(payload);
     },
     onSuccess: (_, { nuevoEstado }) => {
       queryClient.invalidateQueries({ queryKey: ['ordenes-compra'] });
-      const label = nuevoEstado === 'cancelada' ? 'cancelada' : 'actualizada';
+      queryClient.invalidateQueries({ queryKey: ['detalle-ordenes-compra'] });
+      const label = nuevoEstado === 'cancelada' ? 'cancelada' : 'recibida';
       message.success(`Orden ${label} exitosamente`);
     },
     onError: (err) => {
+      console.error('Error al cambiar estado:', err.response?.data);
       message.error(err.response?.data?.message || 'Error al cambiar estado de la orden');
     },
   });

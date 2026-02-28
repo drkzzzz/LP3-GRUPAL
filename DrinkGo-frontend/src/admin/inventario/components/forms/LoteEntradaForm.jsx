@@ -118,6 +118,11 @@ export const LoteEntradaForm = ({
         />
       </div>
 
+      {/* Helper text */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800">
+        <strong>Nota:</strong> La cantidad recibida es el número de <strong>unidades del producto</strong> (botellas, cajas, etc.) que contiene este lote, no la cantidad de lotes.
+      </div>
+
       {/* Fecha de vencimiento */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input

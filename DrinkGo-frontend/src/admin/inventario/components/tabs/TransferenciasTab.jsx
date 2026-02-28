@@ -18,6 +18,7 @@ import {
 import { useMovimientosInventario } from '../../hooks/useMovimientosInventario';
 import { useAlmacenes } from '../../hooks/useAlmacenes';
 import { useProductosInventario } from '../../hooks/useProductosInventario';
+import { useStockInventario } from '../../hooks/useStockInventario';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { formatDateTime } from '@/shared/utils/formatters';
@@ -46,8 +47,7 @@ export const TransferenciasTab = () => {
   /* ─── Data hooks ─── */
   const { movimientos, isLoading, createMovimiento, isCreating } = useMovimientosInventario(negocioId);
   const { almacenes } = useAlmacenes(negocioId);
-  const { productos } = useProductosInventario(negocioId);
-
+  const { productos } = useProductosInventario(negocioId);  const { stock, createStock, updateStock } = useStockInventario(negocioId);
   /* ─── Filtrar solo transferencias ─── */
   const transferencias = useMemo(() => {
     return movimientos
@@ -88,8 +88,65 @@ export const TransferenciasTab = () => {
 
   /* ─── Handlers ─── */
   const handleCreate = async (data) => {
-    await createMovimiento(data);
-    setIsCreateOpen(false);
+    try {
+      // 1. Crear el movimiento de transferencia
+      await createMovimiento(data);
+
+      // 2. Sincronizar stock en almacén ORIGEN (restar)
+      const stockOrigen = stock.find(
+        (s) => s.producto?.id === data.producto.id && s.almacen?.id === data.almacenOrigen.id
+      );
+
+      const cantidad = Number(data.cantidad);
+
+      if (stockOrigen) {
+        const nuevaCantidadOrigen = Math.max(0, Number(stockOrigen.cantidadActual || 0) - cantidad);
+        await updateStock({
+          id: stockOrigen.id,
+          negocio: data.negocio,
+          producto: data.producto,
+          almacen: data.almacenOrigen,
+          cantidadActual: nuevaCantidadOrigen,
+          cantidadDisponible: nuevaCantidadOrigen,
+          cantidadReservada: Number(stockOrigen.cantidadReservada || 0),
+          costoPromedio: Number(stockOrigen.costoPromedio || 0),
+        });
+      }
+
+      // 3. Sincronizar stock en almacén DESTINO (sumar)
+      const stockDestino = stock.find(
+        (s) => s.producto?.id === data.producto.id && s.almacen?.id === data.almacenDestino.id
+      );
+
+      if (stockDestino) {
+        const nuevaCantidadDestino = Number(stockDestino.cantidadActual || 0) + cantidad;
+        await updateStock({
+          id: stockDestino.id,
+          negocio: data.negocio,
+          producto: data.producto,
+          almacen: data.almacenDestino,
+          cantidadActual: nuevaCantidadDestino,
+          cantidadDisponible: nuevaCantidadDestino,
+          cantidadReservada: Number(stockDestino.cantidadReservada || 0),
+          costoPromedio: Number(stockDestino.costoPromedio || 0),
+        });
+      } else {
+        // Crear stock en destino si no existe
+        await createStock({
+          negocio: data.negocio,
+          producto: data.producto,
+          almacen: data.almacenDestino,
+          cantidadActual: cantidad,
+          cantidadDisponible: cantidad,
+          cantidadReservada: 0,
+          costoPromedio: stockOrigen ? Number(stockOrigen.costoPromedio || 0) : 0,
+        });
+      }
+
+      setIsCreateOpen(false);
+    } catch (error) {
+      console.error('Error al crear transferencia o actualizar stock:', error);
+    }
   };
 
   const handleView = (item) => {

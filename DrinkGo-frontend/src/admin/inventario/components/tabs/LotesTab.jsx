@@ -20,6 +20,7 @@ import {
 import { useLotesInventario } from '../../hooks/useLotesInventario';
 import { useAlmacenes } from '../../hooks/useAlmacenes';
 import { useProductosInventario } from '../../hooks/useProductosInventario';
+import { useStockInventario } from '../../hooks/useStockInventario';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { formatDate, formatCurrency } from '@/shared/utils/formatters';
 import { Card } from '@/admin/components/ui/Card';
@@ -52,6 +53,7 @@ export const LotesTab = () => {
   const { lotes, isLoading, createLote, deleteLote, isCreating, isDeleting } = useLotesInventario(negocioId);
   const { almacenes } = useAlmacenes(negocioId);
   const { productos } = useProductosInventario(negocioId);
+  const { stock, createStock, updateStock } = useStockInventario(negocioId);
 
   /* ─── Helpers de vencimiento ─── */
   const diasParaVencer = (fechaVencimiento) => {
@@ -117,8 +119,54 @@ export const LotesTab = () => {
 
   /* ─── Handlers ─── */
   const handleCreate = async (data) => {
-    await createLote(data);
-    setIsCreateOpen(false);
+    try {
+      // 1. Crear el lote
+      await createLote(data);
+
+      // 2. Sincronizar stock: buscar si existe registro para producto+almacén
+      const stockExistente = stock.find(
+        (s) => s.producto?.id === data.producto.id && s.almacen?.id === data.almacen.id
+      );
+
+      const cantidadLote = Number(data.cantidadInicial);
+      const costoUnitario = Number(data.costoUnitario);
+
+      if (stockExistente) {
+        // Actualizar stock existente
+        const nuevaCantidad = Number(stockExistente.cantidadActual || 0) + cantidadLote;
+        const nuevoCostoPromedio = (
+          (Number(stockExistente.cantidadActual || 0) * Number(stockExistente.costoPromedio || 0) +
+            cantidadLote * costoUnitario) /
+          nuevaCantidad
+        );
+
+        await updateStock({
+          id: stockExistente.id,
+          negocio: data.negocio,
+          producto: data.producto,
+          almacen: data.almacen,
+          cantidadActual: nuevaCantidad,
+          cantidadDisponible: nuevaCantidad,
+          cantidadReservada: Number(stockExistente.cantidadReservada || 0),
+          costoPromedio: nuevoCostoPromedio,
+        });
+      } else {
+        // Crear nuevo registro de stock
+        await createStock({
+          negocio: data.negocio,
+          producto: data.producto,
+          almacen: data.almacen,
+          cantidadActual: cantidadLote,
+          cantidadDisponible: cantidadLote,
+          cantidadReservada: 0,
+          costoPromedio: costoUnitario,
+        });
+      }
+
+      setIsCreateOpen(false);
+    } catch (error) {
+      console.error('Error al crear lote o actualizar stock:', error);
+    }
   };
 
   const handleView = (lote) => {
