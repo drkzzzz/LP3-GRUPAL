@@ -25,8 +25,15 @@ import {
   SlidersHorizontal,
   History,
   AlertTriangle,
+  Building2,
 } from 'lucide-react';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
+
+/* ─── Sub-items del menú Configuración ─── */
+const CONFIGURACION_SUBITEMS = [
+  { to: '/admin/configuracion/negocio', label: 'Negocio y Sedes', icon: Building2 },
+  { to: '/admin/configuracion/operaciones', label: 'Operaciones', icon: SlidersHorizontal },
+];
 
 /* ─── Sub-items del menú Catálogo ─── */
 const CATALOGO_SUBITEMS = [
@@ -60,9 +67,10 @@ const NAV_ITEMS = [
     label: 'Dashboard',
   },
   {
-    to: '/admin/configuracion',
+    key: 'configuracion',
     icon: Settings,
     label: 'Configuración',
+    children: CONFIGURACION_SUBITEMS,
   },
   {
     to: '/admin/usuarios',

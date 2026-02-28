@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AdminLayout } from '../layouts/AdminLayout';
 import { Login } from '../pages/Login';
 import { Dashboard } from '../pages/Dashboard';
-import { Configuracion } from '../pages/Configuracion';
 import { Usuarios } from '../pages/Usuarios';
 import { ComprasPage } from '../pages/Compras';
 import { Ventas } from '../pages/Ventas';
@@ -27,11 +26,18 @@ import { AjustesTab } from '../inventario/components/tabs/AjustesTab';
 import { TransferenciasTab } from '../inventario/components/tabs/TransferenciasTab';
 import { ReportesInventarioPage } from '../inventario/components/tabs/ReportesInventarioPage';
 
+
 /* ─── Compras sub-páginas ─── */
 import { ProveedoresTab } from '../compras/components/tabs/ProveedoresTab';
 import { ProductosProveedorTab } from '../compras/components/tabs/ProductosProveedorTab';
 import { OrdenesCompraTab } from '../compras/components/tabs/OrdenesCompraTab';
 import { RecepcionTab } from '../compras/components/tabs/RecepcionTab';
+
+/* ─── Configuración sub-páginas ─── */
+import { ConfiguracionPage } from '../pages/Configuracion';
+import { NegocioYSedesPage } from '../configuracion/components/tabs/NegocioYSedesPage';
+import { OperacionesPage } from '../configuracion/components/tabs/OperacionesPage';
+
 
 const ProtectedRoute = ({ children }) => {
   const { token } = useAdminAuthStore();
@@ -54,7 +60,11 @@ export const AdminRoutes = () => {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="configuracion" element={<Configuracion />} />
+        <Route path="configuracion" element={<ConfiguracionPage />}>
+          <Route index element={<Navigate to="negocio" replace />} />
+          <Route path="negocio" element={<NegocioYSedesPage />} />
+          <Route path="operaciones" element={<OperacionesPage />} />
+        </Route>
         <Route path="usuarios" element={<Usuarios />} />
 
         {/* Catálogo: sub-rutas independientes */}
