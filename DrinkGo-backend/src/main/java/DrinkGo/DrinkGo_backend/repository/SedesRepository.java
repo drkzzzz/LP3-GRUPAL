@@ -5,4 +5,5 @@ import DrinkGo.DrinkGo_backend.entity.Sedes;
 
 public interface SedesRepository extends JpaRepository<Sedes, Long> {
 
+    java.util.List<Sedes> findByNegocioId(Long negocioId);
 }

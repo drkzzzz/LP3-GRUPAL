@@ -3,6 +3,7 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ventas")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @JsonPropertyOrder({ "id", "sedeId", "numeroVenta", "tipoVenta", "clienteId", "mesaId", "sesionCajaId",
         "subtotal", "montoDescuento", "montoImpuesto", "costoEnvio", "total", "estado", "vendedorId",
         "creadoEn", "actualizadoEn" })

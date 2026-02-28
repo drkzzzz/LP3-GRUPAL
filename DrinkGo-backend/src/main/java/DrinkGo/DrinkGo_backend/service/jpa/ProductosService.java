@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import DrinkGo.DrinkGo_backend.entity.Productos;
 import DrinkGo.DrinkGo_backend.repository.ProductosRepository;
 import DrinkGo.DrinkGo_backend.service.IProductosService;
@@ -13,6 +14,7 @@ public class ProductosService implements IProductosService {
     @Autowired
     private ProductosRepository repoProductos;
 
+    @Transactional(readOnly = true)
     public List<Productos> buscarTodos() {
         return repoProductos.findAll();
     }

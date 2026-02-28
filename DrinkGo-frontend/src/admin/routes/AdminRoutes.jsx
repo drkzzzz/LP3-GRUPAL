@@ -6,7 +6,6 @@ import { Configuracion } from '../pages/Configuracion';
 import { Usuarios } from '../pages/Usuarios';
 import { Inventario } from '../pages/Inventario';
 import { Compras } from '../pages/Compras';
-import { Ventas } from '../pages/Ventas';
 import { Pedidos } from '../pages/Pedidos';
 import { Facturacion } from '../pages/Facturacion';
 import { Reportes } from '../pages/Reportes';
@@ -21,6 +20,12 @@ import { UnidadesMedidaTab } from '../catalogo/components/tabs/UnidadesMedidaTab
 import { CombosTab } from '../catalogo/components/tabs/CombosTab';
 import { PromocionesTab } from '../catalogo/components/tabs/PromocionesTab';
 import { CatalogoPage } from '../pages/Catalogo';
+
+/* ─── Ventas / POS sub-páginas ─── */
+import { VentasPage } from '../pages/VentasPage';
+import { POS } from '../ventas/pages/POS';
+import { Cajas } from '../ventas/pages/Cajas';
+import { HistorialVentas } from '../ventas/pages/HistorialVentas';
 
 const ProtectedRoute = ({ children }) => {
   const { token } = useAdminAuthStore();
@@ -59,7 +64,15 @@ export const AdminRoutes = () => {
 
         <Route path="inventario" element={<Inventario />} />
         <Route path="compras" element={<Compras />} />
-        <Route path="ventas" element={<Ventas />} />
+
+        {/* Ventas / POS: sub-rutas independientes */}
+        <Route path="ventas" element={<VentasPage />}>
+          <Route index element={<Navigate to="pos" replace />} />
+          <Route path="pos" element={<POS />} />
+          <Route path="cajas" element={<Cajas />} />
+          <Route path="historial" element={<HistorialVentas />} />
+        </Route>
+
         <Route path="pedidos" element={<Pedidos />} />
         <Route path="facturacion" element={<Facturacion />} />
         <Route path="reportes" element={<Reportes />} />

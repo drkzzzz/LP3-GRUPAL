@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.Column;
@@ -23,6 +24,7 @@ import jakarta.persistence.Table;
 @Table(name = "categorias")
 @SQLDelete(sql = "UPDATE categorias SET esta_activo = 0 WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @JsonPropertyOrder({ "id", "negocioId", "nombre", "slug", "descripcion",
         "visibleTiendaOnline", "estaActivo", "creadoEn", "actualizadoEn" })
 public class Categorias {
