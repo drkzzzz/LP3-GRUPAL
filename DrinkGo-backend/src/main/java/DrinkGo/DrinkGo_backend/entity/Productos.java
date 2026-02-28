@@ -27,7 +27,7 @@ import jakarta.persistence.Table;
 @JsonPropertyOrder({ "id", "negocioId", "sku", "nombre", "slug", "descripcion",
         "urlImagen", "categoriaId", "marcaId", "unidadMedidaId", "gradoAlcoholico",
         "precioCompra", "precioVenta", "precioVentaMinimo",
-        "precioMayorista", "tasaImpuesto", "impuestoIncluido", "stock", "fechaVencimiento",
+        "precioMayorista", "tasaImpuesto", "impuestoIncluido", "fechaVencimiento",
         "permiteDescuento", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class Productos {
 
@@ -86,9 +86,6 @@ public class Productos {
 
     @Column(name = "impuesto_incluido")
     private Boolean impuestoIncluido = true;
-
-    @Column(name = "stock")
-    private Integer stock = 0;
 
     @Column(name = "fecha_vencimiento")
     private java.time.LocalDate fechaVencimiento;
@@ -254,14 +251,6 @@ public class Productos {
 
     public void setImpuestoIncluido(Boolean impuestoIncluido) {
         this.impuestoIncluido = impuestoIncluido;
-    }
-
-    public Integer getStock() {
-        return stock;
-    }
-
-    public void setStock(Integer stock) {
-        this.stock = stock;
     }
 
     public java.time.LocalDate getFechaVencimiento() {

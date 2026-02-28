@@ -554,8 +554,7 @@ CREATE TABLE productos (
     tasa_impuesto DECIMAL(5,2) NOT NULL DEFAULT 18.00 COMMENT 'IGV % Perú',
     impuesto_incluido TINYINT(1) NOT NULL DEFAULT 1,
 
-    -- Stock
-    stock INT NOT NULL DEFAULT 0,
+    -- Vencimiento
     fecha_vencimiento DATE NULL COMMENT 'Fecha de vencimiento del producto',
 
     -- Flags

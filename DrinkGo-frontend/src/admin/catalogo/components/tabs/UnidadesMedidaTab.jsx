@@ -5,7 +5,7 @@
  */
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Search, Eye, Edit, Trash2, Ruler } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Ruler, XCircle } from 'lucide-react';
 import { useUnidadesMedida } from '../../hooks/useUnidadesMedida';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { Card } from '@/admin/components/ui/Card';
@@ -189,7 +189,7 @@ export const UnidadesMedidaTab = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="!p-4 flex items-center gap-3">
           <Ruler size={20} className="text-blue-600" />
           <div>
@@ -202,6 +202,13 @@ export const UnidadesMedidaTab = () => {
           <div>
             <p className="text-sm text-gray-500">Activas</p>
             <p className="text-xl font-bold">{unidades.filter((u) => u.estaActivo).length}</p>
+          </div>
+        </Card>
+        <Card className="!p-4 flex items-center gap-3">
+          <XCircle size={20} className="text-red-500" />
+          <div>
+            <p className="text-sm text-gray-500">Inactivas</p>
+            <p className="text-xl font-bold">{unidades.filter((u) => !u.estaActivo).length}</p>
           </div>
         </Card>
       </div>

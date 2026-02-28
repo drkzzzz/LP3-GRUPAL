@@ -14,7 +14,7 @@ import {
   Trash2,
   Package,
   DollarSign,
-  AlertCircle,
+  XCircle,
   CheckCircle,
 } from 'lucide-react';
 import { useProductos } from '../../hooks/useProductos';
@@ -84,7 +84,7 @@ export const ProductosTab = () => {
   const stats = useMemo(() => ({
     total: productos.length,
     activos: productos.filter((p) => p.estaActivo).length,
-    sinStock: productos.filter((p) => (p.stock ?? 0) <= 0).length,
+    inactivos: productos.filter((p) => !p.estaActivo).length,
     conPrecio: productos.filter((p) => p.precioVenta > 0).length,
   }), [productos]);
 
@@ -196,20 +196,6 @@ export const ProductosTab = () => {
       ),
     },
     {
-      key: 'stock',
-      title: 'Stock',
-      width: '80px',
-      align: 'center',
-      render: (_, row) => {
-        const stock = row.stock ?? 0;
-        return (
-          <Badge variant={stock > 0 ? 'success' : 'error'}>
-            {stock}
-          </Badge>
-        );
-      },
-    },
-    {
       key: 'estado',
       title: 'Estado',
       width: '100px',
@@ -259,7 +245,7 @@ export const ProductosTab = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
         <p className="text-gray-600 mt-1">
-          Gestión de productos del catálogo, precios, stock y disponibilidad
+          Gestión de productos del catálogo, precios y disponibilidad
         </p>
       </div>
 
@@ -273,9 +259,9 @@ export const ProductosTab = () => {
           className="border-l-4 border-l-green-500"
         />
         <StatCard
-          title="Sin stock"
-          value={stats.sinStock}
-          icon={AlertCircle}
+          title="Inactivos"
+          value={stats.inactivos}
+          icon={XCircle}
           className="border-l-4 border-l-red-500"
         />
         <StatCard
@@ -406,10 +392,6 @@ export const ProductosTab = () => {
               <div>
                 <p className="text-gray-500">Precio compra</p>
                 <p className="font-medium">{formatCurrency(selected.precioCompra)}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Stock</p>
-                <p className="font-medium">{selected.stock ?? 0}</p>
               </div>
               <div>
                 <p className="text-gray-500">Grado alcohólico</p>
