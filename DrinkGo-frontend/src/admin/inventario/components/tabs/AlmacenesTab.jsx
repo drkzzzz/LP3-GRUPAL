@@ -336,14 +336,11 @@ export const AlmacenesTab = () => {
 
           <Select
             label="Sede"
+            placeholder="Seleccione una sede"
+            options={sedes.map((s) => ({ value: String(s.id), label: s.nombre }))}
             {...register('sedeId')}
             error={errors.sedeId?.message}
-          >
-            <option value="">Seleccione una sede</option>
-            {sedes.map((s) => (
-              <option key={s.id} value={String(s.id)}>{s.nombre}</option>
-            ))}
-          </Select>
+          />
 
           <Textarea
             label="Descripción"
