@@ -45,9 +45,9 @@ export const CombosTab = () => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = useCombos();
+  } = useCombos(negocioId);
 
-  const { productos } = useProductos();
+  const { productos } = useProductos(negocioId);
 
   /* ─── Filtrado ─── */
   const filtered = useMemo(() => {

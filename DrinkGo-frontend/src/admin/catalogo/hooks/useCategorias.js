@@ -7,12 +7,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoriasService } from '../services/catalogoService';
 import { message } from '@/shared/utils/notifications';
 
-export const useCategorias = () => {
+export const useCategorias = (negocioId) => {
   const queryClient = useQueryClient();
 
   const categoriasQuery = useQuery({
-    queryKey: ['categorias'],
-    queryFn: categoriasService.getAll,
+    queryKey: ['categorias', negocioId],
+    queryFn: () => categoriasService.getAll(negocioId),
+    enabled: !!negocioId,
   });
 
   const createCategoria = useMutation({

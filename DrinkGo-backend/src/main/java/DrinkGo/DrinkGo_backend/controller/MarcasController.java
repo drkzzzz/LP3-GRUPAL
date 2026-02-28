@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import DrinkGo.DrinkGo_backend.entity.Marcas;
+import DrinkGo.DrinkGo_backend.repository.MarcasRepository;
 import DrinkGo.DrinkGo_backend.repository.ProductosRepository;
 import DrinkGo.DrinkGo_backend.service.IMarcasService;
 
@@ -28,9 +29,17 @@ public class MarcasController {
     @Autowired
     private ProductosRepository productosRepository;
 
+    @Autowired
+    private MarcasRepository marcasRepository;
+
     @GetMapping("/marcas")
     public List<Marcas> buscarTodos() {
         return service.buscarTodos();
+    }
+
+    @GetMapping("/marcas/negocio/{negocioId}")
+    public List<Marcas> buscarPorNegocio(@PathVariable Long negocioId) {
+        return marcasRepository.findByNegocioId(negocioId);
     }
 
     @PostMapping("/marcas")

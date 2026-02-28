@@ -3,6 +3,7 @@ package DrinkGo.DrinkGo_backend.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import DrinkGo.DrinkGo_backend.entity.Productos;
+import DrinkGo.DrinkGo_backend.repository.ProductosRepository;
 import DrinkGo.DrinkGo_backend.service.IProductosService;
 import java.util.List;
 import java.util.Optional;
@@ -20,9 +21,17 @@ public class ProductosController {
     @Autowired
     private IProductosService service;
 
+    @Autowired
+    private ProductosRepository productosRepository;
+
     @GetMapping("/productos")
     public List<Productos> buscarTodos() {
         return service.buscarTodos();
+    }
+
+    @GetMapping("/productos/negocio/{negocioId}")
+    public List<Productos> buscarPorNegocio(@PathVariable Long negocioId) {
+        return productosRepository.findByNegocioId(negocioId);
     }
 
     @PostMapping("/productos")

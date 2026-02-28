@@ -46,7 +46,7 @@ export const UnidadesMedidaTab = ({ context }) => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = useUnidadesMedida();
+  } = useUnidadesMedida(negocioId);
 
   /* ─── Filtrado ─── */
   const filtered = useMemo(() => {

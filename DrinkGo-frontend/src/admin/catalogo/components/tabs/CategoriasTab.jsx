@@ -37,7 +37,7 @@ export const CategoriasTab = ({ context }) => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = useCategorias();
+  } = useCategorias(negocioId);
 
   /* ─── Filtrado ─── */
   const filtered = useMemo(() => {

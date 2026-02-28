@@ -55,11 +55,11 @@ export const ProductosTab = () => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = useProductos();
+  } = useProductos(negocioId);
 
-  const { categorias } = useCategorias();
-  const { marcas } = useMarcas();
-  const { unidades } = useUnidadesMedida();
+  const { categorias } = useCategorias(negocioId);
+  const { marcas } = useMarcas(negocioId);
+  const { unidades } = useUnidadesMedida(negocioId);
 
   /* ─── Filtrado client-side ─── */
   const filtered = useMemo(() => {

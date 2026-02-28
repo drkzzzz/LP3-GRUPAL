@@ -8,13 +8,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productosService } from '../services/catalogoService';
 import { message } from '@/shared/utils/notifications';
 
-export const useProductos = () => {
+export const useProductos = (negocioId) => {
   const queryClient = useQueryClient();
 
   /* ─── Query: listar todos los productos ─── */
   const productosQuery = useQuery({
-    queryKey: ['productos'],
-    queryFn: productosService.getAll,
+    queryKey: ['productos', negocioId],
+    queryFn: () => productosService.getAll(negocioId),
+    enabled: !!negocioId,
   });
 
   /* ─── Mutation: crear producto ─── */

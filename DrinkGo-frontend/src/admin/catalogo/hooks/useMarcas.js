@@ -7,12 +7,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { marcasService } from '../services/catalogoService';
 import { message } from '@/shared/utils/notifications';
 
-export const useMarcas = () => {
+export const useMarcas = (negocioId) => {
   const queryClient = useQueryClient();
 
   const marcasQuery = useQuery({
-    queryKey: ['marcas'],
-    queryFn: marcasService.getAll,
+    queryKey: ['marcas', negocioId],
+    queryFn: () => marcasService.getAll(negocioId),
+    enabled: !!negocioId,
   });
 
   const createMarca = useMutation({

@@ -7,12 +7,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { unidadesMedidaService } from '../services/catalogoService';
 import { message } from '@/shared/utils/notifications';
 
-export const useUnidadesMedida = () => {
+export const useUnidadesMedida = (negocioId) => {
   const queryClient = useQueryClient();
 
   const unidadesQuery = useQuery({
-    queryKey: ['unidades-medida'],
-    queryFn: unidadesMedidaService.getAll,
+    queryKey: ['unidades-medida', negocioId],
+    queryFn: () => unidadesMedidaService.getAll(negocioId),
+    enabled: !!negocioId,
   });
 
   const createUnidad = useMutation({

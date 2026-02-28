@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import DrinkGo.DrinkGo_backend.entity.UnidadesMedida;
 import DrinkGo.DrinkGo_backend.repository.ProductosRepository;
+import DrinkGo.DrinkGo_backend.repository.UnidadesMedidaRepository;
 import DrinkGo.DrinkGo_backend.service.IUnidadesMedidaService;
 
 @RestController
@@ -28,9 +29,17 @@ public class UnidadesMedidaController {
     @Autowired
     private ProductosRepository productosRepository;
 
+    @Autowired
+    private UnidadesMedidaRepository unidadesMedidaRepository;
+
     @GetMapping("/unidades-medida")
     public List<UnidadesMedida> buscarTodos() {
         return service.buscarTodos();
+    }
+
+    @GetMapping("/unidades-medida/negocio/{negocioId}")
+    public List<UnidadesMedida> buscarPorNegocio(@PathVariable Long negocioId) {
+        return unidadesMedidaRepository.findByNegocioId(negocioId);
     }
 
     @PostMapping("/unidades-medida")

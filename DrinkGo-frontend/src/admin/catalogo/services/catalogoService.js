@@ -23,8 +23,9 @@ const toArray = (data) => {
  *  PRODUCTOS
  * ================================================================ */
 export const productosService = {
-  getAll: async () => {
-    const { data } = await adminApi.get('/productos');
+  getAll: async (negocioId) => {
+    const url = negocioId ? `/productos/negocio/${negocioId}` : '/productos';
+    const { data } = await adminApi.get(url);
     return toArray(data);
   },
   getById: async (id) => {
@@ -49,8 +50,9 @@ export const productosService = {
  *  CATEGORÍAS
  * ================================================================ */
 export const categoriasService = {
-  getAll: async () => {
-    const { data } = await adminApi.get('/categorias');
+  getAll: async (negocioId) => {
+    const url = negocioId ? `/categorias/negocio/${negocioId}` : '/categorias';
+    const { data } = await adminApi.get(url);
     return toArray(data);
   },
   getById: async (id) => {
@@ -75,8 +77,9 @@ export const categoriasService = {
  *  MARCAS
  * ================================================================ */
 export const marcasService = {
-  getAll: async () => {
-    const { data } = await adminApi.get('/marcas');
+  getAll: async (negocioId) => {
+    const url = negocioId ? `/marcas/negocio/${negocioId}` : '/marcas';
+    const { data } = await adminApi.get(url);
     return toArray(data);
   },
   getById: async (id) => {
@@ -101,8 +104,9 @@ export const marcasService = {
  *  UNIDADES DE MEDIDA
  * ================================================================ */
 export const unidadesMedidaService = {
-  getAll: async () => {
-    const { data } = await adminApi.get('/unidades-medida');
+  getAll: async (negocioId) => {
+    const url = negocioId ? `/unidades-medida/negocio/${negocioId}` : '/unidades-medida';
+    const { data } = await adminApi.get(url);
     return toArray(data);
   },
   getById: async (id) => {
@@ -127,8 +131,9 @@ export const unidadesMedidaService = {
  *  COMBOS
  * ================================================================ */
 export const combosService = {
-  getAll: async () => {
-    const { data } = await adminApi.get('/combos');
+  getAll: async (negocioId) => {
+    const url = negocioId ? `/combos/negocio/${negocioId}` : '/combos';
+    const { data } = await adminApi.get(url);
     return toArray(data);
   },
   getById: async (id) => {
@@ -153,8 +158,9 @@ export const combosService = {
  *  DETALLE COMBOS (productos dentro de un combo)
  * ================================================================ */
 export const detalleCombosService = {
-  getAll: async () => {
-    const { data } = await adminApi.get('/detalle-combos');
+  getAll: async (negocioId) => {
+    const url = negocioId ? `/detalle-combos/negocio/${negocioId}` : '/detalle-combos';
+    const { data } = await adminApi.get(url);
     return toArray(data);
   },
   getById: async (id) => {

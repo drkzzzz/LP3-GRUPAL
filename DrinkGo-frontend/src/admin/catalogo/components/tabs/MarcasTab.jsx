@@ -37,7 +37,7 @@ export const MarcasTab = ({ context }) => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = useMarcas();
+  } = useMarcas(negocioId);
 
   /* ─── Filtrado ─── */
   const filtered = useMemo(() => {
