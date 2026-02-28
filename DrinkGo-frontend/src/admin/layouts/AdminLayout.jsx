@@ -20,6 +20,11 @@ import {
   Layers,
   Gift,
   Tag,
+  Boxes,
+  ArrowRightLeft,
+  SlidersHorizontal,
+  History,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
@@ -29,6 +34,15 @@ const CATALOGO_SUBITEMS = [
   { to: '/admin/catalogo/clasificaciones', label: 'Clasificaciones', icon: Layers },
   { to: '/admin/catalogo/combos', label: 'Combos', icon: Gift },
   { to: '/admin/catalogo/promociones', label: 'Promociones', icon: Tag },
+];
+
+/* ─── Sub-items del menú Inventario ─── */
+const INVENTARIO_SUBITEMS = [
+  { to: '/admin/inventario/almacenes', label: 'Almacenes', icon: Warehouse },
+  { to: '/admin/inventario/lotes', label: 'Lotes', icon: Boxes },
+  { to: '/admin/inventario/ajustes', label: 'Ajustes', icon: SlidersHorizontal },
+  { to: '/admin/inventario/transferencias', label: 'Transferencias', icon: ArrowRightLeft },
+  { to: '/admin/inventario/reportes', label: 'Reportes', icon: BarChart3 },
 ];
 
 const NAV_ITEMS = [
@@ -55,9 +69,10 @@ const NAV_ITEMS = [
     children: CATALOGO_SUBITEMS,
   },
   {
-    to: '/admin/inventario',
+    key: 'inventario',
     icon: Warehouse,
     label: 'Inventario',
+    children: INVENTARIO_SUBITEMS,
   },
   {
     to: '/admin/compras',
@@ -89,14 +104,17 @@ const NAV_ITEMS = [
 export const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [catalogoOpen, setCatalogoOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
   const { user, negocio, logout } = useAdminAuthStore();
 
-  /* Auto-expandir el grupo Catálogo si la ruta actual coincide */
-  const isCatalogoRoute = location.pathname.startsWith('/admin/catalogo');
-  const effectiveCatalogoOpen = catalogoOpen || isCatalogoRoute;
+  /* Toggle para grupos colapsables */
+  const toggleMenu = (key) => setOpenMenus((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  /* Auto-expandir el grupo si la ruta actual coincide */
+  const isGroupActive = (key) => location.pathname.startsWith(`/admin/${key}`);
+  const isGroupOpen = (key) => openMenus[key] || isGroupActive(key);
 
   const handleLogout = () => {
     logout();
@@ -127,9 +145,9 @@ export const AdminLayout = () => {
             /* ─── Grupo colapsable (Catálogo) ─── */
             <div key={item.key}>
               <button
-                onClick={() => setCatalogoOpen((prev) => !prev)}
+                onClick={() => toggleMenu(item.key)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isCatalogoRoute
+                  isGroupActive(item.key)
                     ? 'bg-green-600/20 text-green-400'
                     : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                 }`}
@@ -141,7 +159,7 @@ export const AdminLayout = () => {
                     <ChevronDown
                       size={16}
                       className={`shrink-0 transition-transform duration-200 ${
-                        effectiveCatalogoOpen ? 'rotate-180' : ''
+                        isGroupOpen(item.key) ? 'rotate-180' : ''
                       }`}
                     />
                   </>
@@ -150,7 +168,7 @@ export const AdminLayout = () => {
               {sidebarOpen && (
                 <div
                   className={`ml-3 pl-4 border-l border-gray-700 space-y-0.5 overflow-hidden transition-all duration-300 ease-in-out ${
-                    effectiveCatalogoOpen
+                    isGroupOpen(item.key)
                       ? 'max-h-96 opacity-100 mt-1'
                       : 'max-h-0 opacity-0 mt-0'
                   }`}
