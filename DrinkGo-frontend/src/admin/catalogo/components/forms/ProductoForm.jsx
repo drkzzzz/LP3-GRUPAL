@@ -3,7 +3,10 @@
  * ────────────────
  * Formulario para crear/editar un Producto.
  * Usa React Hook Form + Zod. Recibe categorías, marcas y unidades como props.
+ * El campo "Grado alcohólico" se habilita solo si la categoría seleccionada
+ * tiene esAlcoholica === true.
  */
+import { useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { productoSchema } from '../../validations/catalogoSchemas';
@@ -11,6 +14,7 @@ import { Input } from '@/admin/components/ui/Input';
 import { Select } from '@/admin/components/ui/Select';
 import { Textarea } from '@/admin/components/ui/Textarea';
 import { Button } from '@/admin/components/ui/Button';
+import { Wine } from 'lucide-react';
 
 /**
  * Genera un slug a partir de un nombre.
@@ -73,6 +77,21 @@ export const ProductoForm = ({
       setValue('slug', generateSlug(nombre));
     }
   };
+
+  /* Detectar si la categoría seleccionada es alcohólica */
+  const selectedCategoriaId = watch('categoriaId');
+  const selectedCategoria = useMemo(
+    () => categorias.find((c) => String(c.id) === selectedCategoriaId),
+    [categorias, selectedCategoriaId],
+  );
+  const isAlcohol = selectedCategoria?.esAlcoholica === true;
+
+  /* Limpiar grado alcohólico cuando se cambia a categoría sin alcohol */
+  useEffect(() => {
+    if (!isAlcohol) {
+      setValue('gradoAlcoholico', '');
+    }
+  }, [isAlcohol, setValue]);
 
   /* Preparar datos antes de enviar al backend */
   const handleFormSubmit = (formData) => {
@@ -203,14 +222,29 @@ export const ProductoForm = ({
 
       {/* Fila 5: Grado + Impuesto */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Input
-          label="Grado alcohólico (%)"
-          type="number"
-          step="0.01"
-          {...register('gradoAlcoholico')}
-          error={errors.gradoAlcoholico?.message}
-          placeholder="Ej: 40.00"
-        />
+        <div className="relative">
+          {!isAlcohol && (
+            <div className="absolute inset-0 bg-gray-50/60 rounded-lg z-10 flex items-center justify-center">
+              <span className="text-xs text-gray-400 bg-white px-2 py-1 rounded shadow-sm">
+                Seleccione una categoría con alcohol
+              </span>
+            </div>
+          )}
+          <Input
+            label={
+              <span className="flex items-center gap-1.5">
+                <Wine size={14} className={isAlcohol ? 'text-amber-600' : 'text-gray-300'} />
+                Grado alcohólico (%)
+              </span>
+            }
+            type="number"
+            step="0.01"
+            {...register('gradoAlcoholico')}
+            error={errors.gradoAlcoholico?.message}
+            placeholder={isAlcohol ? 'Ej: 40.00' : 'No aplica'}
+            disabled={!isAlcohol}
+          />
+        </div>
         <Input
           label="Tasa impuesto (%)"
           type="number"

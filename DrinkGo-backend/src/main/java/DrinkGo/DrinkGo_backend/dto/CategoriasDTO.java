@@ -9,6 +9,7 @@ public class CategoriasDTO {
     private String nombre;
     private String slug;
     private String descripcion;
+    private Boolean esAlcoholica;
     private Boolean visibleTiendaOnline;
     private Boolean estaActivo;
     private LocalDateTime creadoEn;
@@ -19,13 +20,14 @@ public class CategoriasDTO {
     }
 
     public CategoriasDTO(Long id, Long negocioId, String nombre, String slug, String descripcion,
-            Boolean visibleTiendaOnline, Boolean estaActivo,
+            Boolean esAlcoholica, Boolean visibleTiendaOnline, Boolean estaActivo,
             LocalDateTime creadoEn, LocalDateTime actualizadoEn) {
         this.id = id;
         this.negocioId = negocioId;
         this.nombre = nombre;
         this.slug = slug;
         this.descripcion = descripcion;
+        this.esAlcoholica = esAlcoholica;
         this.visibleTiendaOnline = visibleTiendaOnline;
         this.estaActivo = estaActivo;
         this.creadoEn = creadoEn;
@@ -71,6 +73,14 @@ public class CategoriasDTO {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+
+    public Boolean getEsAlcoholica() {
+        return esAlcoholica;
+    }
+
+    public void setEsAlcoholica(Boolean esAlcoholica) {
+        this.esAlcoholica = esAlcoholica;
     }
 
     public Boolean getVisibleTiendaOnline() {

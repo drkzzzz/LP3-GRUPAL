@@ -65,6 +65,7 @@ export const categoriaSchema = z.object({
     .string()
     .min(1, 'El slug es obligatorio'),
   descripcion: z.string().optional().default(''),
+  esAlcoholica: z.boolean().optional().default(false),
   visibleTiendaOnline: z.boolean().optional().default(true),
   estaActivo: z.boolean().optional().default(true),
 });

@@ -44,7 +44,8 @@ export const useCategorias = () => {
       message.success('Categoría eliminada exitosamente');
     },
     onError: (err) => {
-      message.error(err.response?.data?.message || 'Error al eliminar categoría');
+      const msg = err.response?.data?.message || err.response?.data || 'Error al eliminar categoría';
+      message.error(msg);
     },
   });
 

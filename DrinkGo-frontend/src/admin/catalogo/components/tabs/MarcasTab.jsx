@@ -4,7 +4,6 @@
  * CRUD completo de Marcas.
  */
 import { useState, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { Plus, Search, Eye, Edit, Trash2, Award, XCircle } from 'lucide-react';
 import { useMarcas } from '../../hooks/useMarcas';
 import { useDebounce } from '@/shared/hooks/useDebounce';
@@ -16,8 +15,8 @@ import { Modal } from '@/admin/components/ui/Modal';
 import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { MarcaForm } from '../forms/MarcaForm';
 
-export const MarcasTab = () => {
-  const { negocioId } = useOutletContext();
+export const MarcasTab = ({ context }) => {
+  const { negocioId } = context;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,7 +74,11 @@ export const MarcasTab = () => {
   const handleDeleteClick = (marca) => { setSelected(marca); setIsDeleteOpen(true); };
 
   const handleDeleteConfirm = async () => {
-    await deleteMarca(selected.id);
+    try {
+      await deleteMarca(selected.id);
+    } catch {
+      /* Error ya manejado por el hook (toast) */
+    }
     setIsDeleteOpen(false);
     setSelected(null);
   };
@@ -162,14 +165,7 @@ export const MarcasTab = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Marcas</h1>
-        <p className="text-gray-600 mt-1">
-          Administración de marcas de productos, país de origen y logotipos
-        </p>
-      </div>
+    <div className="space-y-4">
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

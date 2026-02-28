@@ -4,7 +4,6 @@
  * CRUD básico de Unidades de Medida.
  */
 import { useState, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { Plus, Search, Eye, Edit, Trash2, Ruler, XCircle } from 'lucide-react';
 import { useUnidadesMedida } from '../../hooks/useUnidadesMedida';
 import { useDebounce } from '@/shared/hooks/useDebounce';
@@ -25,8 +24,8 @@ const TIPO_BADGE = {
   otro: 'warning',
 };
 
-export const UnidadesMedidaTab = () => {
-  const { negocioId } = useOutletContext();
+export const UnidadesMedidaTab = ({ context }) => {
+  const { negocioId } = context;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -179,14 +178,7 @@ export const UnidadesMedidaTab = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Unidades de Medida</h1>
-        <p className="text-gray-600 mt-1">
-          Configuración de unidades de medida para los productos del catálogo
-        </p>
-      </div>
+    <div className="space-y-4">
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

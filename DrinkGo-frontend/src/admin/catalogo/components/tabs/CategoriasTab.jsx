@@ -4,8 +4,7 @@
  * CRUD completo de Categorías con tabla, búsqueda, modales.
  */
 import { useState, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { Plus, Search, Eye, Edit, Trash2, FolderTree, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, FolderTree, CheckCircle, XCircle, Wine } from 'lucide-react';
 import { useCategorias } from '../../hooks/useCategorias';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { Card } from '@/admin/components/ui/Card';
@@ -16,8 +15,8 @@ import { Modal } from '@/admin/components/ui/Modal';
 import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { CategoriaForm } from '../forms/CategoriaForm';
 
-export const CategoriasTab = () => {
-  const { negocioId } = useOutletContext();
+export const CategoriasTab = ({ context }) => {
+  const { negocioId } = context;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,7 +83,11 @@ export const CategoriasTab = () => {
   };
 
   const handleDeleteConfirm = async () => {
-    await deleteCategoria(selected.id);
+    try {
+      await deleteCategoria(selected.id);
+    } catch {
+      /* Error ya manejado por el hook (toast) */
+    }
     setIsDeleteOpen(false);
     setSelected(null);
   };
@@ -112,6 +115,22 @@ export const CategoriasTab = () => {
             <p className="text-xs text-gray-500">{row.slug}</p>
           </div>
         </div>
+      ),
+    },
+    {
+      key: 'alcohol',
+      title: 'Alcohol',
+      width: '90px',
+      align: 'center',
+      render: (_, row) => (
+        row.esAlcoholica ? (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+            <Wine size={12} />
+            Sí
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">No</span>
+        )
       ),
     },
     {
@@ -170,14 +189,7 @@ export const CategoriasTab = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Categorías</h1>
-        <p className="text-gray-600 mt-1">
-          Organización y clasificación de productos por categorías
-        </p>
-      </div>
+    <div className="space-y-4">
 
       {/* Stats rápidos */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -281,6 +293,10 @@ export const CategoriasTab = () => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">Categoría con alcohol</p>
+                <p className="font-medium">{selected.esAlcoholica ? 'Sí' : 'No'}</p>
+              </div>
               <div>
                 <p className="text-gray-500">Tienda online</p>
                 <p className="font-medium">{selected.visibleTiendaOnline ? 'Visible' : 'Oculto'}</p>

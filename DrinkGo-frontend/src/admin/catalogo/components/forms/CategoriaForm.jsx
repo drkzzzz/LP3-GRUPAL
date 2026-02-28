@@ -39,6 +39,7 @@ export const CategoriaForm = ({
       nombre: initialData?.nombre || '',
       slug: initialData?.slug || '',
       descripcion: initialData?.descripcion || '',
+      esAlcoholica: initialData?.esAlcoholica ?? false,
       visibleTiendaOnline: initialData?.visibleTiendaOnline ?? true,
       estaActivo: initialData?.estaActivo ?? true,
     },
@@ -59,6 +60,7 @@ export const CategoriaForm = ({
       nombre: formData.nombre,
       slug: formData.slug,
       descripcion: formData.descripcion || null,
+      esAlcoholica: formData.esAlcoholica,
       visibleTiendaOnline: formData.visibleTiendaOnline,
       estaActivo: formData.estaActivo,
     };
@@ -91,7 +93,11 @@ export const CategoriaForm = ({
         error={errors.descripcion?.message}
       />
 
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-4">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" {...register('esAlcoholica')} className="rounded border-gray-300 text-amber-600 focus:ring-amber-500" />
+          Categoría con alcohol
+        </label>
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" {...register('visibleTiendaOnline')} className="rounded border-gray-300 text-green-600 focus:ring-green-500" />
           Visible en tienda online

@@ -44,7 +44,8 @@ export const useMarcas = () => {
       message.success('Marca eliminada exitosamente');
     },
     onError: (err) => {
-      message.error(err.response?.data?.message || 'Error al eliminar marca');
+      const msg = err.response?.data?.message || err.response?.data || 'Error al eliminar marca';
+      message.error(msg);
     },
   });
 

@@ -15,9 +15,7 @@ import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
 /* ─── Catálogo sub-páginas ─── */
 import { ProductosTab } from '../catalogo/components/tabs/ProductosTab';
-import { CategoriasTab } from '../catalogo/components/tabs/CategoriasTab';
-import { MarcasTab } from '../catalogo/components/tabs/MarcasTab';
-import { UnidadesMedidaTab } from '../catalogo/components/tabs/UnidadesMedidaTab';
+import { ClasificacionesPage } from '../catalogo/components/tabs/ClasificacionesPage';
 import { CombosTab } from '../catalogo/components/tabs/CombosTab';
 import { PromocionesTab } from '../catalogo/components/tabs/PromocionesTab';
 import { CatalogoPage } from '../pages/Catalogo';
@@ -50,9 +48,7 @@ export const AdminRoutes = () => {
         <Route path="catalogo" element={<CatalogoPage />}>
           <Route index element={<Navigate to="productos" replace />} />
           <Route path="productos" element={<ProductosTab />} />
-          <Route path="categorias" element={<CategoriasTab />} />
-          <Route path="marcas" element={<MarcasTab />} />
-          <Route path="unidades" element={<UnidadesMedidaTab />} />
+          <Route path="clasificaciones" element={<ClasificacionesPage />} />
           <Route path="combos" element={<CombosTab />} />
           <Route path="promociones" element={<PromocionesTab />} />
         </Route>

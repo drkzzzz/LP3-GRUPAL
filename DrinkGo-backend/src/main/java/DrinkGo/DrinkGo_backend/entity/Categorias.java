@@ -24,7 +24,7 @@ import jakarta.persistence.Table;
 @SQLDelete(sql = "UPDATE categorias SET esta_activo = 0 WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "negocioId", "nombre", "slug", "descripcion",
-        "visibleTiendaOnline", "estaActivo", "creadoEn", "actualizadoEn" })
+        "esAlcoholica", "visibleTiendaOnline", "estaActivo", "creadoEn", "actualizadoEn" })
 public class Categorias {
 
     @Id
@@ -43,6 +43,9 @@ public class Categorias {
 
     @Column(columnDefinition = "TEXT")
     private String descripcion;
+
+    @Column(name = "es_alcoholica")
+    private Boolean esAlcoholica = false;
 
     @Column(name = "visible_tienda_online")
     private Boolean visibleTiendaOnline = true;
@@ -108,6 +111,14 @@ public class Categorias {
         this.descripcion = descripcion;
     }
 
+    public Boolean getEsAlcoholica() {
+        return esAlcoholica;
+    }
+
+    public void setEsAlcoholica(Boolean esAlcoholica) {
+        this.esAlcoholica = esAlcoholica;
+    }
+
     public Boolean getVisibleTiendaOnline() {
         return visibleTiendaOnline;
     }
@@ -144,7 +155,7 @@ public class Categorias {
     public String toString() {
         return "Categorias [id=" + id + ", negocio=" + (negocio != null ? negocio.getId() : null)
                 + ", nombre=" + nombre + ", slug=" + slug + ", descripcion=" + descripcion
-                + ", visibleTiendaOnline=" + visibleTiendaOnline + ", estaActivo=" + estaActivo
+                + ", esAlcoholica=" + esAlcoholica + ", visibleTiendaOnline=" + visibleTiendaOnline + ", estaActivo=" + estaActivo
                 + ", creadoEn=" + creadoEn + ", actualizadoEn=" + actualizadoEn + "]";
     }
 }

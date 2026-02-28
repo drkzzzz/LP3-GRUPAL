@@ -17,9 +17,7 @@ import {
   ChevronDown,
   Truck,
   UserCircle,
-  FolderTree,
-  Award,
-  Ruler,
+  Layers,
   Gift,
   Tag,
 } from 'lucide-react';
@@ -28,9 +26,7 @@ import { useAdminAuthStore } from '@/stores/adminAuthStore';
 /* ─── Sub-items del menú Catálogo ─── */
 const CATALOGO_SUBITEMS = [
   { to: '/admin/catalogo/productos', label: 'Productos', icon: Package },
-  { to: '/admin/catalogo/categorias', label: 'Categorías', icon: FolderTree },
-  { to: '/admin/catalogo/marcas', label: 'Marcas', icon: Award },
-  { to: '/admin/catalogo/unidades', label: 'Unidades', icon: Ruler },
+  { to: '/admin/catalogo/clasificaciones', label: 'Clasificaciones', icon: Layers },
   { to: '/admin/catalogo/combos', label: 'Combos', icon: Gift },
   { to: '/admin/catalogo/promociones', label: 'Promociones', icon: Tag },
 ];

@@ -479,6 +479,7 @@ CREATE TABLE categorias (
     nombre VARCHAR(150) NOT NULL,
     slug VARCHAR(150) NOT NULL,
     descripcion TEXT NULL,
+    es_alcoholica TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = categoría para productos con alcohol',
     visible_tienda_online TINYINT(1) NOT NULL DEFAULT 1,
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
