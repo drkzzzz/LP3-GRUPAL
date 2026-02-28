@@ -84,9 +84,14 @@ export const UnidadesMedidaTab = ({ context }) => {
   const handleDeleteClick = (unidad) => { setSelected(unidad); setIsDeleteOpen(true); };
 
   const handleDeleteConfirm = async () => {
-    await deleteUnidad(selected.id);
-    setIsDeleteOpen(false);
-    setSelected(null);
+    try {
+      await deleteUnidad(selected.id);
+    } catch {
+      // Error ya manejado por el hook (toast)
+    } finally {
+      setIsDeleteOpen(false);
+      setSelected(null);
+    }
   };
 
   /* ─── Columnas ─── */

@@ -38,6 +38,9 @@ export const CombosTab = () => {
     createCombo,
     updateCombo,
     deleteCombo,
+    createDetalle,
+    updateDetalle,
+    deleteDetalle,
     getDetallesForCombo,
     isCreating,
     isUpdating,
@@ -78,14 +81,61 @@ export const CombosTab = () => {
 
   /* ─── Handlers ─── */
   const handleCreate = async (data) => {
-    await createCombo(data);
+    const { detalles, ...comboData } = data;
+    const combo = await createCombo(comboData);
+    // Crear cada detalle asociado al combo recién creado
+    if (detalles?.length && combo?.id) {
+      for (const det of detalles) {
+        await createDetalle({
+          combo: { id: combo.id },
+          producto: { id: det.productoId },
+          cantidad: det.cantidad,
+          precioUnitario: det.precioUnitario,
+        });
+      }
+    }
     setIsCreateOpen(false);
   };
 
   const handleEdit = (combo) => { setSelected(combo); setIsEditOpen(true); };
 
   const handleUpdate = async (data) => {
-    await updateCombo(data);
+    const { detalles: newDetalles, ...comboData } = data;
+    await updateCombo(comboData);
+
+    // Sincronizar detalles: borrar eliminados, crear nuevos, actualizar existentes
+    const existingDetalles = getDetallesForCombo(comboData.id);
+    const newDetalleIds = new Set((newDetalles || []).filter((d) => d.id).map((d) => d.id));
+
+    // Eliminar los que ya no están
+    for (const existing of existingDetalles) {
+      if (!newDetalleIds.has(existing.id)) {
+        await deleteDetalle(existing.id);
+      }
+    }
+
+    // Crear nuevos o actualizar existentes
+    for (const det of newDetalles || []) {
+      if (det.id) {
+        // Actualizar existente
+        await updateDetalle({
+          id: det.id,
+          combo: { id: comboData.id },
+          producto: { id: det.productoId },
+          cantidad: det.cantidad,
+          precioUnitario: det.precioUnitario,
+        });
+      } else {
+        // Crear nuevo
+        await createDetalle({
+          combo: { id: comboData.id },
+          producto: { id: det.productoId },
+          cantidad: det.cantidad,
+          precioUnitario: det.precioUnitario,
+        });
+      }
+    }
+
     setIsEditOpen(false);
     setSelected(null);
   };
@@ -274,6 +324,7 @@ export const CombosTab = () => {
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Nuevo Combo" size="lg">
         <ComboForm
           negocioId={negocioId}
+          productos={productos}
           onSubmit={handleCreate}
           onCancel={() => setIsCreateOpen(false)}
           isLoading={isCreating}
@@ -285,6 +336,8 @@ export const CombosTab = () => {
         {selected && (
           <ComboForm
             initialData={selected}
+            initialDetalles={getDetallesForCombo(selected.id)}
+            productos={productos}
             negocioId={negocioId}
             onSubmit={handleUpdate}
             onCancel={() => { setIsEditOpen(false); setSelected(null); }}

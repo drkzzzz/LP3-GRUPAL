@@ -44,7 +44,7 @@ export const useUnidadesMedida = () => {
       message.success('Unidad de medida eliminada exitosamente');
     },
     onError: (err) => {
-      message.error(err.response?.data?.message || 'Error al eliminar unidad');
+      message.error(err.response?.data?.message || err.response?.data || 'Error al eliminar unidad');
     },
   });
 

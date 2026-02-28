@@ -68,6 +68,16 @@ export const useCombos = () => {
     },
   });
 
+  const updateDetalle = useMutation({
+    mutationFn: detalleCombosService.update,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['detalle-combos'] });
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.message || 'Error al actualizar producto del combo');
+    },
+  });
+
   const deleteDetalle = useMutation({
     mutationFn: detalleCombosService.delete,
     onSuccess: () => {
@@ -99,12 +109,14 @@ export const useCombos = () => {
     updateCombo: updateCombo.mutateAsync,
     deleteCombo: deleteCombo.mutateAsync,
     createDetalle: createDetalle.mutateAsync,
+    updateDetalle: updateDetalle.mutateAsync,
     deleteDetalle: deleteDetalle.mutateAsync,
 
     isCreating: createCombo.isPending,
     isUpdating: updateCombo.isPending,
     isDeleting: deleteCombo.isPending,
     isCreatingDetalle: createDetalle.isPending,
+    isUpdatingDetalle: updateDetalle.isPending,
     isDeletingDetalle: deleteDetalle.isPending,
   };
 };
