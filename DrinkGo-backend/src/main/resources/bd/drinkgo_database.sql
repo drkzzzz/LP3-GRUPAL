@@ -476,22 +476,17 @@ CREATE TABLE metodos_pago (
 CREATE TABLE categorias (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     negocio_id BIGINT UNSIGNED NOT NULL,
-    padre_id BIGINT UNSIGNED NULL,
     nombre VARCHAR(150) NOT NULL,
     slug VARCHAR(150) NOT NULL,
     descripcion TEXT NULL,
-    url_imagen VARCHAR(500) NULL,
-    icono VARCHAR(50) NULL,
-    orden INT NOT NULL DEFAULT 0,
+    es_alcoholica TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = categoría para productos con alcohol',
     visible_tienda_online TINYINT(1) NOT NULL DEFAULT 1,
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_cat_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
-    CONSTRAINT fk_cat_padre FOREIGN KEY (padre_id) REFERENCES categorias(id) ON DELETE SET NULL,
     UNIQUE KEY uk_cat_negocio_slug (negocio_id, slug),
     INDEX idx_cat_negocio (negocio_id),
-    INDEX idx_cat_padre (padre_id),
     INDEX idx_cat_activo (negocio_id, esta_activo)
 ) ENGINE=InnoDB COMMENT='Categorías de productos (RF-PRO-006..009)';
 
@@ -552,16 +547,11 @@ CREATE TABLE productos (
     -- Atributos específicos de licorería
     grado_alcoholico DECIMAL(5,2) NULL COMMENT 'Grado alcohólico %',
 
-    -- Precios
-    precio_compra DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    precio_venta DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    precio_venta_minimo DECIMAL(10,2) NULL COMMENT 'Precio mínimo permitido',
-    precio_mayorista DECIMAL(10,2) NULL,
+    -- Impuestos
     tasa_impuesto DECIMAL(5,2) NOT NULL DEFAULT 18.00 COMMENT 'IGV % Perú',
     impuesto_incluido TINYINT(1) NOT NULL DEFAULT 1,
 
-    -- Stock
-    stock INT NOT NULL DEFAULT 0,
+    -- Vencimiento
     fecha_vencimiento DATE NULL COMMENT 'Fecha de vencimiento del producto',
 
     -- Flags

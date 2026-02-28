@@ -1,6 +1,5 @@
 package DrinkGo.DrinkGo_backend.dto;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -14,9 +13,6 @@ public class ProductosDTO {
     private Long categoriaId;
     private Long marcaId;
     private Long unidadMedidaId;
-    private BigDecimal precioCompra;
-    private BigDecimal precioVenta;
-    private Integer stock;
     private LocalDate fechaVencimiento;
     private Boolean tieneIgv;
     private Boolean controlaStock;
@@ -32,8 +28,8 @@ public class ProductosDTO {
     }
 
     public ProductosDTO(Long id, Long negocioId, String sku, String nombre, String descripcion,
-            Long categoriaId, Long marcaId, Long unidadMedidaId, BigDecimal precioCompra, BigDecimal precioVenta,
-            Integer stock, LocalDate fechaVencimiento, Boolean tieneIgv, Boolean controlaStock,
+            Long categoriaId, Long marcaId, Long unidadMedidaId,
+            LocalDate fechaVencimiento, Boolean tieneIgv, Boolean controlaStock,
             Boolean permiteVentaSinStock, String urlImagen, Boolean estaActivo,
             LocalDateTime creadoEn, LocalDateTime actualizadoEn, LocalDateTime eliminadoEn) {
         this.id = id;
@@ -44,9 +40,6 @@ public class ProductosDTO {
         this.categoriaId = categoriaId;
         this.marcaId = marcaId;
         this.unidadMedidaId = unidadMedidaId;
-        this.precioCompra = precioCompra;
-        this.precioVenta = precioVenta;
-        this.stock = stock;
         this.fechaVencimiento = fechaVencimiento;
         this.tieneIgv = tieneIgv;
         this.controlaStock = controlaStock;
@@ -121,30 +114,6 @@ public class ProductosDTO {
 
     public void setUnidadMedidaId(Long unidadMedidaId) {
         this.unidadMedidaId = unidadMedidaId;
-    }
-
-    public BigDecimal getPrecioCompra() {
-        return precioCompra;
-    }
-
-    public void setPrecioCompra(BigDecimal precioCompra) {
-        this.precioCompra = precioCompra;
-    }
-
-    public BigDecimal getPrecioVenta() {
-        return precioVenta;
-    }
-
-    public void setPrecioVenta(BigDecimal precioVenta) {
-        this.precioVenta = precioVenta;
-    }
-
-    public Integer getStock() {
-        return stock;
-    }
-
-    public void setStock(Integer stock) {
-        this.stock = stock;
     }
 
     public LocalDate getFechaVencimiento() {

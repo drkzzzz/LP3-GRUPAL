@@ -4,7 +4,6 @@ import { Login } from '../pages/Login';
 import { Dashboard } from '../pages/Dashboard';
 import { Configuracion } from '../pages/Configuracion';
 import { Usuarios } from '../pages/Usuarios';
-import { Catalogo } from '../pages/Catalogo';
 import { Inventario } from '../pages/Inventario';
 import { Compras } from '../pages/Compras';
 import { Ventas } from '../pages/Ventas';
@@ -13,6 +12,13 @@ import { Facturacion } from '../pages/Facturacion';
 import { Reportes } from '../pages/Reportes';
 import { MiPerfil } from '../pages/MiPerfil';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
+
+/* ─── Catálogo sub-páginas ─── */
+import { ProductosTab } from '../catalogo/components/tabs/ProductosTab';
+import { ClasificacionesPage } from '../catalogo/components/tabs/ClasificacionesPage';
+import { CombosTab } from '../catalogo/components/tabs/CombosTab';
+import { PromocionesTab } from '../catalogo/components/tabs/PromocionesTab';
+import { CatalogoPage } from '../pages/Catalogo';
 
 const ProtectedRoute = ({ children }) => {
   const { token } = useAdminAuthStore();
@@ -37,7 +43,16 @@ export const AdminRoutes = () => {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="configuracion" element={<Configuracion />} />
         <Route path="usuarios" element={<Usuarios />} />
-        <Route path="catalogo" element={<Catalogo />} />
+
+        {/* Catálogo: sub-rutas independientes */}
+        <Route path="catalogo" element={<CatalogoPage />}>
+          <Route index element={<Navigate to="productos" replace />} />
+          <Route path="productos" element={<ProductosTab />} />
+          <Route path="clasificaciones" element={<ClasificacionesPage />} />
+          <Route path="combos" element={<CombosTab />} />
+          <Route path="promociones" element={<PromocionesTab />} />
+        </Route>
+
         <Route path="inventario" element={<Inventario />} />
         <Route path="compras" element={<Compras />} />
         <Route path="ventas" element={<Ventas />} />

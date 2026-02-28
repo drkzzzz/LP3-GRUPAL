@@ -32,6 +32,19 @@ Crea 4 negocios de ejemplo en diferentes estados con sus suscripciones y sedes.
 - **El Imperio**: Pendiente, Sin plan asignado
 - **Premium Wines**: Suspendido por falta de pago
 
+### 4. `04_catalogo_demo.sql`
+Crea datos completos del módulo Catálogo para los 4 negocios. Útil como base para módulos de Inventario, Ventas, Compras y Pedidos.
+
+**Datos creados por negocio (×4 negocios):**
+- **5 Categorías**: Rones ★, Cervezas ★, Vinos y Espumantes ★, Snacks y Piqueos, Gaseosas y Bebidas (★ = alcohólica)
+- **5 Marcas**: Cartavio (Perú), Pilsen (Perú), Concha y Toro (Chile), Lay's (USA), Coca-Cola (USA)
+- **5 Unidades de Medida**: Unidad, Botella, Paquete, Lata, Six Pack
+- **5 Productos**: Ron Cartavio Black 750ml (40°), Cerveza Pilsen 630ml (5°), Vino Casillero del Diablo 750ml (13.5°), Papitas Lay's 200g, Coca-Cola 1.5L
+- **2 Combos**: Pack Parrillero (S/22→S/18.90), Combo Ron + Gaseosa (S/57→S/49.90)
+- **Detalle Combos**: 2 productos por combo con precios unitarios
+
+**Totales**: 20 categorías, 20 marcas, 20 unidades, 20 productos, 8 combos, 16 detalle combos
+
 ## 🔧 Cómo Ejecutar los Seeds
 
 ### Opción 1: Desde MySQL Command Line
@@ -93,6 +106,12 @@ Rol: soporte_plataforma
 - ✅ 4 negocios demo
 - ✅ 5 sedes (entre todos los negocios)
 - ✅ 3 suscripciones activas/suspendidas
+- ✅ 20 categorías (5 × 4 negocios)
+- ✅ 20 marcas (5 × 4 negocios)
+- ✅ 20 unidades de medida (5 × 4 negocios)
+- ✅ 20 productos (5 × 4 negocios)
+- ✅ 8 combos (2 × 4 negocios)
+- ✅ 16 detalle combos (4 × 4 negocios)
 
 ### Estados de Negocios
 - **Activos**: 2 (Don Pepe, La Bodega)
@@ -139,7 +158,7 @@ Luego volver a ejecutar los seeds en orden.
 
 ## ⚠️ Notas Importantes
 
-1. **Orden de Ejecución**: Los seeds DEBEN ejecutarse en orden (01, 02, 03) debido a las dependencias entre tablas
+1. **Orden de Ejecución**: Los seeds DEBEN ejecutarse en orden (01, 02, 03, 04) debido a las dependencias entre tablas
 
 2. **Contraseñas**: Las contraseñas están hasheadas con BCrypt (fortaleza 10) compatible con Spring Security
 

@@ -3,6 +3,7 @@ package DrinkGo.DrinkGo_backend.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import DrinkGo.DrinkGo_backend.entity.Combos;
+import DrinkGo.DrinkGo_backend.repository.CombosRepository;
 import DrinkGo.DrinkGo_backend.service.ICombosService;
 import java.util.List;
 import java.util.Optional;
@@ -20,9 +21,17 @@ public class CombosController {
     @Autowired
     private ICombosService service;
 
+    @Autowired
+    private CombosRepository combosRepository;
+
     @GetMapping("/combos")
     public List<Combos> buscarTodos() {
         return service.buscarTodos();
+    }
+
+    @GetMapping("/combos/negocio/{negocioId}")
+    public List<Combos> buscarPorNegocio(@PathVariable Long negocioId) {
+        return combosRepository.findByNegocioId(negocioId);
     }
 
     @PostMapping("/combos")
