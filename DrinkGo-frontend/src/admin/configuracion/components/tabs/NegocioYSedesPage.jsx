@@ -6,16 +6,14 @@
  */
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Building2, MapPin, Warehouse, Globe } from 'lucide-react';
+import { Building2, MapPin, Globe } from 'lucide-react';
 import { NegocioTab } from './NegocioTab';
 import { SedesTab } from './SedesTab';
-import { AlmacenesConfigTab } from './AlmacenesConfigTab';
 import { TiendaOnlineTab } from './TiendaOnlineTab';
 
 const TABS = [
   { key: 'negocio', label: 'Mi Negocio', icon: Building2 },
   { key: 'sedes', label: 'Sedes', icon: MapPin },
-  { key: 'almacenes', label: 'Almacenes', icon: Warehouse },
   { key: 'tienda-online', label: 'Tienda Online', icon: Globe },
 ];
 
@@ -60,7 +58,6 @@ export const NegocioYSedesPage = () => {
       <div>
         {activeTab === 'negocio' && <NegocioTab context={outletContext} />}
         {activeTab === 'sedes' && <SedesTab context={outletContext} />}
-        {activeTab === 'almacenes' && <AlmacenesConfigTab context={outletContext} />}
         {activeTab === 'tienda-online' && <TiendaOnlineTab context={outletContext} />}
       </div>
     </div>
