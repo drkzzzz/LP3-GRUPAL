@@ -26,8 +26,7 @@ import jakarta.persistence.Table;
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "negocioId", "sku", "nombre", "slug", "descripcion",
         "urlImagen", "categoriaId", "marcaId", "unidadMedidaId", "gradoAlcoholico",
-        "precioCompra", "precioVenta", "precioVentaMinimo",
-        "precioMayorista", "tasaImpuesto", "impuestoIncluido", "fechaVencimiento",
+        "tasaImpuesto", "impuestoIncluido", "fechaVencimiento",
         "permiteDescuento", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class Productos {
 
@@ -68,18 +67,6 @@ public class Productos {
 
     @Column(name = "grado_alcoholico", precision = 5, scale = 2)
     private BigDecimal gradoAlcoholico;
-
-    @Column(name = "precio_compra", precision = 10, scale = 2)
-    private BigDecimal precioCompra = BigDecimal.ZERO;
-
-    @Column(name = "precio_venta", precision = 10, scale = 2, nullable = false)
-    private BigDecimal precioVenta = BigDecimal.ZERO;
-
-    @Column(name = "precio_venta_minimo", precision = 10, scale = 2)
-    private BigDecimal precioVentaMinimo;
-
-    @Column(name = "precio_mayorista", precision = 10, scale = 2)
-    private BigDecimal precioMayorista;
 
     @Column(name = "tasa_impuesto", precision = 5, scale = 2)
     private BigDecimal tasaImpuesto = new BigDecimal("18.00");
@@ -205,38 +192,6 @@ public class Productos {
         this.gradoAlcoholico = gradoAlcoholico;
     }
 
-    public BigDecimal getPrecioCompra() {
-        return precioCompra;
-    }
-
-    public void setPrecioCompra(BigDecimal precioCompra) {
-        this.precioCompra = precioCompra;
-    }
-
-    public BigDecimal getPrecioVenta() {
-        return precioVenta;
-    }
-
-    public void setPrecioVenta(BigDecimal precioVenta) {
-        this.precioVenta = precioVenta;
-    }
-
-    public BigDecimal getPrecioVentaMinimo() {
-        return precioVentaMinimo;
-    }
-
-    public void setPrecioVentaMinimo(BigDecimal precioVentaMinimo) {
-        this.precioVentaMinimo = precioVentaMinimo;
-    }
-
-    public BigDecimal getPrecioMayorista() {
-        return precioMayorista;
-    }
-
-    public void setPrecioMayorista(BigDecimal precioMayorista) {
-        this.precioMayorista = precioMayorista;
-    }
-
     public BigDecimal getTasaImpuesto() {
         return tasaImpuesto;
     }
@@ -304,6 +259,6 @@ public class Productos {
     @Override
     public String toString() {
         return "Productos [id=" + id + ", sku=" + sku + ", nombre=" + nombre
-                + ", precioVenta=" + precioVenta + ", estaActivo=" + estaActivo + "]";
+                + ", estaActivo=" + estaActivo + "]";
     }
 }

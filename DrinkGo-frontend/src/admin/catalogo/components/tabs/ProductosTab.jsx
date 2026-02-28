@@ -13,7 +13,7 @@ import {
   Edit,
   Trash2,
   Package,
-  DollarSign,
+  Tag,
   XCircle,
   CheckCircle,
 } from 'lucide-react';
@@ -22,7 +22,6 @@ import { useCategorias } from '../../hooks/useCategorias';
 import { useMarcas } from '../../hooks/useMarcas';
 import { useUnidadesMedida } from '../../hooks/useUnidadesMedida';
 import { useDebounce } from '@/shared/hooks/useDebounce';
-import { formatCurrency } from '@/shared/utils/formatters';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
 import { Table } from '@/admin/components/ui/Table';
@@ -85,7 +84,7 @@ export const ProductosTab = () => {
     total: productos.length,
     activos: productos.filter((p) => p.estaActivo).length,
     inactivos: productos.filter((p) => !p.estaActivo).length,
-    conPrecio: productos.filter((p) => p.precioVenta > 0).length,
+    conCategoria: productos.filter((p) => p.categoria).length,
   }), [productos]);
 
   /* ─── Handlers ─── */
@@ -186,12 +185,12 @@ export const ProductosTab = () => {
       ),
     },
     {
-      key: 'precio',
-      title: 'Precio',
+      key: 'gradoAlcoholico',
+      title: 'Grado Alc.',
       width: '110px',
       render: (_, row) => (
-        <span className="text-sm font-medium text-gray-800">
-          {formatCurrency(row.precioVenta)}
+        <span className="text-sm text-gray-600">
+          {row.gradoAlcoholico ? `${row.gradoAlcoholico}%` : '—'}
         </span>
       ),
     },
@@ -265,9 +264,9 @@ export const ProductosTab = () => {
           className="border-l-4 border-l-red-500"
         />
         <StatCard
-          title="Con precio"
-          value={stats.conPrecio}
-          icon={DollarSign}
+          title="Con categoría"
+          value={stats.conCategoria}
+          icon={Tag}
           className="border-l-4 border-l-blue-500"
         />
       </div>
@@ -384,14 +383,6 @@ export const ProductosTab = () => {
               <div>
                 <p className="text-gray-500">Marca</p>
                 <p className="font-medium">{getMarcaName(selected)}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Precio venta</p>
-                <p className="font-medium">{formatCurrency(selected.precioVenta)}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Precio compra</p>
-                <p className="font-medium">{formatCurrency(selected.precioCompra)}</p>
               </div>
               <div>
                 <p className="text-gray-500">Grado alcohólico</p>

@@ -547,11 +547,7 @@ CREATE TABLE productos (
     -- Atributos específicos de licorería
     grado_alcoholico DECIMAL(5,2) NULL COMMENT 'Grado alcohólico %',
 
-    -- Precios
-    precio_compra DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    precio_venta DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    precio_venta_minimo DECIMAL(10,2) NULL COMMENT 'Precio mínimo permitido',
-    precio_mayorista DECIMAL(10,2) NULL,
+    -- Impuestos
     tasa_impuesto DECIMAL(5,2) NOT NULL DEFAULT 18.00 COMMENT 'IGV % Perú',
     impuesto_incluido TINYINT(1) NOT NULL DEFAULT 1,
 

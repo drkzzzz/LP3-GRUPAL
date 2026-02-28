@@ -96,7 +96,7 @@ export const ComboForm = ({
             ? {
                 ...d,
                 productoId: Number(productoId) || '',
-                precioUnitario: producto?.precioVenta ?? 0,
+                precioUnitario: 0,
               }
             : d,
         ),
@@ -310,7 +310,7 @@ export const ComboForm = ({
                             value={p.id}
                             disabled={usedProductIds.has(p.id) && Number(det.productoId) !== p.id}
                           >
-                            {p.nombre} — {formatCurrency(p.precioVenta)}
+                            {p.nombre}
                           </option>
                         ))}
                       </select>

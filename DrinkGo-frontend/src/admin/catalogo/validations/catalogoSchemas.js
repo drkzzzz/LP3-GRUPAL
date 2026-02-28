@@ -39,15 +39,6 @@ export const productoSchema = z.object({
     .string()
     .optional()
     .default(''),
-  precioCompra: z
-    .string()
-    .optional()
-    .default('0'),
-  precioVenta: z
-    .string()
-    .min(1, 'El precio de venta es obligatorio'),
-  precioVentaMinimo: z.string().optional().default(''),
-  precioMayorista: z.string().optional().default(''),
   tasaImpuesto: z.string().optional().default('18'),
   impuestoIncluido: z.boolean().optional().default(true),
   permiteDescuento: z.boolean().optional().default(true),

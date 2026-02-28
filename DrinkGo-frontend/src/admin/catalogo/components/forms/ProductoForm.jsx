@@ -58,10 +58,6 @@ export const ProductoForm = ({
       marcaId: String(initialData?.marca?.id || initialData?.marcaId || ''),
       unidadMedidaId: String(initialData?.unidadMedida?.id || initialData?.unidadMedidaId || ''),
       gradoAlcoholico: String(initialData?.gradoAlcoholico ?? ''),
-      precioCompra: String(initialData?.precioCompra ?? '0'),
-      precioVenta: String(initialData?.precioVenta ?? ''),
-      precioVentaMinimo: String(initialData?.precioVentaMinimo ?? ''),
-      precioMayorista: String(initialData?.precioMayorista ?? ''),
       tasaImpuesto: String(initialData?.tasaImpuesto ?? '18'),
       impuestoIncluido: initialData?.impuestoIncluido ?? true,
       permiteDescuento: initialData?.permiteDescuento ?? true,
@@ -107,10 +103,6 @@ export const ProductoForm = ({
       marca: formData.marcaId ? { id: Number(formData.marcaId) } : null,
       unidadMedida: formData.unidadMedidaId ? { id: Number(formData.unidadMedidaId) } : null,
       gradoAlcoholico: formData.gradoAlcoholico ? Number(formData.gradoAlcoholico) : null,
-      precioCompra: Number(formData.precioCompra) || 0,
-      precioVenta: Number(formData.precioVenta),
-      precioVentaMinimo: formData.precioVentaMinimo ? Number(formData.precioVentaMinimo) : null,
-      precioMayorista: formData.precioMayorista ? Number(formData.precioMayorista) : null,
       tasaImpuesto: Number(formData.tasaImpuesto) || 18,
       impuestoIncluido: formData.impuestoIncluido,
       permiteDescuento: formData.permiteDescuento,
@@ -187,40 +179,7 @@ export const ProductoForm = ({
         />
       </div>
 
-      {/* Fila 4: Precios */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Input
-          label="Precio compra (S/)"
-          type="number"
-          step="0.01"
-          {...register('precioCompra')}
-          error={errors.precioCompra?.message}
-        />
-        <Input
-          label="Precio venta (S/)"
-          required
-          type="number"
-          step="0.01"
-          {...register('precioVenta')}
-          error={errors.precioVenta?.message}
-        />
-        <Input
-          label="Precio mínimo (S/)"
-          type="number"
-          step="0.01"
-          {...register('precioVentaMinimo')}
-          error={errors.precioVentaMinimo?.message}
-        />
-        <Input
-          label="Precio mayorista (S/)"
-          type="number"
-          step="0.01"
-          {...register('precioMayorista')}
-          error={errors.precioMayorista?.message}
-        />
-      </div>
-
-      {/* Fila 5: Grado + Impuesto */}
+      {/* Fila 4: Grado + Impuesto */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="relative">
           {!isAlcohol && (
