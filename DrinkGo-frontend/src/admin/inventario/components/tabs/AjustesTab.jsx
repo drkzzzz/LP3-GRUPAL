@@ -19,6 +19,7 @@ import {
 import { useMovimientosInventario } from '../../hooks/useMovimientosInventario';
 import { useAlmacenes } from '../../hooks/useAlmacenes';
 import { useProductosInventario } from '../../hooks/useProductosInventario';
+import { useStockInventario } from '../../hooks/useStockInventario';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { formatDateTime } from '@/shared/utils/formatters';
@@ -56,8 +57,7 @@ export const AjustesTab = () => {
   /* ─── Data hooks ─── */
   const { movimientos, isLoading, createMovimiento, isCreating } = useMovimientosInventario(negocioId);
   const { almacenes } = useAlmacenes(negocioId);
-  const { productos } = useProductosInventario(negocioId);
-
+  const { productos } = useProductosInventario(negocioId);  const { stock, createStock, updateStock } = useStockInventario(negocioId);
   /* ─── Filtrar solo ajustes ─── */
   const ajustes = useMemo(() => {
     return movimientos
@@ -92,8 +92,50 @@ export const AjustesTab = () => {
 
   /* ─── Handlers ─── */
   const handleCreate = async (data) => {
-    await createMovimiento(data);
-    setIsCreateOpen(false);
+    try {
+      // 1. Crear el movimiento
+      await createMovimiento(data);
+
+      // 2. Sincronizar stock
+      const almacenAfectado = data.almacenOrigen || data.almacenDestino;
+      const stockExistente = stock.find(
+        (s) => s.producto?.id === data.producto.id && s.almacen?.id === almacenAfectado.id
+      );
+
+      const cantidad = Number(data.cantidad);
+      const isPositive = ['ajuste_positivo', 'devolucion'].includes(data.tipoMovimiento);
+      const deltaStock = isPositive ? cantidad : -cantidad;
+
+      if (stockExistente) {
+        // Actualizar stock existente
+        const nuevaCantidad = Math.max(0, Number(stockExistente.cantidadActual || 0) + deltaStock);
+        await updateStock({
+          id: stockExistente.id,
+          negocio: data.negocio,
+          producto: data.producto,
+          almacen: almacenAfectado,
+          cantidadActual: nuevaCantidad,
+          cantidadDisponible: nuevaCantidad,
+          cantidadReservada: Number(stockExistente.cantidadReservada || 0),
+          costoPromedio: Number(stockExistente.costoPromedio || 0),
+        });
+      } else if (isPositive) {
+        // Solo crear stock si es ajuste positivo
+        await createStock({
+          negocio: data.negocio,
+          producto: data.producto,
+          almacen: almacenAfectado,
+          cantidadActual: cantidad,
+          cantidadDisponible: cantidad,
+          cantidadReservada: 0,
+          costoPromedio: 0,
+        });
+      }
+
+      setIsCreateOpen(false);
+    } catch (error) {
+      console.error('Error al crear ajuste o actualizar stock:', error);
+    }
   };
 
   const handleView = (item) => {
