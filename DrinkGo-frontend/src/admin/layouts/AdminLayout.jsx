@@ -52,6 +52,14 @@ const INVENTARIO_SUBITEMS = [
   { to: '/admin/inventario/reportes', label: 'Reportes', icon: BarChart3 },
 ];
 
+/* ─── Sub-items del menú Compras ─── */
+const COMPRAS_SUBITEMS = [
+  { to: '/admin/compras/proveedores', label: 'Proveedores', icon: Users },
+  { to: '/admin/compras/productos-proveedor', label: 'Productos Proveedor', icon: Package },
+  { to: '/admin/compras/ordenes', label: 'Órdenes de Compra', icon: ClipboardList },
+  { to: '/admin/compras/recepcion', label: 'Recepción', icon: ShoppingCart },
+];
+
 const NAV_ITEMS = [
   {
     to: '/admin/dashboard',
@@ -83,9 +91,10 @@ const NAV_ITEMS = [
     children: INVENTARIO_SUBITEMS,
   },
   {
-    to: '/admin/compras',
+    key: 'compras',
     icon: Truck,
     label: 'Proveedores y Compras',
+    children: COMPRAS_SUBITEMS,
   },
   {
     to: '/admin/ventas',
