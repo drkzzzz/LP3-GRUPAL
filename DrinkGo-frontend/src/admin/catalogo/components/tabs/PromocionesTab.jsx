@@ -7,6 +7,8 @@ import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Eye, Tag, Percent, DollarSign } from 'lucide-react';
 import { usePromociones } from '../../hooks/usePromociones';
+import { useCategorias } from '../../hooks/useCategorias';
+import { useProductos } from '../../hooks/useProductos';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { formatCurrency, formatDate } from '@/shared/utils/formatters';
 import { Card } from '@/admin/components/ui/Card';
@@ -43,11 +45,15 @@ export const PromocionesTab = () => {
     createPromocion,
     updatePromocion,
     deletePromocion,
+    createCondicion,
     getCondicionesForPromocion,
     isCreating,
     isUpdating,
     isDeleting,
   } = usePromociones();
+
+  const { categorias } = useCategorias(negocioId);
+  const { productos } = useProductos(negocioId);
 
   /* ─── Helpers ─── */
   const isPromoActive = (promo) => {
@@ -82,14 +88,24 @@ export const PromocionesTab = () => {
 
   /* ─── Handlers ─── */
   const handleCreate = async (data) => {
-    await createPromocion(data);
+    const { _entidadId, _tipoEntidad, ...promoData } = data;
+    const created = await createPromocion(promoData);
+    /* Si seleccionó categoría/producto, crear la condición asociada */
+    if (_entidadId && _tipoEntidad && created?.id) {
+      await createCondicion({
+        promocion: { id: created.id },
+        tipoEntidad: _tipoEntidad,
+        entidadId: _entidadId,
+      });
+    }
     setIsCreateOpen(false);
   };
 
   const handleEdit = (promo) => { setSelected(promo); setIsEditOpen(true); };
 
   const handleUpdate = async (data) => {
-    await updatePromocion(data);
+    const { _entidadId, _tipoEntidad, ...promoData } = data;
+    await updatePromocion(promoData);
     setIsEditOpen(false);
     setSelected(null);
   };
@@ -280,6 +296,8 @@ export const PromocionesTab = () => {
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Nueva Promoción" size="lg">
         <PromocionForm
           negocioId={negocioId}
+          categorias={categorias}
+          productos={productos}
           onSubmit={handleCreate}
           onCancel={() => setIsCreateOpen(false)}
           isLoading={isCreating}
@@ -292,6 +310,8 @@ export const PromocionesTab = () => {
           <PromocionForm
             initialData={selected}
             negocioId={negocioId}
+            categorias={categorias}
+            productos={productos}
             onSubmit={handleUpdate}
             onCancel={() => { setIsEditOpen(false); setSelected(null); }}
             isLoading={isUpdating}
@@ -299,7 +319,7 @@ export const PromocionesTab = () => {
         )}
       </Modal>
 
-      {/* Detalle: condiciones */}
+      {/* Detalle */}
       <Modal
         isOpen={isDetailOpen}
         onClose={() => { setIsDetailOpen(false); setSelected(null); }}
@@ -308,7 +328,6 @@ export const PromocionesTab = () => {
       >
         {selected && (
           <div className="space-y-4">
-            {/* Info general */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-gray-500">Tipo descuento</p>
@@ -324,7 +343,7 @@ export const PromocionesTab = () => {
               </div>
               <div>
                 <p className="text-gray-500">Código</p>
-                <p className="font-medium">{selected.codigoPromocion || '—'}</p>
+                <p className="font-medium">{selected.codigo || '—'}</p>
               </div>
               <div>
                 <p className="text-gray-500">Compra mínima</p>
@@ -332,47 +351,15 @@ export const PromocionesTab = () => {
               </div>
               <div>
                 <p className="text-gray-500">Uso máximo</p>
-                <p className="font-medium">{selected.usoMaximo || 'Ilimitado'}</p>
+                <p className="font-medium">{selected.maxUsos ?? 'Ilimitado'}</p>
               </div>
-            </div>
-
-            {selected.descripcion && (
-              <div className="text-sm">
-                <p className="text-gray-500">Descripción</p>
-                <p className="text-gray-700 mt-1">{selected.descripcion}</p>
-              </div>
-            )}
-
-            {/* Condiciones */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Condiciones</h4>
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-medium text-gray-600">Tipo condición</th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-600">Valor</th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-600">Descripción</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {getCondicionesForPromocion(selected.id).length > 0 ? (
-                      getCondicionesForPromocion(selected.id).map((cond) => (
-                        <tr key={cond.id}>
-                          <td className="px-4 py-2">{cond.tipoCondicion}</td>
-                          <td className="px-4 py-2">{cond.valorCondicion}</td>
-                          <td className="px-4 py-2 text-gray-500">{cond.descripcion || '—'}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="3" className="px-4 py-6 text-center text-gray-400">
-                          Sin condiciones configuradas
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              <div className="col-span-2">
+                <p className="text-gray-500">Vigencia</p>
+                <p className="font-medium">
+                  {selected.validoDesde ? formatDate(selected.validoDesde) : '—'}
+                  {' — '}
+                  {selected.validoHasta ? formatDate(selected.validoHasta) : 'Sin fin'}
+                </p>
               </div>
             </div>
           </div>

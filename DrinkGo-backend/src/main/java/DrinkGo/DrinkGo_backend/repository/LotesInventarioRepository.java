@@ -6,12 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-
-
+import DrinkGo.DrinkGo_backend.entity.Almacenes;
 import DrinkGo.DrinkGo_backend.entity.LotesInventario;
 import DrinkGo.DrinkGo_backend.entity.Productos;
-import DrinkGo.DrinkGo_backend.entity.Almacenes;
-import java.util.List;
 
 public interface LotesInventarioRepository extends JpaRepository<LotesInventario, Long> {
 
@@ -29,7 +26,7 @@ public interface LotesInventarioRepository extends JpaRepository<LotesInventario
     List<LotesInventario> findLotesConStockFIFOForUpdate(
             @Param("productoId") Long productoId,
             @Param("almacenId") Long almacenId);
-=======
+
     /**
      * Obtiene lotes con stock disponible ordenados por FIFO (fecha de ingreso más antigua primero)
      * Usado para salidas de inventario aplicando First In, First Out

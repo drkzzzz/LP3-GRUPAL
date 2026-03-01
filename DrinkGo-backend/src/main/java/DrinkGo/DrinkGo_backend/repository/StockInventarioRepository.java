@@ -7,11 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import DrinkGo.DrinkGo_backend.entity.StockInventario;
-import DrinkGo.DrinkGo_backend.entity.Productos;
 import DrinkGo.DrinkGo_backend.entity.Almacenes;
-import java.util.Optional;
-import java.util.List;
+import DrinkGo.DrinkGo_backend.entity.Productos;
+import DrinkGo.DrinkGo_backend.entity.StockInventario;
 
 public interface StockInventarioRepository extends JpaRepository<StockInventario, Long> {
 
@@ -30,7 +28,7 @@ public interface StockInventarioRepository extends JpaRepository<StockInventario
     Optional<StockInventario> findByProductoIdAndAlmacenIdForUpdate(
             @Param("productoId") Long productoId,
             @Param("almacenId") Long almacenId);
-=======
+
     /**
      * Busca el registro de stock para un producto específico en un almacén específico
      */
