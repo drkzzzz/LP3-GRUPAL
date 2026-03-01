@@ -68,18 +68,23 @@ export const PagoModal = ({
 
   /* Inicializar al abrir */
   useEffect(() => {
-    if (isOpen && metodosPago.length > 0) {
-      const efectivo = metodosPago.find(
-        (m) => m.tipo === 'efectivo' || m.nombre?.toLowerCase() === 'efectivo',
-      );
-      setPagos([
-        { metodoPagoId: efectivo?.id || metodosPago[0]?.id, monto: total },
-      ]);
+    if (isOpen) {
       setTipoComprobante('nota_venta');
       setTipoDocumento('');
       setDocClienteNumero('');
       setDocClienteNombre('');
       setDocError(null);
+
+      if (metodosPago.length > 0) {
+        const efectivo = metodosPago.find(
+          (m) => m.tipo === 'efectivo' || m.nombre?.toLowerCase() === 'efectivo',
+        );
+        setPagos([
+          { metodoPagoId: efectivo?.id || metodosPago[0]?.id, monto: total },
+        ]);
+      } else {
+        setPagos([]);
+      }
     }
   }, [isOpen, metodosPago, total]);
 
@@ -292,11 +297,18 @@ export const PagoModal = ({
             <h3 className="text-sm font-semibold text-gray-700">
               Métodos de pago
             </h3>
-            <Button variant="outline" size="sm" onClick={addPago}>
+            <Button variant="outline" size="sm" onClick={addPago} disabled={metodosPago.length === 0}>
               <Plus size={14} className="mr-1" />
               Agregar método
             </Button>
           </div>
+
+          {metodosPago.length === 0 && (
+            <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-200 text-sm">
+              <AlertCircle size={16} />
+              <span>No hay métodos de pago configurados. Vaya a <strong>Configuración → Métodos de Pago</strong> para crear uno.</span>
+            </div>
+          )}
 
           <div className="space-y-2">
             {pagos.map((pago, index) => {

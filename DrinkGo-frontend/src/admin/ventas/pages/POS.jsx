@@ -4,9 +4,9 @@
  * Página principal del Punto de Venta.
  * Si no hay turno abierto redirige a Cajas para aperturar.
  */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DollarSign, Power, ArrowDownUp, ShoppingBag, AlertCircle } from 'lucide-react';
+import { DollarSign, Power, ArrowDownUp, ShoppingBag, AlertCircle, LogIn } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
 import { Badge } from '@/admin/components/ui/Badge';
@@ -16,11 +16,10 @@ import { ResumenVenta } from '../components/ResumenVenta';
 import { PagoModal } from '../components/PagoModal';
 import { MovimientoCajaModal } from '../components/MovimientoCajaModal';
 import { useCartStore } from '../stores/cartStore';
-import { useSesionActiva, useResumenTurno, useMovimientos } from '../hooks/useCajas';
+import { useSesionActiva, useResumenTurno, useMovimientos, useCategoriasGasto } from '../hooks/useCajas';
 import { useCrearVenta, useMetodosPago } from '../hooks/useVentas';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { formatCurrency, formatDateTime } from '@/shared/utils/formatters';
-import { message } from '@/shared/utils/notifications';
 
 export const POS = () => {
   const navigate = useNavigate();
@@ -28,6 +27,7 @@ export const POS = () => {
   const { sesion, hasSesion, isLoading: loadingSesion } = useSesionActiva();
   const { resumen } = useResumenTurno(sesion?.id);
   const { registrar: registrarMovimiento, isRegistrando } = useMovimientos(sesion?.id);
+  const { categorias } = useCategoriasGasto();
   const { crearVenta, isCreating } = useCrearVenta();
   const { metodosPago } = useMetodosPago();
 
@@ -39,14 +39,6 @@ export const POS = () => {
 
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [showMovimientoModal, setShowMovimientoModal] = useState(false);
-
-  /* Redirigir a Cajas si no hay turno abierto */
-  useEffect(() => {
-    if (!loadingSesion && !hasSesion) {
-      message.warning('Debe aperturar una caja antes de vender');
-      navigate('/admin/ventas/cajas', { replace: true });
-    }
-  }, [loadingSesion, hasSesion, navigate]);
 
   /* ─── Registrar movimiento ─── */
   const handleMovimiento = async (data) => {
@@ -91,8 +83,45 @@ export const POS = () => {
     );
   }
 
-  /* Si no hay sesión, el useEffect redirige, pero por seguridad */
-  if (!hasSesion) return null;
+  /* Si no hay sesión, mostrar aviso claro */
+  if (!hasSesion) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Punto de Venta</h1>
+          <p className="text-gray-600 mt-1">Registra ventas rápidas desde el mostrador</p>
+        </div>
+
+        <div className="flex flex-col items-center justify-center bg-white rounded-xl border border-gray-200 shadow-sm py-16 px-6">
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mb-6">
+            <AlertCircle size={40} className="text-amber-500" />
+          </div>
+
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            No tienes una caja abierta
+          </h2>
+
+          <p className="text-gray-500 text-center max-w-md mb-2">
+            Para poder realizar ventas, primero debes aperturar una caja registradora.
+            Esto permite llevar un control preciso del dinero en tu turno.
+          </p>
+
+          <p className="text-sm text-gray-400 text-center max-w-sm mb-8">
+            Ve a la sección de Cajas, selecciona una caja disponible e ingresa el monto
+            con el que inicias tu turno.
+          </p>
+
+          <Button
+            onClick={() => navigate('/admin/ventas/cajas')}
+            className="px-6 py-3 text-base"
+          >
+            <LogIn size={20} className="mr-2" />
+            Ir a Aperturar Caja
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const total = getTotal();
 
@@ -222,6 +251,7 @@ export const POS = () => {
         onConfirm={handleMovimiento}
         sesionCajaId={sesion?.id}
         isLoading={isRegistrando}
+        categorias={categorias}
       />
     </div>
   );

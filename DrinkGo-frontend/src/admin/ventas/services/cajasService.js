@@ -79,4 +79,35 @@ export const cajasService = {
     const { data } = await adminApi.get(`/pos/movimientos/sesion/${sesionCajaId}`);
     return toArray(data);
   },
+
+  getMovimientosByNegocio: async (negocioId, { cajaId, desde, hasta } = {}) => {
+    const params = {};
+    if (cajaId) params.cajaId = cajaId;
+    if (desde) params.desde = desde;
+    if (hasta) params.hasta = hasta;
+    const { data } = await adminApi.get(`/pos/movimientos/negocio/${negocioId}`, { params });
+    return toArray(data);
+  },
+
+  /* ═══ CATEGORÍAS DE GASTO ═══ */
+
+  getCategoriasByNegocio: async (negocioId) => {
+    const { data } = await adminApi.get(`/pos/categorias-gasto/negocio/${negocioId}`);
+    return toArray(data);
+  },
+
+  crearCategoria: async (categoriaData) => {
+    const { data } = await adminApi.post('/pos/categorias-gasto', categoriaData);
+    return data;
+  },
+
+  actualizarCategoria: async (id, categoriaData) => {
+    const { data } = await adminApi.put(`/pos/categorias-gasto/${id}`, categoriaData);
+    return data;
+  },
+
+  eliminarCategoria: async (id) => {
+    const { data } = await adminApi.delete(`/pos/categorias-gasto/${id}`);
+    return data;
+  },
 };

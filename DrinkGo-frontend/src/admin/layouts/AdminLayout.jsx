@@ -26,6 +26,11 @@ import {
   History,
   AlertTriangle,
   Building2,
+  FileText,
+  Hash,
+  Monitor,
+  Wallet,
+  Receipt,
 } from 'lucide-react';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
@@ -58,6 +63,21 @@ const COMPRAS_SUBITEMS = [
   { to: '/admin/compras/productos-proveedor', label: 'Productos Proveedor', icon: Package },
   { to: '/admin/compras/ordenes', label: 'Órdenes de Compra', icon: ClipboardList },
   { to: '/admin/compras/recepcion', label: 'Recepción', icon: ShoppingCart },
+];
+
+/* ─── Sub-items del menú Ventas / POS ─── */
+const VENTAS_SUBITEMS = [
+  { to: '/admin/ventas/pos', label: 'Punto de Venta', icon: Monitor },
+  { to: '/admin/ventas/cajas', label: 'Caja', icon: Wallet },
+  { to: '/admin/ventas/movimientos', label: 'Movimientos de Caja', icon: Receipt },
+  { to: '/admin/ventas/historial', label: 'Historial', icon: History },
+];
+
+/* ─── Sub-items del menú Facturación ─── */
+const FACTURACION_SUBITEMS = [
+  { to: '/admin/facturacion/comprobantes', label: 'Comprobantes', icon: FileText },
+  { to: '/admin/facturacion/series', label: 'Series', icon: Hash },
+  { to: '/admin/facturacion/metodos-pago', label: 'Métodos de Pago', icon: CreditCard },
 ];
 
 const NAV_ITEMS = [
@@ -97,9 +117,10 @@ const NAV_ITEMS = [
     children: COMPRAS_SUBITEMS,
   },
   {
-    to: '/admin/ventas',
+    key: 'ventas',
     icon: CreditCard,
     label: 'Ventas / POS',
+    children: VENTAS_SUBITEMS,
   },
   {
     to: '/admin/pedidos',
@@ -107,9 +128,10 @@ const NAV_ITEMS = [
     label: 'Pedidos',
   },
   {
-    to: '/admin/facturacion',
+    key: 'facturacion',
     icon: ClipboardList,
     label: 'Facturación',
+    children: FACTURACION_SUBITEMS,
   },
   {
     to: '/admin/reportes',

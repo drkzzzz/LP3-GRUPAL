@@ -42,6 +42,10 @@ public class MovimientosCaja {
     @Column(name = "gasto_id")
     private Long gastoId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoria_gasto_id")
+    private CategoriasGasto categoriaGasto;
+
     @Column(name = "fecha_movimiento", nullable = false)
     private LocalDateTime fechaMovimiento;
 
@@ -130,6 +134,14 @@ public class MovimientosCaja {
 
     public void setGastoId(Long gastoId) {
         this.gastoId = gastoId;
+    }
+
+    public CategoriasGasto getCategoriaGasto() {
+        return categoriaGasto;
+    }
+
+    public void setCategoriaGasto(CategoriasGasto categoriaGasto) {
+        this.categoriaGasto = categoriaGasto;
     }
 
     public LocalDateTime getFechaMovimiento() {

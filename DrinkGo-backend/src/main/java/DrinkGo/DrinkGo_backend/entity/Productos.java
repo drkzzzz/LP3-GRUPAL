@@ -19,6 +19,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "productos")
@@ -26,8 +27,9 @@ import jakarta.persistence.Table;
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "negocioId", "sku", "nombre", "slug", "descripcion",
         "urlImagen", "categoriaId", "marcaId", "unidadMedidaId", "gradoAlcoholico",
-        "tasaImpuesto", "impuestoIncluido", "fechaVencimiento",
-        "permiteDescuento", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
+        "precioVenta", "precioCompra", "stock", "tasaImpuesto", "impuestoIncluido",
+        "fechaVencimiento", "permiteDescuento", "estaActivo",
+        "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class Productos {
 
     @Id
@@ -68,11 +70,21 @@ public class Productos {
     @Column(name = "grado_alcoholico", precision = 5, scale = 2)
     private BigDecimal gradoAlcoholico;
 
+    @Column(name = "precio_venta", precision = 10, scale = 2)
+    private BigDecimal precioVenta;
+
+    @Column(name = "precio_compra", precision = 10, scale = 2)
+    private BigDecimal precioCompra;
+
     @Column(name = "tasa_impuesto", precision = 5, scale = 2)
     private BigDecimal tasaImpuesto = new BigDecimal("18.00");
 
     @Column(name = "impuesto_incluido")
     private Boolean impuestoIncluido = true;
+
+    /** Stock disponible (campo transitorio, poblado desde StockInventario) */
+    @Transient
+    private BigDecimal stock;
 
     @Column(name = "fecha_vencimiento")
     private java.time.LocalDate fechaVencimiento;
@@ -190,6 +202,30 @@ public class Productos {
 
     public void setGradoAlcoholico(BigDecimal gradoAlcoholico) {
         this.gradoAlcoholico = gradoAlcoholico;
+    }
+
+    public BigDecimal getPrecioVenta() {
+        return precioVenta;
+    }
+
+    public void setPrecioVenta(BigDecimal precioVenta) {
+        this.precioVenta = precioVenta;
+    }
+
+    public BigDecimal getPrecioCompra() {
+        return precioCompra;
+    }
+
+    public void setPrecioCompra(BigDecimal precioCompra) {
+        this.precioCompra = precioCompra;
+    }
+
+    public BigDecimal getStock() {
+        return stock;
+    }
+
+    public void setStock(BigDecimal stock) {
+        this.stock = stock;
     }
 
     public BigDecimal getTasaImpuesto() {

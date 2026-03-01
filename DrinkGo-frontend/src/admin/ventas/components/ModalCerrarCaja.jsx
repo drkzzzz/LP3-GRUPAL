@@ -28,7 +28,7 @@ export const ModalCerrarCaja = ({
   const handleConfirm = () => {
     onConfirm({
       sesionCajaId: sesion?.id,
-      montoContado: montoContadoNum,
+      montoCierre: montoContadoNum,
       observaciones: observaciones || null,
     });
   };

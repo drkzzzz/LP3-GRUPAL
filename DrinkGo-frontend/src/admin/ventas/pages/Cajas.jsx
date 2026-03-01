@@ -4,11 +4,12 @@
  * Página de gestión de cajas registradoras.
  * Flujo: primero aperturar caja → luego ir al POS a vender.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Edit, Monitor, Clock, Power,
   LogIn, ArrowRight, User, DollarSign,
+  Eye, Search, Calendar, CheckCircle, AlertTriangle,
 } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
@@ -18,6 +19,7 @@ import { Modal } from '@/admin/components/ui/Modal';
 import { Input } from '@/admin/components/ui/Input';
 import { StatCard } from '@/admin/components/ui/StatCard';
 import { ModalCerrarCaja } from '../components/ModalCerrarCaja';
+import { SesionDetalleModal } from '../components/SesionDetalleModal';
 import {
   useCajas,
   useSesionActiva,
@@ -40,12 +42,22 @@ export const Cajas = () => {
   const [showCrearModal, setShowCrearModal] = useState(false);
   const [showAbrirModal, setShowAbrirModal] = useState(false);
   const [showCerrarModal, setShowCerrarModal] = useState(false);
+  const [showDetalleModal, setShowDetalleModal] = useState(false);
+  const [sesionDetalle, setSesionDetalle] = useState(null);
   const [editCaja, setEditCaja] = useState(null);
   const [formData, setFormData] = useState({
     nombreCaja: '',
     codigo: '',
-    montoAperturaDefecto: '100.00',
   });
+
+  /* Filtros historial */
+  const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroCaja, setFiltroCaja] = useState('todas');
+  const [filtroBusqueda, setFiltroBusqueda] = useState('');
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
+  const [paginaHistorial, setPaginaHistorial] = useState(1);
+  const [pageSizeHistorial, setPageSizeHistorial] = useState(10);
 
   /* Apertura de caja */
   const [abrirCajaId, setAbrirCajaId] = useState('');
@@ -57,7 +69,7 @@ export const Cajas = () => {
   /* ─── CRUD Cajas ─── */
   const openCrear = () => {
     setEditCaja(null);
-    setFormData({ nombreCaja: '', codigo: '', montoAperturaDefecto: '100.00' });
+    setFormData({ nombreCaja: '', codigo: '' });
     setShowCrearModal(true);
   };
 
@@ -66,7 +78,6 @@ export const Cajas = () => {
     setFormData({
       nombreCaja: caja.nombreCaja || '',
       codigo: caja.codigo || '',
-      montoAperturaDefecto: String(caja.montoAperturaDefecto || '100.00'),
     });
     setShowCrearModal(true);
   };
@@ -76,7 +87,6 @@ export const Cajas = () => {
       negocioId: negocio?.id,
       nombreCaja: formData.nombreCaja,
       codigo: formData.codigo,
-      montoAperturaDefecto: parseFloat(formData.montoAperturaDefecto) || 0,
     };
 
     if (editCaja) {
@@ -125,11 +135,6 @@ export const Cajas = () => {
     { key: 'codigo', title: 'Código', dataIndex: 'codigo' },
     { key: 'nombre', title: 'Nombre', dataIndex: 'nombreCaja' },
     {
-      key: 'monto',
-      title: 'Monto Apertura',
-      render: (_, row) => formatCurrency(row.montoAperturaDefecto),
-    },
-    {
       key: 'estado',
       title: 'Estado',
       render: (_, row) => {
@@ -160,36 +165,124 @@ export const Cajas = () => {
     },
   ];
 
+  /* ─── Historial: cajas únicas para filtro ─── */
+  const cajasUnicas = useMemo(() => {
+    const map = new Map();
+    sesiones.forEach((s) => {
+      const cajaId = s.caja?.id;
+      if (cajaId && !map.has(cajaId)) {
+        map.set(cajaId, s.caja?.nombreCaja || `Caja ${cajaId}`);
+      }
+    });
+    return Array.from(map.entries());
+  }, [sesiones]);
+
+  /* ─── Historial: sesiones filtradas ─── */
+  const sesionesFiltradas = useMemo(() => {
+    let resultado = [...sesiones];
+    if (filtroEstado !== 'todos') {
+      resultado = resultado.filter((s) => s.estadoSesion === filtroEstado);
+    }
+    if (filtroCaja !== 'todas') {
+      resultado = resultado.filter((s) => String(s.caja?.id) === filtroCaja);
+    }
+    if (filtroBusqueda.trim()) {
+      const q = filtroBusqueda.toLowerCase();
+      resultado = resultado.filter((s) => {
+        const nombre = `${s.usuario?.nombres || ''} ${s.usuario?.apellidos || ''}`.toLowerCase();
+        return nombre.includes(q);
+      });
+    }
+    if (filtroFechaDesde) {
+      const desde = new Date(filtroFechaDesde);
+      desde.setHours(0, 0, 0, 0);
+      resultado = resultado.filter((s) => new Date(s.fechaApertura) >= desde);
+    }
+    if (filtroFechaHasta) {
+      const hasta = new Date(filtroFechaHasta);
+      hasta.setHours(23, 59, 59, 999);
+      resultado = resultado.filter((s) => new Date(s.fechaApertura) <= hasta);
+    }
+    return resultado;
+  }, [sesiones, filtroEstado, filtroCaja, filtroBusqueda, filtroFechaDesde, filtroFechaHasta]);
+
+  const sesionesPage = useMemo(() => {
+    const start = (paginaHistorial - 1) * pageSizeHistorial;
+    return sesionesFiltradas.slice(start, start + pageSizeHistorial);
+  }, [sesionesFiltradas, paginaHistorial, pageSizeHistorial]);
+
+  const handleVerDetalle = (ses) => {
+    setSesionDetalle(ses);
+    setShowDetalleModal(true);
+  };
+
   /* ─── Columnas tabla sesiones ─── */
   const sesionesColumns = [
-    { key: 'index', title: '#', width: '60px', render: (_, __, i) => i + 1 },
-    {
-      key: 'caja',
-      title: 'Caja',
-      render: (_, row) => row.caja?.nombreCaja || '—',
-    },
-    {
-      key: 'usuario',
-      title: 'Cajero',
-      render: (_, row) => {
-        const u = row.usuario;
-        return u ? `${u.nombres || ''} ${u.apellidos || ''}`.trim() || u.email || '—' : '—';
-      },
-    },
+    { key: 'index', title: '#', width: '50px', render: (_, __, i) => (paginaHistorial - 1) * pageSizeHistorial + i + 1 },
     {
       key: 'apertura',
       title: 'Apertura',
-      render: (_, row) => formatDateTime(row.fechaApertura),
+      render: (_, row) => (
+        <p className="text-sm font-medium text-gray-900">{formatDateTime(row.fechaApertura)}</p>
+      ),
     },
     {
       key: 'cierre',
       title: 'Cierre',
-      render: (_, row) => row.fechaCierre ? formatDateTime(row.fechaCierre) : '—',
+      render: (_, row) => (
+        <span className="text-sm text-gray-600">
+          {row.fechaCierre ? formatDateTime(row.fechaCierre) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'caja',
+      title: 'Caja',
+      render: (_, row) => (
+        <span className="text-sm font-medium text-gray-700">{row.caja?.nombreCaja || '—'}</span>
+      ),
+    },
+    {
+      key: 'usuario',
+      title: 'Usuario',
+      render: (_, row) => {
+        const nombre = row.usuario
+          ? `${row.usuario.nombres || ''} ${row.usuario.apellidos || ''}`.trim()
+          : '—';
+        return <span className="text-sm text-gray-700">{nombre}</span>;
+      },
     },
     {
       key: 'montoApertura',
-      title: 'M. Apertura',
-      render: (_, row) => formatCurrency(row.montoApertura),
+      title: 'Apertura (S/)',
+      align: 'right',
+      render: (_, row) => (
+        <span className="text-sm font-medium text-gray-700">{formatCurrency(row.montoApertura)}</span>
+      ),
+    },
+    {
+      key: 'montoCierre',
+      title: 'Cierre (S/)',
+      align: 'right',
+      render: (_, row) => (
+        <span className="text-sm font-medium text-gray-700">
+          {row.fechaCierre ? formatCurrency(row.montoCierre) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'diferencia',
+      title: 'Diferencia',
+      align: 'right',
+      render: (_, row) => {
+        if (!row.fechaCierre) return '—';
+        const diff = row.diferenciaEsperadoReal ?? 0;
+        return (
+          <span className={`text-sm font-semibold ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+            {diff > 0 ? '+' : ''}{formatCurrency(diff)}
+          </span>
+        );
+      },
     },
     {
       key: 'estado',
@@ -197,10 +290,10 @@ export const Cajas = () => {
       render: (_, row) => {
         const variant =
           row.estadoSesion === 'abierta'
-            ? 'success'
+            ? 'info'
             : row.estadoSesion === 'con_diferencia'
               ? 'warning'
-              : 'info';
+              : 'success';
         const label =
           row.estadoSesion === 'abierta'
             ? 'Abierta'
@@ -209,6 +302,21 @@ export const Cajas = () => {
               : 'Cerrada';
         return <Badge variant={variant}>{label}</Badge>;
       },
+    },
+    {
+      key: 'acciones',
+      title: '',
+      width: '80px',
+      render: (_, row) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleVerDetalle(row)}
+          title="Ver detalle"
+        >
+          <Eye size={16} className="text-gray-500" />
+        </Button>
+      ),
     },
   ];
 
@@ -381,16 +489,141 @@ export const Cajas = () => {
         <Table columns={cajasColumns} data={cajasActivas} loading={isLoading} />
       </Card>
 
-      {/* Tabla de sesiones */}
-      <Card>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Historial de Sesiones
-        </h2>
+      {/* ═══ HISTORIAL DE SESIONES (con filtros) ═══ */}
+      <Card className="!p-4">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Historial de Sesiones</h2>
+        <div className="flex flex-col lg:flex-row lg:items-end gap-3 mb-4">
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              <Calendar size={12} className="inline mr-1" />Desde
+            </label>
+            <input
+              type="date"
+              value={filtroFechaDesde}
+              onChange={(e) => { setFiltroFechaDesde(e.target.value); setPaginaHistorial(1); }}
+              className="block w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              <Calendar size={12} className="inline mr-1" />Hasta
+            </label>
+            <input
+              type="date"
+              value={filtroFechaHasta}
+              onChange={(e) => { setFiltroFechaHasta(e.target.value); setPaginaHistorial(1); }}
+              className="block w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Caja</label>
+            <select
+              value={filtroCaja}
+              onChange={(e) => { setFiltroCaja(e.target.value); setPaginaHistorial(1); }}
+              className="block w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="todas">Todas las cajas</option>
+              {cajasUnicas.map(([id, nombre]) => (
+                <option key={id} value={id}>{nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+            <select
+              value={filtroEstado}
+              onChange={(e) => { setFiltroEstado(e.target.value); setPaginaHistorial(1); }}
+              className="block w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="todos">Todos</option>
+              <option value="abierta">Abierta</option>
+              <option value="cerrada">Cerrada</option>
+              <option value="con_diferencia">Con diferencia</option>
+            </select>
+          </div>
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              <User size={12} className="inline mr-1" />Buscar usuario
+            </label>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={filtroBusqueda}
+                onChange={(e) => { setFiltroBusqueda(e.target.value); setPaginaHistorial(1); }}
+                placeholder="Nombre..."
+                className="block w-full border border-gray-300 rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+          </div>
+          {(filtroEstado !== 'todos' || filtroCaja !== 'todas' || filtroBusqueda || filtroFechaDesde || filtroFechaHasta) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFiltroEstado('todos');
+                setFiltroCaja('todas');
+                setFiltroBusqueda('');
+                setFiltroFechaDesde('');
+                setFiltroFechaHasta('');
+                setPaginaHistorial(1);
+              }}
+              className="text-xs whitespace-nowrap"
+            >
+              Limpiar filtros
+            </Button>
+          )}
+        </div>
+
+        {/* Resumen rápido */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+            <p className="text-xs text-gray-500">Total sesiones</p>
+            <p className="text-xl font-bold text-gray-900">{sesionesFiltradas.length}</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+            <div className="flex items-center gap-1 mb-0.5">
+              <Clock size={12} className="text-blue-500" />
+              <p className="text-xs text-gray-500">Abiertas</p>
+            </div>
+            <p className="text-xl font-bold text-blue-600">
+              {sesionesFiltradas.filter((s) => s.estadoSesion === 'abierta').length}
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+            <div className="flex items-center gap-1 mb-0.5">
+              <CheckCircle size={12} className="text-green-500" />
+              <p className="text-xs text-gray-500">Cerradas OK</p>
+            </div>
+            <p className="text-xl font-bold text-green-600">
+              {sesionesFiltradas.filter((s) => s.estadoSesion === 'cerrada').length}
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+            <div className="flex items-center gap-1 mb-0.5">
+              <AlertTriangle size={12} className="text-amber-500" />
+              <p className="text-xs text-gray-500">Con diferencia</p>
+            </div>
+            <p className="text-xl font-bold text-amber-600">
+              {sesionesFiltradas.filter((s) => s.estadoSesion === 'con_diferencia').length}
+            </p>
+          </div>
+        </div>
+
         <Table
           columns={sesionesColumns}
-          data={sesiones}
+          data={sesionesPage}
           loading={loadingSesiones}
-          pagination={{ current: 1, pageSize: 10, total: sesiones.length }}
+          pagination={{
+            current: paginaHistorial,
+            pageSize: pageSizeHistorial,
+            total: sesionesFiltradas.length,
+            onChange: (page, size) => {
+              setPaginaHistorial(page);
+              setPageSizeHistorial(size);
+            },
+            pageSizeOptions: [5, 10, 20, 50],
+          }}
         />
       </Card>
 
@@ -417,14 +650,6 @@ export const Cajas = () => {
             value={formData.codigo}
             onChange={(e) => updateForm('codigo', e.target.value)}
             placeholder="Ej: CAJA-001"
-          />
-          <Input
-            label="Monto de Apertura por Defecto (S/)"
-            type="number"
-            min={0}
-            step={0.01}
-            value={formData.montoAperturaDefecto}
-            onChange={(e) => updateForm('montoAperturaDefecto', e.target.value)}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button
@@ -482,9 +707,6 @@ export const Cajas = () => {
                 onChange={(e) => {
                   setAbrirCajaId(e.target.value);
                   const caja = cajasActivas.find((c) => c.id === parseInt(e.target.value));
-                  if (caja?.montoAperturaDefecto) {
-                    setMontoApertura(String(caja.montoAperturaDefecto));
-                  }
                 }}
                 className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
@@ -532,6 +754,13 @@ export const Cajas = () => {
         sesion={sesion}
         resumen={resumen}
         isLoading={isCerrando}
+      />
+
+      {/* Modal Detalle Sesión */}
+      <SesionDetalleModal
+        isOpen={showDetalleModal}
+        onClose={() => { setShowDetalleModal(false); setSesionDetalle(null); }}
+        sesion={sesionDetalle}
       />
     </div>
   );
