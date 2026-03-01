@@ -33,6 +33,17 @@ import { ProductosProveedorTab } from '../compras/components/tabs/ProductosProve
 import { OrdenesCompraTab } from '../compras/components/tabs/OrdenesCompraTab';
 import { RecepcionTab } from '../compras/components/tabs/RecepcionTab';
 
+/* ─── Ventas sub-páginas ─── */
+import { POS } from '../ventas/pages/POS';
+import { Cajas } from '../ventas/pages/Cajas';
+import { MovimientosCajaPage } from '../ventas/pages/MovimientosCajaPage';
+import { HistorialVentas } from '../ventas/pages/HistorialVentas';
+
+/* ─── Facturación sub-páginas ─── */
+import { ComprobantesTab } from '../facturacion/pages/ComprobantesTab';
+import { SeriesTab } from '../facturacion/pages/SeriesTab';
+import { MetodosPagoTab } from '../facturacion/pages/MetodosPagoTab';
+
 /* ─── Configuración sub-páginas ─── */
 import { ConfiguracionPage } from '../pages/Configuracion';
 import { NegocioYSedesPage } from '../configuracion/components/tabs/NegocioYSedesPage';
@@ -91,9 +102,20 @@ export const AdminRoutes = () => {
           <Route path="ordenes" element={<OrdenesCompraTab />} />
           <Route path="recepcion" element={<RecepcionTab />} />
         </Route>
-        <Route path="ventas" element={<Ventas />} />
+        <Route path="ventas" element={<Ventas />}>
+          <Route index element={<Navigate to="pos" replace />} />
+          <Route path="pos" element={<POS />} />
+          <Route path="cajas" element={<Cajas />} />
+          <Route path="movimientos" element={<MovimientosCajaPage />} />
+          <Route path="historial" element={<HistorialVentas />} />
+        </Route>
         <Route path="pedidos" element={<Pedidos />} />
-        <Route path="facturacion" element={<Facturacion />} />
+        <Route path="facturacion" element={<Facturacion />}>
+          <Route index element={<Navigate to="comprobantes" replace />} />
+          <Route path="comprobantes" element={<ComprobantesTab />} />
+          <Route path="series" element={<SeriesTab />} />
+          <Route path="metodos-pago" element={<MetodosPagoTab />} />
+        </Route>
         <Route path="reportes" element={<Reportes />} />
         <Route path="perfil" element={<MiPerfil />} />
       </Route>

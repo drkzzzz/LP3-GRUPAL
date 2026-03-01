@@ -103,7 +103,7 @@ public class DocumentosFacturacion {
     }
 
     public enum EstadoDocumento {
-        borrador, enviado, aceptado, rechazado, anulado
+        borrador, pendiente_envio, enviado, aceptado, rechazado, anulado
     }
 
     @PrePersist

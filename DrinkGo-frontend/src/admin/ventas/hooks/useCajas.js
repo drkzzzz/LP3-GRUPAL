@@ -175,6 +175,7 @@ export const useMovimientos = (sesionCajaId) => {
     mutationFn: cajasService.registrarMovimiento,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['movimientos'] });
+      queryClient.invalidateQueries({ queryKey: ['movimientos-negocio'] });
       queryClient.invalidateQueries({ queryKey: ['resumen-turno'] });
       message.success('Movimiento registrado');
     },
@@ -188,5 +189,101 @@ export const useMovimientos = (sesionCajaId) => {
     isLoading: query.isLoading,
     registrar: registrarMutation.mutateAsync,
     isRegistrando: registrarMutation.isPending,
+  };
+};
+
+/* ═══ MOVIMIENTOS POR NEGOCIO (HISTÓRICOS) ═══ */
+
+export const useMovimientosNegocio = (filters = {}) => {
+  const { negocio } = useAdminAuthStore();
+  const negocioId = negocio?.id;
+
+  const { cajaId, desde, hasta } = filters;
+
+  const query = useQuery({
+    queryKey: ['movimientos-negocio', negocioId, cajaId, desde, hasta],
+    queryFn: () => cajasService.getMovimientosByNegocio(negocioId, { cajaId, desde, hasta }),
+    enabled: !!negocioId,
+    staleTime: 1000 * 30,
+  });
+
+  return {
+    movimientos: query.data || [],
+    isLoading: query.isLoading,
+    refetch: query.refetch,
+  };
+};
+
+/* ═══ CATEGORÍAS DE GASTO ═══ */
+
+export const useCategoriasGasto = () => {
+  const { negocio } = useAdminAuthStore();
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['categorias-gasto', negocio?.id],
+    queryFn: () => cajasService.getCategoriasByNegocio(negocio?.id),
+    enabled: !!negocio?.id,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const crearMutation = useMutation({
+    mutationFn: cajasService.crearCategoria,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categorias-gasto'] });
+      message.success('Categoría creada');
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.error || 'Error al crear categoría');
+    },
+  });
+
+  const actualizarMutation = useMutation({
+    mutationFn: ({ id, data }) => cajasService.actualizarCategoria(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categorias-gasto'] });
+      message.success('Categoría actualizada');
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.error || 'Error al actualizar');
+    },
+  });
+
+  const eliminarMutation = useMutation({
+    mutationFn: cajasService.eliminarCategoria,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categorias-gasto'] });
+      message.success('Categoría eliminada');
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.error || 'Error al eliminar');
+    },
+  });
+
+  return {
+    categorias: query.data || [],
+    isLoading: query.isLoading,
+    crear: crearMutation.mutateAsync,
+    actualizar: actualizarMutation.mutateAsync,
+    eliminar: eliminarMutation.mutateAsync,
+    isCreating: crearMutation.isPending,
+    isUpdating: actualizarMutation.isPending,
+    isDeleting: eliminarMutation.isPending,
+  };
+};
+
+/* ═══ SESIONES POR CAJA (HISTORIAL) ═══ */
+
+export const useSesionesByCaja = (cajaId) => {
+  const query = useQuery({
+    queryKey: ['sesiones-caja', cajaId],
+    queryFn: () => cajasService.getSesionesByCaja(cajaId),
+    enabled: !!cajaId,
+    staleTime: 1000 * 60,
+  });
+
+  return {
+    sesiones: query.data || [],
+    isLoading: query.isLoading,
   };
 };

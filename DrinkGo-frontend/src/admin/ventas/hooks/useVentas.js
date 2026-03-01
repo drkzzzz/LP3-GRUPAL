@@ -134,14 +134,22 @@ export const useMetodosPago = () => {
   const negocioId = negocio?.id;
 
   const query = useQuery({
-    queryKey: ['metodos-pago', negocioId],
+    queryKey: ['metodos-pago-pos', negocioId],
     queryFn: () => ventasService.getMetodosPago(negocioId),
     enabled: !!negocioId,
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 2,
+    retry: 3,
+    retryDelay: 1000,
   });
+
+  if (query.isError) {
+    console.error('[useMetodosPago] Error al cargar métodos de pago:', query.error);
+  }
 
   return {
     metodosPago: query.data || [],
     isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
   };
 };
