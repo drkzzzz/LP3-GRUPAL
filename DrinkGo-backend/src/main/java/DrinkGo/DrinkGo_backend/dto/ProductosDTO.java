@@ -1,5 +1,6 @@
 package DrinkGo.DrinkGo_backend.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -13,6 +14,8 @@ public class ProductosDTO {
     private Long categoriaId;
     private Long marcaId;
     private Long unidadMedidaId;
+    private BigDecimal precioVenta;
+    private BigDecimal precioVentaMinimo;
     private LocalDate fechaVencimiento;
     private Boolean tieneIgv;
     private Boolean controlaStock;
@@ -29,6 +32,7 @@ public class ProductosDTO {
 
     public ProductosDTO(Long id, Long negocioId, String sku, String nombre, String descripcion,
             Long categoriaId, Long marcaId, Long unidadMedidaId,
+            BigDecimal precioVenta, BigDecimal precioVentaMinimo,
             LocalDate fechaVencimiento, Boolean tieneIgv, Boolean controlaStock,
             Boolean permiteVentaSinStock, String urlImagen, Boolean estaActivo,
             LocalDateTime creadoEn, LocalDateTime actualizadoEn, LocalDateTime eliminadoEn) {
@@ -40,6 +44,8 @@ public class ProductosDTO {
         this.categoriaId = categoriaId;
         this.marcaId = marcaId;
         this.unidadMedidaId = unidadMedidaId;
+        this.precioVenta = precioVenta;
+        this.precioVentaMinimo = precioVentaMinimo;
         this.fechaVencimiento = fechaVencimiento;
         this.tieneIgv = tieneIgv;
         this.controlaStock = controlaStock;
@@ -114,6 +120,22 @@ public class ProductosDTO {
 
     public void setUnidadMedidaId(Long unidadMedidaId) {
         this.unidadMedidaId = unidadMedidaId;
+    }
+
+    public BigDecimal getPrecioVenta() {
+        return precioVenta;
+    }
+
+    public void setPrecioVenta(BigDecimal precioVenta) {
+        this.precioVenta = precioVenta;
+    }
+
+    public BigDecimal getPrecioVentaMinimo() {
+        return precioVentaMinimo;
+    }
+
+    public void setPrecioVentaMinimo(BigDecimal precioVentaMinimo) {
+        this.precioVentaMinimo = precioVentaMinimo;
     }
 
     public LocalDate getFechaVencimiento() {

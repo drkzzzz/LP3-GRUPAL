@@ -39,10 +39,33 @@ export const productoSchema = z.object({
     .string()
     .optional()
     .default(''),
+  precioVenta: z
+    .string()
+    .min(1, 'El precio de venta es obligatorio')
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+      message: 'El precio de venta debe ser mayor a 0',
+    }),
+  precioVentaMinimo: z
+    .string()
+    .optional()
+    .default('')
+    .refine((val) => !val || (!isNaN(parseFloat(val)) && parseFloat(val) > 0), {
+      message: 'El precio mínimo debe ser mayor a 0',
+    }),
   tasaImpuesto: z.string().optional().default('18'),
   impuestoIncluido: z.boolean().optional().default(true),
   permiteDescuento: z.boolean().optional().default(true),
   estaActivo: z.boolean().optional().default(true),
+}).refine((data) => {
+  if (data.precioVentaMinimo && data.precioVenta) {
+    const venta = parseFloat(data.precioVenta);
+    const minimo = parseFloat(data.precioVentaMinimo);
+    return venta >= minimo;
+  }
+  return true;
+}, {
+  message: 'El precio de venta no puede ser menor al precio mínimo',
+  path: ['precioVenta'],
 });
 
 /* ================================================================

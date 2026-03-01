@@ -27,7 +27,7 @@ import jakarta.persistence.Transient;
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "negocioId", "sku", "nombre", "slug", "descripcion",
         "urlImagen", "categoriaId", "marcaId", "unidadMedidaId", "gradoAlcoholico",
-        "precioVenta", "precioCompra", "stock", "tasaImpuesto", "impuestoIncluido",
+        "precioVenta", "precioVentaMinimo", "precioCompra", "stock", "tasaImpuesto", "impuestoIncluido",
         "fechaVencimiento", "permiteDescuento", "estaActivo",
         "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class Productos {
@@ -72,6 +72,9 @@ public class Productos {
 
     @Column(name = "precio_venta", precision = 10, scale = 2)
     private BigDecimal precioVenta;
+
+    @Column(name = "precio_venta_minimo", precision = 10, scale = 2)
+    private BigDecimal precioVentaMinimo;
 
     @Column(name = "precio_compra", precision = 10, scale = 2)
     private BigDecimal precioCompra;
@@ -210,6 +213,14 @@ public class Productos {
 
     public void setPrecioVenta(BigDecimal precioVenta) {
         this.precioVenta = precioVenta;
+    }
+
+    public BigDecimal getPrecioVentaMinimo() {
+        return precioVentaMinimo;
+    }
+
+    public void setPrecioVentaMinimo(BigDecimal precioVentaMinimo) {
+        this.precioVentaMinimo = precioVentaMinimo;
     }
 
     public BigDecimal getPrecioCompra() {

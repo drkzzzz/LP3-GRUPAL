@@ -551,6 +551,10 @@ CREATE TABLE productos (
     tasa_impuesto DECIMAL(5,2) NOT NULL DEFAULT 18.00 COMMENT 'IGV % Perú',
     impuesto_incluido TINYINT(1) NOT NULL DEFAULT 1,
 
+    -- Precios de venta
+    precio_venta DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Precio de venta al público',
+    precio_venta_minimo DECIMAL(10,2) NULL COMMENT 'Precio mínimo de venta permitido (opcional)',
+
     -- Vencimiento
     fecha_vencimiento DATE NULL COMMENT 'Fecha de vencimiento del producto',
 
