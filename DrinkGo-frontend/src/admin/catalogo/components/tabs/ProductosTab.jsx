@@ -195,6 +195,16 @@ export const ProductosTab = () => {
       ),
     },
     {
+      key: 'precioVenta',
+      title: 'Precio Venta',
+      width: '120px',
+      render: (_, row) => (
+        <span className="text-sm font-semibold text-gray-900">
+          {row.precioVenta ? `S/ ${Number(row.precioVenta).toFixed(2)}` : '—'}
+        </span>
+      ),
+    },
+    {
       key: 'estado',
       title: 'Estado',
       width: '100px',
@@ -387,6 +397,18 @@ export const ProductosTab = () => {
               <div>
                 <p className="text-gray-500">Grado alcohólico</p>
                 <p className="font-medium">{selected.gradoAlcoholico ? `${selected.gradoAlcoholico}%` : '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Precio de venta</p>
+                <p className="font-medium text-green-700">
+                  {selected.precioVenta ? `S/ ${Number(selected.precioVenta).toFixed(2)}` : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Precio mínimo</p>
+                <p className="font-medium text-orange-600">
+                  {selected.precioVentaMinimo ? `S/ ${Number(selected.precioVentaMinimo).toFixed(2)}` : '—'}
+                </p>
               </div>
               <div>
                 <p className="text-gray-500">Impuesto</p>

@@ -58,6 +58,8 @@ export const ProductoForm = ({
       marcaId: String(initialData?.marca?.id || initialData?.marcaId || ''),
       unidadMedidaId: String(initialData?.unidadMedida?.id || initialData?.unidadMedidaId || ''),
       gradoAlcoholico: String(initialData?.gradoAlcoholico ?? ''),
+      precioVenta: String(initialData?.precioVenta ?? ''),
+      precioVentaMinimo: String(initialData?.precioVentaMinimo ?? ''),
       tasaImpuesto: String(initialData?.tasaImpuesto ?? '18'),
       impuestoIncluido: initialData?.impuestoIncluido ?? true,
       permiteDescuento: initialData?.permiteDescuento ?? true,
@@ -103,6 +105,8 @@ export const ProductoForm = ({
       marca: formData.marcaId ? { id: Number(formData.marcaId) } : null,
       unidadMedida: formData.unidadMedidaId ? { id: Number(formData.unidadMedidaId) } : null,
       gradoAlcoholico: formData.gradoAlcoholico ? Number(formData.gradoAlcoholico) : null,
+      precioVenta: formData.precioVenta ? Number(formData.precioVenta) : null,
+      precioVentaMinimo: formData.precioVentaMinimo ? Number(formData.precioVentaMinimo) : null,
       tasaImpuesto: Number(formData.tasaImpuesto) || 18,
       impuestoIncluido: formData.impuestoIncluido,
       permiteDescuento: formData.permiteDescuento,
@@ -179,7 +183,30 @@ export const ProductoForm = ({
         />
       </div>
 
-      {/* Fila 4: Grado + Impuesto */}
+      {/* Fila 4: Precio de venta + Precio mínimo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Input
+          label="Precio de venta"
+          type="number"
+          step="0.01"
+          min="0"
+          required
+          {...register('precioVenta')}
+          error={errors.precioVenta?.message}
+          placeholder="Ej: 35.90"
+        />
+        <Input
+          label="Precio mínimo (opcional)"
+          type="number"
+          step="0.01"
+          min="0"
+          {...register('precioVentaMinimo')}
+          error={errors.precioVentaMinimo?.message}
+          placeholder="Ej: 30.00"
+        />
+      </div>
+
+      {/* Fila 5: Grado + Impuesto */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="relative">
           {!isAlcohol && (

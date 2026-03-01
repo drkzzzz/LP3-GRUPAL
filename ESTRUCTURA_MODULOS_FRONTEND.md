@@ -561,9 +561,10 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
     - Origen/País
     - Añada (para vinos)
   - **Precios:**
-    - Precio de compra
-    - Precio de venta
-    - Margen de ganancia (calculado)
+    - Precio de compra (referencia)
+    - Precio de venta al público
+    - Precio mínimo de venta (opcional, para control de descuentos)
+    - Margen de ganancia (calculado automáticamente)
   - **Stock:**
     - Stock mínimo
     - Stock máximo
@@ -735,29 +736,55 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
   - Fecha de vencimiento
   - Costo unitario
   - Alertas de próximo vencimiento
+  - **Acciones por lote:**
+    - 🔧 **Botón Ajustar**: Abre modal con formulario de ajuste:
+      - Tipo (entrada/salida)
+      - Cantidad a ajustar
+      - Motivo (merma, robo, error de conteo, muestra, donación, vencimiento, rotura, defecto)
+      - Acción tomada (descarte, devolución a proveedor, donación, ajuste contable)
+      - Observaciones
+      - Documento de respaldo (opcional)
+      - Usuario responsable (automático)
+    - Ver historial del lote
+    - Ver movimientos relacionados
   
-- 🔄 **Movimientos de Inventario**
-  - Historial completo (Kardex)
-  - Tipos de movimiento:
-    - Entrada por compra
-    - Salida por venta
-    - Ajuste manual (positivo/negativo)
-    - Transferencia entre almacenes
-    - Merma/Vencimiento
-    - Devolución
-  - Filtros por tipo, fecha, producto, almacén
-  - Usuario responsable
-  - Documento asociado
-  
-- ⚡ **Ajustes de Inventario**
-  - Formulario de ajuste manual
-  - Producto
-  - Almacén
-  - Tipo (entrada/salida)
-  - Cantidad
-  - Motivo (merma, robo, error de conteo, muestra, donación)
-  - Observaciones
-  - Documento de respaldo
+- 🔄 **Movimientos de Inventario (Reporte Kardex)**
+  - **Historial completo de movimientos con detalles:**
+    - Tabla con todos los movimientos realizados
+    - Fecha y hora del movimiento
+    - Tipo de movimiento:
+      - Entrada por compra
+      - Salida por venta
+      - Ajuste manual (entrada/salida)
+      - Transferencia entre almacenes
+      - Merma/Vencimiento
+      - Devolución
+      - Stock inicial
+    - Producto afectado
+    - Almacén
+    - Lote relacionado
+    - Cantidad (positiva para entradas, negativa para salidas)
+    - **Para ajustes, incluye:**
+      - Motivo detallado (merma, robo, error de conteo, muestra, donación, vencimiento, rotura, defecto)
+      - Acción tomada (descarte, devolución a proveedor, donación, ajuste contable)
+      - Documento de respaldo (si aplica)
+    - Usuario responsable
+    - Observaciones
+  - **Filtros avanzados:**
+    - Por tipo de movimiento
+    - Por rango de fechas
+    - Por producto específico
+    - Por almacén
+    - Por usuario responsable
+    - Por lote
+  - **Exportación:**
+    - Excel con reporte completo
+    - PDF para auditorías
+    - CSV para análisis externo
+  - **Visualización:**
+    - Vista de tabla detallada
+    - Gráficos de movimientos por tipo
+    - Línea de tiempo por producto
   
 - 🔄 **Transferencias Entre Almacenes**
   - Formulario de transferencia
@@ -786,27 +813,16 @@ El Admin gestiona completamente su licorería (negocio), con acceso a todas las 
   - Comparación con sistema
   - Generación de ajustes automáticos
   - Cierre de inventario
-  
-- 🗑️ **Productos Vencidos/Dañados**
-  - Lista de productos vencidos
-  - Registrar producto dañado
-  - Lote afectado
-  - Cantidad
-  - Motivo (vencimiento, rotura, defecto)
-  - Acción tomada (descarte, devolución a proveedor, donación)
-  - Documento de respaldo
-  - Ajuste automático de inventario
 
 **Acciones:**
 - Ver stock consolidado
 - Registrar entrada de lote
 - Ver lotes activos
 - Consultar kardex/movimientos
-- Realizar ajuste manual
+- Ajustar lote individualmente (desde botón en tabla)
 - Transferir entre almacenes
 - Configurar alertas
 - Ver productos por vencer
-- Registrar producto vencido/dañado
 - Realizar inventario físico
 - Exportar reportes de inventario
 - Ver trazabilidad de lotes

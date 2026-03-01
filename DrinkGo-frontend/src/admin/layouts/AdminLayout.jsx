@@ -52,7 +52,6 @@ const CATALOGO_SUBITEMS = [
 const INVENTARIO_SUBITEMS = [
   { to: '/admin/inventario/almacenes', label: 'Almacenes', icon: Warehouse },
   { to: '/admin/inventario/lotes', label: 'Lotes', icon: Boxes },
-  { to: '/admin/inventario/ajustes', label: 'Ajustes', icon: SlidersHorizontal },
   { to: '/admin/inventario/transferencias', label: 'Transferencias', icon: ArrowRightLeft },
   { to: '/admin/inventario/reportes', label: 'Reportes', icon: BarChart3 },
 ];

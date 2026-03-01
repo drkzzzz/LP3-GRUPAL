@@ -22,7 +22,6 @@ import { CatalogoPage } from '../pages/Catalogo';
 import { InventarioPage } from '../pages/Inventario';
 import { AlmacenesTab } from '../inventario/components/tabs/AlmacenesTab';
 import { LotesTab } from '../inventario/components/tabs/LotesTab';
-import { AjustesTab } from '../inventario/components/tabs/AjustesTab';
 import { TransferenciasTab } from '../inventario/components/tabs/TransferenciasTab';
 import { ReportesInventarioPage } from '../inventario/components/tabs/ReportesInventarioPage';
 
@@ -91,7 +90,6 @@ export const AdminRoutes = () => {
           <Route index element={<Navigate to="almacenes" replace />} />
           <Route path="almacenes" element={<AlmacenesTab />} />
           <Route path="lotes" element={<LotesTab />} />
-          <Route path="ajustes" element={<AjustesTab />} />
           <Route path="transferencias" element={<TransferenciasTab />} />
           <Route path="reportes" element={<ReportesInventarioPage />} />
         </Route>

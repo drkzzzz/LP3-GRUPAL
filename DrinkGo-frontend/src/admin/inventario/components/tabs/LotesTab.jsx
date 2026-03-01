@@ -16,11 +16,14 @@ import {
   AlertTriangle,
   CalendarClock,
   Layers,
+  Settings,
 } from 'lucide-react';
 import { useLotesInventario } from '../../hooks/useLotesInventario';
 import { useAlmacenes } from '../../hooks/useAlmacenes';
 import { useProductosInventario } from '../../hooks/useProductosInventario';
 import { useStockInventario } from '../../hooks/useStockInventario';
+import { useMovimientosInventario } from '../../hooks/useMovimientosInventario';
+import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { formatDate, formatCurrency } from '@/shared/utils/formatters';
 import { Card } from '@/admin/components/ui/Card';
@@ -31,12 +34,14 @@ import { Modal } from '@/admin/components/ui/Modal';
 import { StatCard } from '@/admin/components/ui/StatCard';
 import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { LoteEntradaForm } from '../forms/LoteEntradaForm';
+import { AjusteInventarioForm } from '../forms/AjusteInventarioForm';
 
 /* Días para considerar "próximo a vencer" */
 const DIAS_ALERTA_VENCIMIENTO = 30;
 
 export const LotesTab = () => {
   const { negocioId } = useOutletContext();
+  const user = useAdminAuthStore((s) => s.user);
 
   /* ─── State ─── */
   const [page, setPage] = useState(1);
@@ -47,6 +52,7 @@ export const LotesTab = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isAjusteOpen, setIsAjusteOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
   /* ─── Data hooks ─── */
@@ -54,6 +60,7 @@ export const LotesTab = () => {
   const { almacenes } = useAlmacenes(negocioId);
   const { productos } = useProductosInventario(negocioId);
   const { stock, createStock, updateStock } = useStockInventario(negocioId);
+  const { createMovimiento, isCreating: isCreatingAjuste } = useMovimientosInventario(negocioId);
 
   /* ─── Helpers de vencimiento ─── */
   const diasParaVencer = (fechaVencimiento) => {
@@ -185,6 +192,60 @@ export const LotesTab = () => {
     setSelected(null);
   };
 
+  const handleAjustarClick = (lote) => {
+    setSelected(lote);
+    setIsAjusteOpen(true);
+  };
+
+  const handleAjusteSubmit = async (data) => {
+    try {
+      // 1. Crear el movimiento de ajuste
+      await createMovimiento(data);
+
+      // 2. Sincronizar stock
+      const almacenAfectado = data.almacenOrigen || data.almacenDestino;
+      const stockExistente = stock.find(
+        (s) => s.producto?.id === data.producto.id && s.almacen?.id === almacenAfectado.id
+      );
+
+      const isPositive = data.almacenDestino !== null;
+      const cantidad = Number(data.cantidad);
+
+      if (stockExistente) {
+        const cantidadActual = Number(stockExistente.cantidadActual || 0);
+        const nuevaCantidad = isPositive ? cantidadActual + cantidad : cantidadActual - cantidad;
+
+        await updateStock({
+          id: stockExistente.id,
+          negocio: data.negocio,
+          producto: data.producto,
+          almacen: almacenAfectado,
+          cantidadActual: Math.max(0, nuevaCantidad),
+          cantidadDisponible: Math.max(0, nuevaCantidad),
+          cantidadReservada: Number(stockExistente.cantidadReservada || 0),
+          costoPromedio: Number(stockExistente.costoPromedio || 0),
+        });
+      } else if (isPositive) {
+        await createStock({
+          negocio: data.negocio,
+          producto: data.producto,
+          almacen: almacenAfectado,
+          cantidadActual: cantidad,
+          cantidadDisponible: cantidad,
+          cantidadReservada: 0,
+          cantidadMinima: 0,
+          cantidadMaxima: null,
+          costoPromedio: 0,
+        });
+      }
+
+      setIsAjusteOpen(false);
+      setSelected(null);
+    } catch (error) {
+      console.error('Error al crear ajuste:', error);
+    }
+  };
+
   /* ─── Columnas ─── */
   const columns = [
     {
@@ -257,6 +318,13 @@ export const LotesTab = () => {
       align: 'center',
       render: (_, row) => (
         <div className="flex justify-center gap-1">
+          <button
+            title="Ajustar inventario"
+            onClick={() => handleAjustarClick(row)}
+            className="p-1.5 rounded hover:bg-purple-50 text-purple-500 hover:text-purple-700 transition-colors"
+          >
+            <Settings size={16} />
+          </button>
           <button
             title="Ver detalles"
             onClick={() => handleView(row)}
@@ -411,6 +479,26 @@ export const LotesTab = () => {
               </div>
             </div>
           </div>
+        )}
+      </Modal>
+
+      {/* ─── Modal: Ajustar inventario ─── */}
+      <Modal
+        isOpen={isAjusteOpen}
+        onClose={() => { setIsAjusteOpen(false); setSelected(null); }}
+        title={`Ajustar Inventario - ${selected?.producto?.nombre || ''}`}
+        size="lg"
+      >
+        {selected && (
+          <AjusteInventarioForm
+            productos={productos}
+            almacenes={almacenes}
+            negocioId={negocioId}
+            userId={user?.id}
+            onSubmit={handleAjusteSubmit}
+            onCancel={() => { setIsAjusteOpen(false); setSelected(null); }}
+            isLoading={isCreatingAjuste}
+          />
         )}
       </Modal>
 
