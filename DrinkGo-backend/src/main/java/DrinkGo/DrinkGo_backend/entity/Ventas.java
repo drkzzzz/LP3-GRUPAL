@@ -89,6 +89,14 @@ public class Ventas {
     @Column(name = "doc_cliente_nombre")
     private String docClienteNombre;
 
+    @Column(name = "doc_cliente_direccion")
+    private String docClienteDireccion;
+
+    /** Campo transitorio: número del comprobante generado (B001-XXXXXXXX / F001-XXXXXXXX).
+     *  No se persiste en BD; se rellena por PosService tras emitir el comprobante. */
+    @Transient
+    private String numeroDocumentoFacturacion;
+
     @Column(name = "completado_en")
     private LocalDateTime completadoEn;
 
@@ -313,6 +321,22 @@ public class Ventas {
 
     public void setDocClienteNombre(String docClienteNombre) {
         this.docClienteNombre = docClienteNombre;
+    }
+
+    public String getDocClienteDireccion() {
+        return docClienteDireccion;
+    }
+
+    public void setDocClienteDireccion(String docClienteDireccion) {
+        this.docClienteDireccion = docClienteDireccion;
+    }
+
+    public String getNumeroDocumentoFacturacion() {
+        return numeroDocumentoFacturacion;
+    }
+
+    public void setNumeroDocumentoFacturacion(String numeroDocumentoFacturacion) {
+        this.numeroDocumentoFacturacion = numeroDocumentoFacturacion;
     }
 
     public LocalDateTime getCompletadoEn() {

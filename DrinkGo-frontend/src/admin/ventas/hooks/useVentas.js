@@ -89,6 +89,8 @@ export const useCrearVenta = () => {
       queryClient.invalidateQueries({ queryKey: ['ventas-sesion'] });
       queryClient.invalidateQueries({ queryKey: ['resumen-turno'] });
       queryClient.invalidateQueries({ queryKey: ['movimientos'] });
+      // Refrescar comprobantes en módulo de facturación sin recargar la página
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
       message.success('Venta registrada exitosamente');
     },
     onError: (err) => {
