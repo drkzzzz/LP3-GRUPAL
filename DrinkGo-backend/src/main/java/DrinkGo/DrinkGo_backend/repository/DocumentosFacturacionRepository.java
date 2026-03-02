@@ -12,4 +12,14 @@ public interface DocumentosFacturacionRepository extends JpaRepository<Documento
             Long negocioId, DocumentosFacturacion.EstadoDocumento estadoDocumento);
 
     List<DocumentosFacturacion> findByVentaId(Long ventaId);
+
+    /** Bandeja PSE: comprobantes electrónicos con estados pendientes/rechazados */
+    List<DocumentosFacturacion> findByNegocioIdAndModoEmisionAndEstadoDocumentoInOrderByCreadoEnDesc(
+            Long negocioId,
+            DocumentosFacturacion.ModoEmision modoEmision,
+            List<DocumentosFacturacion.EstadoDocumento> estados);
+
+    /** Todos los comprobantes PSE de un negocio */
+    List<DocumentosFacturacion> findByNegocioIdAndModoEmisionOrderByCreadoEnDesc(
+            Long negocioId, DocumentosFacturacion.ModoEmision modoEmision);
 }

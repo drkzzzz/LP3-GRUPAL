@@ -16,7 +16,8 @@ import java.time.LocalDateTime;
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "negocioId", "serieFacturacionId", "tipoDocumento", "numeroDocumento", "clienteId",
         "ventaId", "pedidoId", "fechaEmision", "fechaVencimiento", "subtotal", "impuestos", "total",
-        "estadoDocumento", "hashSunat", "respuestaSunat", "xmlDocumento", "pdfUrl", "usuarioId", "estaActivo",
+        "estadoDocumento", "modoEmision", "fechaEnvio", "intentosEnvio", "codigoRespuestaSunat",
+        "hashSunat", "respuestaSunat", "xmlDocumento", "pdfUrl", "usuarioId", "estaActivo",
         "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class DocumentosFacturacion {
 
@@ -70,6 +71,15 @@ public class DocumentosFacturacion {
     @Column(name = "estado_documento", nullable = false)
     private EstadoDocumento estadoDocumento = EstadoDocumento.borrador;
 
+    /** Modo de emisión: LOCAL (sin SUNAT) o PSE (facturación electrónica). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modo_emision")
+    private ModoEmision modoEmision = ModoEmision.LOCAL;
+
+    /** Fecha/hora en que se envió al PSE/SUNAT. */
+    @Column(name = "fecha_envio")
+    private LocalDateTime fechaEnvio;
+
     @Column(name = "hash_sunat")
     private String hashSunat;
 
@@ -81,6 +91,14 @@ public class DocumentosFacturacion {
 
     @Column(name = "pdf_url", length = 500)
     private String pdfUrl;
+
+    /** Número de intentos de envío al PSE/SUNAT. */
+    @Column(name = "intentos_envio")
+    private Integer intentosEnvio = 0;
+
+    /** Código de respuesta SUNAT (0 = OK, 2001 = error RUC, 2800 = estructura, etc.). */
+    @Column(name = "codigo_respuesta_sunat", length = 10)
+    private String codigoRespuestaSunat;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
@@ -103,7 +121,11 @@ public class DocumentosFacturacion {
     }
 
     public enum EstadoDocumento {
-        borrador, pendiente_envio, enviado, aceptado, rechazado, anulado
+        borrador, pendiente_envio, enviado, aceptado, observado, rechazado, anulado
+    }
+
+    public enum ModoEmision {
+        LOCAL, PSE
     }
 
     @PrePersist
@@ -230,6 +252,22 @@ public class DocumentosFacturacion {
         this.estadoDocumento = estadoDocumento;
     }
 
+    public ModoEmision getModoEmision() {
+        return modoEmision;
+    }
+
+    public void setModoEmision(ModoEmision modoEmision) {
+        this.modoEmision = modoEmision;
+    }
+
+    public LocalDateTime getFechaEnvio() {
+        return fechaEnvio;
+    }
+
+    public void setFechaEnvio(LocalDateTime fechaEnvio) {
+        this.fechaEnvio = fechaEnvio;
+    }
+
     public String getHashSunat() {
         return hashSunat;
     }
@@ -260,6 +298,22 @@ public class DocumentosFacturacion {
 
     public void setPdfUrl(String pdfUrl) {
         this.pdfUrl = pdfUrl;
+    }
+
+    public Integer getIntentosEnvio() {
+        return intentosEnvio != null ? intentosEnvio : 0;
+    }
+
+    public void setIntentosEnvio(Integer intentosEnvio) {
+        this.intentosEnvio = intentosEnvio;
+    }
+
+    public String getCodigoRespuestaSunat() {
+        return codigoRespuestaSunat;
+    }
+
+    public void setCodigoRespuestaSunat(String codigoRespuestaSunat) {
+        this.codigoRespuestaSunat = codigoRespuestaSunat;
     }
 
     public Usuarios getUsuario() {

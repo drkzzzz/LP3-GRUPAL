@@ -42,6 +42,7 @@ import { HistorialVentas } from '../ventas/pages/HistorialVentas';
 import { ComprobantesTab } from '../facturacion/pages/ComprobantesTab';
 import { SeriesTab } from '../facturacion/pages/SeriesTab';
 import { MetodosPagoTab } from '../facturacion/pages/MetodosPagoTab';
+import { PseTab } from '../facturacion/pages/PseTab';
 
 /* ─── Configuración sub-páginas ─── */
 import { ConfiguracionPage } from '../pages/Configuracion';
@@ -113,6 +114,7 @@ export const AdminRoutes = () => {
           <Route path="comprobantes" element={<ComprobantesTab />} />
           <Route path="series" element={<SeriesTab />} />
           <Route path="metodos-pago" element={<MetodosPagoTab />} />
+          <Route path="pse" element={<PseTab />} />
         </Route>
         <Route path="reportes" element={<Reportes />} />
         <Route path="perfil" element={<MiPerfil />} />

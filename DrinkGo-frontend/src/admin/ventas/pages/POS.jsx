@@ -15,6 +15,7 @@ import { CarritoPanel } from '../components/CarritoPanel';
 import { ResumenVenta } from '../components/ResumenVenta';
 import { PagoModal } from '../components/PagoModal';
 import { MovimientoCajaModal } from '../components/MovimientoCajaModal';
+import { ComprobanteVenta } from '../components/ComprobanteVenta';
 import { useCartStore } from '../stores/cartStore';
 import { useSesionActiva, useResumenTurno, useMovimientos, useCategoriasGasto } from '../hooks/useCajas';
 import { useCrearVenta, useMetodosPago } from '../hooks/useVentas';
@@ -40,6 +41,9 @@ export const POS = () => {
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [showMovimientoModal, setShowMovimientoModal] = useState(false);
 
+  /* ─── Estado del comprobante ─── */
+  const [receiptData, setReceiptData] = useState(null);
+
   /* ─── Registrar movimiento ─── */
   const handleMovimiento = async (data) => {
     await registrarMovimiento(data);
@@ -48,6 +52,9 @@ export const POS = () => {
 
   /* ─── Procesar venta ─── */
   const handlePago = async ({ pagos, tipoComprobante, docClienteNumero, docClienteNombre }) => {
+    /* Snapshot de los ítems ANTES de limpiar el carrito */
+    const itemsSnapshot = items.map((i) => ({ ...i, producto: { ...i.producto } }));
+
     const ventaData = {
       negocioId: negocio?.id,
       sedeId: sesion?.caja?.sede?.id || null,
@@ -69,7 +76,15 @@ export const POS = () => {
       pagos,
     };
 
-    await crearVenta(ventaData);
+    const ventaResponse = await crearVenta(ventaData);
+
+    /* Guardar datos para el comprobante */
+    setReceiptData({
+      venta: ventaResponse,
+      items: itemsSnapshot,
+      pagos,
+    });
+
     setShowPagoModal(false);
     clearCart();
   };
@@ -253,6 +268,19 @@ export const POS = () => {
         isLoading={isRegistrando}
         categorias={categorias}
       />
+
+      {/* Comprobante de venta */}
+      {receiptData && (
+        <ComprobanteVenta
+          venta={receiptData.venta}
+          items={receiptData.items}
+          pagos={receiptData.pagos}
+          negocio={negocio}
+          sede={sesion?.caja?.sede}
+          metodosPago={metodosPago}
+          onClose={() => setReceiptData(null)}
+        />
+      )}
     </div>
   );
 };

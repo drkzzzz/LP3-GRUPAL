@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 @Table(name = "cajas_registradoras")
 @SQLDelete(sql = "UPDATE cajas_registradoras SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "negocioId", "sedeId", "nombreCaja", "codigo", "montoAperturaDefecto", "estaActivo",
-        "creadoEn", "actualizadoEn", "eliminadoEn" })
+@JsonPropertyOrder({ "id", "negocioId", "sedeId", "nombreCaja", "codigo", "montoAperturaDefecto", "estaHabilitada",
+        "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class CajasRegistradoras {
 
     @Id
@@ -37,6 +37,9 @@ public class CajasRegistradoras {
 
     @Column(name = "monto_apertura_defecto", precision = 10, scale = 2)
     private BigDecimal montoAperturaDefecto = BigDecimal.ZERO;
+
+    @Column(name = "esta_habilitada")
+    private Boolean estaHabilitada = true;
 
     @Column(name = "esta_activo")
     private Boolean estaActivo = true;
@@ -110,6 +113,14 @@ public class CajasRegistradoras {
         this.montoAperturaDefecto = montoAperturaDefecto;
     }
 
+    public Boolean getEstaHabilitada() {
+        return estaHabilitada;
+    }
+
+    public void setEstaHabilitada(Boolean estaHabilitada) {
+        this.estaHabilitada = estaHabilitada;
+    }
+
     public Boolean getEstaActivo() {
         return estaActivo;
     }
@@ -144,7 +155,7 @@ public class CajasRegistradoras {
 
     @Override
     public String toString() {
-        return "CajasRegistradoras [id=" + id + ", nombreCaja=" + nombreCaja + ", codigo=" + codigo + ", estaActivo="
-                + estaActivo + "]";
+        return "CajasRegistradoras [id=" + id + ", nombreCaja=" + nombreCaja + ", codigo=" + codigo
+                + ", estaHabilitada=" + estaHabilitada + ", estaActivo=" + estaActivo + "]";
     }
 }

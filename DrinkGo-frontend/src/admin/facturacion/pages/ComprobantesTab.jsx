@@ -1,22 +1,23 @@
 /**
  * ComprobantesTab.jsx
  * ───────────────────
- * Comprobantes electrónicos - consulta y gestión.
- * Incluye tarjetas resumen, filtros avanzados y tabla paginada.
+ * Comprobantes electrónicos - facturación LOCAL.
+ * Muestra los comprobantes generados por ventas POS.
+ * Estados locales: Confirmado (aceptado) y Anulado.
+ * NO tiene interacción con SUNAT — eso se hace en PSE.
  */
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Eye, Send, XCircle, FileText, Search, CheckCircle, Clock, AlertCircle, X } from 'lucide-react';
+import { Eye, XCircle, Search, CheckCircle, AlertCircle, Hash, X } from 'lucide-react';
 import { useComprobantes, useCambiarEstadoComprobante } from '../hooks/useFacturacion';
 
-/* ─── Mapas de estado ─── */
-const ESTADO_CONFIG = {
-  borrador: { label: 'Borrador', badge: 'bg-gray-100 text-gray-700 border-gray-300' },
-  pendiente_envio: { label: 'Pendiente envío', badge: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-  enviado: { label: 'Enviado', badge: 'bg-blue-100 text-blue-700 border-blue-300' },
-  aceptado: { label: 'Aceptado', badge: 'bg-green-100 text-green-700 border-green-300' },
-  rechazado: { label: 'Rechazado', badge: 'bg-red-100 text-red-700 border-red-300' },
-  anulado: { label: 'Anulado', badge: 'bg-red-100 text-red-700 border-red-300' },
+/* ─── Mapeo de estados internos a etiquetas locales ─── */
+const getEstadoLocal = (estadoDocumento) => {
+  if (estadoDocumento === 'anulado') {
+    return { label: 'Anulado', badge: 'bg-red-50 text-red-700 border-red-200' };
+  }
+  // aceptado, observado, enviado, pendiente_envio, borrador → "Confirmado"
+  return { label: 'Confirmado', badge: 'bg-green-50 text-green-700 border-green-200' };
 };
 
 const TIPO_DOC_LABELS = {
@@ -60,11 +61,10 @@ export const ComprobantesTab = () => {
 
   /* ─── Stats ─── */
   const stats = useMemo(() => {
-    const aceptados = comprobantes.filter((c) => c.estadoDocumento === 'aceptado').length;
-    const emitidos = comprobantes.filter((c) => c.estadoDocumento === 'borrador' || c.estadoDocumento === 'enviado').length;
-    const rechazados = comprobantes.filter((c) => c.estadoDocumento === 'rechazado').length;
-    const pendientes = comprobantes.filter((c) => c.estadoDocumento === 'pendiente_envio').length;
-    return { aceptados, emitidos, rechazados, pendientes };
+    const total = comprobantes.length;
+    const anulados = comprobantes.filter((c) => c.estadoDocumento === 'anulado').length;
+    const confirmados = total - anulados;
+    return { total, confirmados, anulados };
   }, [comprobantes]);
 
   /* ─── Filtrado ─── */
@@ -79,7 +79,11 @@ export const ComprobantesTab = () => {
         if (!matchSearch) return false;
       }
       if (filterTipo && c.tipoDocumento !== filterTipo) return false;
-      if (filterEstado && c.estadoDocumento !== filterEstado) return false;
+      if (filterEstado) {
+        const esAnulado = c.estadoDocumento === 'anulado';
+        if (filterEstado === 'confirmado' && esAnulado) return false;
+        if (filterEstado === 'anulado' && !esAnulado) return false;
+      }
       if (fechaDesde) {
         const desde = new Date(fechaDesde);
         const fecha = new Date(c.fechaEmision || c.creadoEn);
@@ -100,19 +104,11 @@ export const ComprobantesTab = () => {
   const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
   /* ─── Acciones ─── */
-  const handleEnviar = async (id) => {
-    try {
-      await cambiarEstado.mutateAsync({ id, estado: 'pendiente_envio' });
-    } catch (err) {
-      console.error('Error al enviar comprobante:', err);
-    }
-  };
-
   const handleAnular = async (id) => {
     try {
       await cambiarEstado.mutateAsync({ id, estado: 'anulado' });
-    } catch (err) {
-      console.error('Error al anular comprobante:', err);
+    } catch {
+      // Error manejado por mutation
     }
   };
 
@@ -124,23 +120,19 @@ export const ComprobantesTab = () => {
         <p className="text-gray-600 mt-1">Consulta y gestión de boletas, facturas y notas de crédito</p>
       </div>
 
-      {/* ─── Stats Cards ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ─── Stats Cards (3 cards: Total, Confirmados, Anulados) ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
-          <div className="p-2.5 bg-green-50 rounded-lg"><CheckCircle size={22} className="text-green-600" /></div>
-          <div><p className="text-sm text-gray-500">Aceptados</p><p className="text-2xl font-bold text-gray-900">{stats.aceptados}</p></div>
+          <div className="p-2.5 bg-blue-50 rounded-lg"><Hash size={22} className="text-blue-600" /></div>
+          <div><p className="text-sm text-gray-500">Total emitidos</p><p className="text-2xl font-bold text-gray-900">{stats.total}</p></div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
-          <div className="p-2.5 bg-green-50 rounded-lg"><FileText size={22} className="text-green-600" /></div>
-          <div><p className="text-sm text-gray-500">Emitidos localmente</p><p className="text-2xl font-bold text-gray-900">{stats.emitidos}</p></div>
+          <div className="p-2.5 bg-green-50 rounded-lg"><CheckCircle size={22} className="text-green-600" /></div>
+          <div><p className="text-sm text-gray-500">Confirmados</p><p className="text-2xl font-bold text-gray-900">{stats.confirmados}</p></div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
           <div className="p-2.5 bg-red-50 rounded-lg"><AlertCircle size={22} className="text-red-500" /></div>
-          <div><p className="text-sm text-gray-500">Rechazados</p><p className="text-2xl font-bold text-gray-900">{stats.rechazados}</p></div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
-          <div className="p-2.5 bg-yellow-50 rounded-lg"><Clock size={22} className="text-yellow-600" /></div>
-          <div><p className="text-sm text-gray-500">Pendientes PSE</p><p className="text-2xl font-bold text-gray-900">{stats.pendientes}</p></div>
+          <div><p className="text-sm text-gray-500">Anulados</p><p className="text-2xl font-bold text-gray-900">{stats.anulados}</p></div>
         </div>
       </div>
 
@@ -178,9 +170,8 @@ export const ComprobantesTab = () => {
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           >
             <option value="">Todos los estados</option>
-            {Object.entries(ESTADO_CONFIG).map(([key, cfg]) => (
-              <option key={key} value={key}>{cfg.label}</option>
-            ))}
+            <option value="confirmado">Confirmado</option>
+            <option value="anulado">Anulado</option>
           </select>
 
           {/* Fecha desde */}
@@ -217,12 +208,13 @@ export const ComprobantesTab = () => {
                   <th className="text-right py-3 px-3 text-gray-500 font-semibold text-xs uppercase tracking-wider">Total</th>
                   <th className="text-center py-3 px-3 text-gray-500 font-semibold text-xs uppercase tracking-wider">Estado</th>
                   <th className="text-left py-3 px-3 text-gray-500 font-semibold text-xs uppercase tracking-wider">Fecha</th>
-                  <th className="text-center py-3 px-3 text-gray-500 font-semibold text-xs uppercase tracking-wider w-[120px]">Acciones</th>
+                  <th className="text-center py-3 px-3 text-gray-500 font-semibold text-xs uppercase tracking-wider w-[100px]">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {paginated.map((doc, idx) => {
-                  const cfg = ESTADO_CONFIG[doc.estadoDocumento] || ESTADO_CONFIG.borrador;
+                  const estado = getEstadoLocal(doc.estadoDocumento);
+                  const esAnulado = doc.estadoDocumento === 'anulado';
                   return (
                     <tr key={doc.id} className="border-b border-gray-100 hover:bg-gray-50/50">
                       <td className="py-3 px-3 text-gray-400">{page * pageSize + idx + 1}</td>
@@ -231,8 +223,8 @@ export const ComprobantesTab = () => {
                       <td className="py-3 px-3 text-gray-700">{doc.razonSocialReceptor || doc.receptor || '-'}</td>
                       <td className="py-3 px-3 text-right font-semibold">{formatCurrency(doc.total)}</td>
                       <td className="py-3 px-3 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.badge}`}>
-                          {cfg.label}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${estado.badge}`}>
+                          {estado.label}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-gray-600">{formatDate(doc.fechaEmision || doc.creadoEn)}</td>
@@ -241,12 +233,7 @@ export const ComprobantesTab = () => {
                           <button title="Ver detalles" onClick={() => setSelectedDoc(doc)} className="text-blue-500 hover:text-blue-700">
                             <Eye size={16} />
                           </button>
-                          {doc.estadoDocumento === 'borrador' && (
-                            <button title="Enviar a SUNAT" onClick={() => handleEnviar(doc.id)} className="text-green-500 hover:text-green-700">
-                              <Send size={16} />
-                            </button>
-                          )}
-                          {(doc.estadoDocumento === 'borrador' || doc.estadoDocumento === 'pendiente_envio') && (
+                          {!esAnulado && (
                             <button title="Anular" onClick={() => handleAnular(doc.id)} className="text-red-500 hover:text-red-700">
                               <XCircle size={16} />
                             </button>
@@ -319,11 +306,14 @@ export const ComprobantesTab = () => {
               </div>
               <div>
                 <p className="text-gray-500 text-xs mb-0.5">Estado</p>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                  (ESTADO_CONFIG[selectedDoc.estadoDocumento] || ESTADO_CONFIG.borrador).badge
-                }`}>
-                  {(ESTADO_CONFIG[selectedDoc.estadoDocumento] || ESTADO_CONFIG.borrador).label}
-                </span>
+                {(() => {
+                  const est = getEstadoLocal(selectedDoc.estadoDocumento);
+                  return (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${est.badge}`}>
+                      {est.label}
+                    </span>
+                  );
+                })()}
               </div>
               <div>
                 <p className="text-gray-500 text-xs mb-0.5">Receptor</p>

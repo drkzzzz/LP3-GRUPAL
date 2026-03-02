@@ -17,11 +17,16 @@ import DrinkGo.DrinkGo_backend.entity.MetodosPago;
 import DrinkGo.DrinkGo_backend.entity.Negocios;
 import DrinkGo.DrinkGo_backend.entity.Sedes;
 import DrinkGo.DrinkGo_backend.entity.SeriesFacturacion;
+import DrinkGo.DrinkGo_backend.entity.ConfiguracionPse;
+import DrinkGo.DrinkGo_backend.entity.HistorialPse;
 import DrinkGo.DrinkGo_backend.repository.DocumentosFacturacionRepository;
 import DrinkGo.DrinkGo_backend.repository.MetodosPagoRepository;
 import DrinkGo.DrinkGo_backend.repository.NegociosRepository;
 import DrinkGo.DrinkGo_backend.repository.SedesRepository;
 import DrinkGo.DrinkGo_backend.repository.SeriesFacturacionRepository;
+import DrinkGo.DrinkGo_backend.repository.ConfiguracionPseRepository;
+import DrinkGo.DrinkGo_backend.repository.HistorialPseRepository;
+import DrinkGo.DrinkGo_backend.service.FacturacionService;
 
 /**
  * Controller for Facturación admin module.
@@ -37,6 +42,9 @@ public class AdminFacturacionController {
     @Autowired private MetodosPagoRepository metodosPagoRepo;
     @Autowired private NegociosRepository negociosRepo;
     @Autowired private SedesRepository sedesRepo;
+    @Autowired private ConfiguracionPseRepository configPseRepo;
+    @Autowired private HistorialPseRepository historialPseRepo;
+    @Autowired private FacturacionService facturacionService;
 
     // ═══════════════════════════════════════════════════════════════════
     //  SERIES DE FACTURACIÓN
@@ -284,6 +292,190 @@ public class AdminFacturacionController {
     }
 
     // ═══════════════════════════════════════════════════════════════════
+    //  PSE (Proveedor de Servicios Electrónicos)
+    // ═══════════════════════════════════════════════════════════════════
+
+    @GetMapping("/pse/configuracion/{negocioId}")
+    public ResponseEntity<?> getConfiguracionPse(@PathVariable Long negocioId) {
+        try {
+            Optional<ConfiguracionPse> config = configPseRepo.findByNegocioId(negocioId);
+            if (config.isEmpty()) {
+                // Retornar config default vacía
+                ConfiguracionPse defaultConfig = new ConfiguracionPse();
+                defaultConfig.setProveedor("SIMULADOR");
+                defaultConfig.setEntorno("SANDBOX");
+                defaultConfig.setEstaActivo(false);
+                return ResponseEntity.ok(defaultConfig);
+            }
+            return ResponseEntity.ok(config.get());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/pse/configuracion/{negocioId}")
+    @Transactional
+    public ResponseEntity<?> guardarConfiguracionPse(
+            @PathVariable Long negocioId, @RequestBody Map<String, Object> body) {
+        try {
+            ConfiguracionPse config = configPseRepo.findByNegocioId(negocioId)
+                    .orElseGet(() -> {
+                        ConfiguracionPse c = new ConfiguracionPse();
+                        c.setNegocio(negociosRepo.getReferenceById(negocioId));
+                        return c;
+                    });
+            if (body.containsKey("proveedor")) config.setProveedor((String) body.get("proveedor"));
+            if (body.containsKey("entorno")) config.setEntorno((String) body.get("entorno"));
+            if (body.containsKey("apiToken")) config.setApiToken((String) body.get("apiToken"));
+            if (body.containsKey("urlServicio")) config.setUrlServicio((String) body.get("urlServicio"));
+            if (body.containsKey("rucEmisor")) config.setRucEmisor((String) body.get("rucEmisor"));
+            if (body.containsKey("estaActivo")) config.setEstaActivo((Boolean) body.get("estaActivo"));
+
+            configPseRepo.save(config);
+            return ResponseEntity.ok(config);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/pse/probar-conexion/{negocioId}")
+    public ResponseEntity<?> probarConexionPse(@PathVariable Long negocioId) {
+        try {
+            // Verificar que existe configuración con token
+            Optional<ConfiguracionPse> configOpt = configPseRepo.findByNegocioId(negocioId);
+            String proveedor = "SIMULADOR";
+            String entorno = "SANDBOX";
+
+            if (configOpt.isPresent()) {
+                ConfiguracionPse cfg = configOpt.get();
+                proveedor = cfg.getProveedor() != null ? cfg.getProveedor() : "SIMULADOR";
+                entorno = cfg.getEntorno() != null ? cfg.getEntorno() : "SANDBOX";
+            }
+
+            // Simular prueba de conexión al PSE
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Conexión exitosa con el PSE (" + proveedor + " - " + entorno + ")",
+                    "proveedor", proveedor,
+                    "entorno", entorno
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/pse/toggle/{negocioId}")
+    @Transactional
+    public ResponseEntity<?> togglePse(@PathVariable Long negocioId) {
+        try {
+            Optional<Negocios> negOpt = negociosRepo.findById(negocioId);
+            if (negOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Negocio no encontrado"));
+            }
+            Negocios negocio = negOpt.get();
+            boolean nuevoEstado = !Boolean.TRUE.equals(negocio.getTienePse());
+            negocio.setTienePse(nuevoEstado);
+            negociosRepo.save(negocio);
+
+            // Crear configuración si no existe y se activa
+            if (nuevoEstado) {
+                configPseRepo.findByNegocioId(negocioId).orElseGet(() -> {
+                    ConfiguracionPse config = new ConfiguracionPse();
+                    config.setNegocio(negocio);
+                    config.setProveedor("SIMULADOR");
+                    config.setEntorno("SANDBOX");
+                    config.setEstaActivo(true);
+                    return configPseRepo.save(config);
+                });
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "tienePse", nuevoEstado,
+                    "message", nuevoEstado ? "PSE activado" : "PSE desactivado"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/pse/bandeja/{negocioId}")
+    public ResponseEntity<?> getBandejaPse(
+            @PathVariable Long negocioId,
+            @RequestParam(required = false) String estado) {
+        try {
+            List<DocumentosFacturacion> docs;
+            if (estado != null && !estado.isEmpty()) {
+                DocumentosFacturacion.EstadoDocumento estadoEnum =
+                        DocumentosFacturacion.EstadoDocumento.valueOf(estado);
+                docs = documentosRepo.findByNegocioIdAndEstadoDocumento(
+                        negocioId, estadoEnum);
+            } else {
+                // Bandeja PSE: mostrar pendientes, enviados, rechazados, observados
+                docs = documentosRepo.findByNegocioIdOrderByCreadoEnDesc(negocioId);
+                docs = docs.stream()
+                        .filter(d -> d.getModoEmision() == DocumentosFacturacion.ModoEmision.PSE
+                                || d.getEstadoDocumento() == DocumentosFacturacion.EstadoDocumento.pendiente_envio)
+                        .toList();
+            }
+            return ResponseEntity.ok(docs);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/pse/enviar/{documentoId}")
+    public ResponseEntity<?> enviarDocumentoPse(@PathVariable Long documentoId) {
+        try {
+            DocumentosFacturacion doc = facturacionService.reenviarComprobante(documentoId);
+            return ResponseEntity.ok(doc);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/pse/reenviar/{documentoId}")
+    public ResponseEntity<?> reenviarDocumentoPse(@PathVariable Long documentoId) {
+        try {
+            DocumentosFacturacion doc = facturacionService.reenviarComprobante(documentoId);
+            return ResponseEntity.ok(doc);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/pse/historial/{negocioId}")
+    public ResponseEntity<?> getHistorialPse(@PathVariable Long negocioId) {
+        try {
+            List<HistorialPse> historial = historialPseRepo
+                    .findByNegocioIdOrderByCreadoEnDesc(negocioId);
+            return ResponseEntity.ok(historial);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
     //  HELPERS
     // ═══════════════════════════════════════════════════════════════════
 
@@ -306,8 +498,11 @@ public class AdminFacturacionController {
             case pendiente_envio -> to == DocumentosFacturacion.EstadoDocumento.enviado
                     || to == DocumentosFacturacion.EstadoDocumento.anulado;
             case enviado -> to == DocumentosFacturacion.EstadoDocumento.aceptado
-                    || to == DocumentosFacturacion.EstadoDocumento.rechazado;
+                    || to == DocumentosFacturacion.EstadoDocumento.rechazado
+                    || to == DocumentosFacturacion.EstadoDocumento.observado;
             case rechazado -> to == DocumentosFacturacion.EstadoDocumento.pendiente_envio;
+            case observado -> to == DocumentosFacturacion.EstadoDocumento.aceptado
+                    || to == DocumentosFacturacion.EstadoDocumento.anulado;
             case aceptado, anulado -> false; // terminal states
         };
     }

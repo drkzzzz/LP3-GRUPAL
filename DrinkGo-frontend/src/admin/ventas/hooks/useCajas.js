@@ -45,14 +45,28 @@ export const useCajas = () => {
     },
   });
 
+  const toggleHabilitadaMutation = useMutation({
+    mutationFn: cajasService.toggleHabilitada,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['cajas'] });
+      const habilitada = data?.estaHabilitada !== false;
+      message.success(habilitada ? 'Caja habilitada' : 'Caja deshabilitada');
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.error || 'Error al cambiar estado de caja');
+    },
+  });
+
   return {
     cajas: query.data || [],
     isLoading: query.isLoading,
     isError: query.isError,
     crear: crearMutation.mutateAsync,
     actualizar: actualizarMutation.mutateAsync,
+    toggleHabilitada: toggleHabilitadaMutation.mutateAsync,
     isCreating: crearMutation.isPending,
     isUpdating: actualizarMutation.isPending,
+    isToggling: toggleHabilitadaMutation.isPending,
   };
 };
 

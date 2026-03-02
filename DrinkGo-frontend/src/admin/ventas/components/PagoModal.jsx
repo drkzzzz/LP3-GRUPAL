@@ -40,13 +40,16 @@ const DOC_TYPES = [
  * Validates customer document number based on type.
  * DNI = exactly 8 digits, RUC = exactly 11 digits.
  */
-const validateDocNumber = (tipoDoc, numero) => {
-  if (!tipoDoc || !numero) return null; // no validation needed
+const validateDocNumber = (tipoDoc, numero, tipoComprobante) => {
+  if (!tipoDoc || !numero) return null;
   const clean = numero.replace(/\s/g, '');
   if (tipoDoc === 'DNI') {
     if (!/^\d{8}$/.test(clean)) return 'DNI debe tener exactamente 8 dígitos';
   } else if (tipoDoc === 'RUC') {
     if (!/^\d{11}$/.test(clean)) return 'RUC debe tener exactamente 11 dígitos';
+    if (clean.length === 11 && tipoComprobante === 'factura' && !/^(10|20)/.test(clean)) {
+      return 'RUC debe iniciar con 10 (persona natural) o 20 (persona jurídica)';
+    }
   }
   return null;
 };
@@ -64,6 +67,7 @@ export const PagoModal = ({
   const [tipoDocumento, setTipoDocumento] = useState('');
   const [docClienteNumero, setDocClienteNumero] = useState('');
   const [docClienteNombre, setDocClienteNombre] = useState('');
+  const [docClienteDireccion, setDocClienteDireccion] = useState('');
   const [docError, setDocError] = useState(null);
 
   /* Inicializar al abrir */
@@ -73,6 +77,7 @@ export const PagoModal = ({
       setTipoDocumento('');
       setDocClienteNumero('');
       setDocClienteNombre('');
+      setDocClienteDireccion('');
       setDocError(null);
 
       if (metodosPago.length > 0) {
@@ -99,8 +104,13 @@ export const PagoModal = ({
 
   /* Validar documento */
   useEffect(() => {
-    setDocError(validateDocNumber(tipoDocumento, docClienteNumero));
-  }, [tipoDocumento, docClienteNumero]);
+    setDocError(validateDocNumber(tipoDocumento, docClienteNumero, tipoComprobante));
+  }, [tipoDocumento, docClienteNumero, tipoComprobante]);
+
+  /* Tipo de contribuyente según prefijo RUC */
+  const esPersonaJuridica = docClienteNumero.startsWith('20');
+  const esPersonaNatural = docClienteNumero.startsWith('10');
+  const tipoContribuyente = esPersonaJuridica ? 'jurídica' : esPersonaNatural ? 'natural' : null;
 
   /* Calcular totales */
   const totalPagado = useMemo(
@@ -119,6 +129,11 @@ export const PagoModal = ({
   };
 
   /* Pago CRUD */
+  const usedMethodIds = useMemo(
+    () => new Set(pagos.map((p) => String(p.metodoPagoId))),
+    [pagos],
+  );
+
   const updatePago = (index, field, value) => {
     setPagos((prev) =>
       prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)),
@@ -126,10 +141,11 @@ export const PagoModal = ({
   };
 
   const addPago = () => {
+    const nextMethod = metodosPago.find((m) => !usedMethodIds.has(String(m.id)));
     const remaining = Math.max(0, total - totalPagado);
     setPagos((prev) => [
       ...prev,
-      { metodoPagoId: metodosPago[0]?.id, monto: remaining > 0 ? remaining : 0 },
+      { metodoPagoId: nextMethod?.id || metodosPago[0]?.id, monto: remaining > 0 ? remaining : 0 },
     ]);
   };
 
@@ -151,7 +167,7 @@ export const PagoModal = ({
   /* Validation */
   const docRequired = tipoComprobante === 'factura';
   const isDocValid =
-    !docRequired || (!docError && docClienteNumero.length > 0 && docClienteNombre.length > 0);
+    !docRequired || (!docError && docClienteNumero.length > 0 && docClienteNombre.length > 0 && docClienteDireccion.length > 0);
   const isPaymentValid = totalPagado >= total && pagos.some((p) => parseFloat(p.monto) > 0);
   const canConfirm = isPaymentValid && isDocValid && !docError;
 
@@ -171,6 +187,7 @@ export const PagoModal = ({
       tipoComprobante,
       docClienteNumero: docClienteNumero || null,
       docClienteNombre: docClienteNombre || null,
+      docClienteDireccion: docClienteDireccion || null,
     });
   };
 
@@ -258,20 +275,54 @@ export const PagoModal = ({
             </div>
           </div>
 
-          {/* Razón social (para factura) */}
-          {tipoComprobante === 'factura' && (
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Razón Social <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={docClienteNombre}
-                onChange={(e) => setDocClienteNombre(e.target.value)}
-                placeholder="Nombre o razón social del cliente"
-                className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
+          {/* Info contribuyente (para factura) */}
+          {tipoComprobante === 'factura' && tipoContribuyente && (
+            <>
+              {/* Badge tipo contribuyente */}
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  esPersonaJuridica
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {esPersonaJuridica ? 'Persona Jurídica (RUC 20)' : 'Persona Natural con Negocio (RUC 10)'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    {esPersonaJuridica ? 'Razón Social' : 'Nombre Completo'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={docClienteNombre}
+                    onChange={(e) => setDocClienteNombre(e.target.value)}
+                    placeholder={esPersonaJuridica ? 'Ej: Distribuidora ABC S.A.C.' : 'Ej: Juan Pérez López'}
+                    className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Dirección Fiscal <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={docClienteDireccion}
+                    onChange={(e) => setDocClienteDireccion(e.target.value)}
+                    placeholder="Ej: Av. Los Olivos 123, Lima"
+                    className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Aviso cuando RUC no tiene prefijo válido aún */}
+          {tipoComprobante === 'factura' && docClienteNumero.length > 0 && !tipoContribuyente && !docError && (
+            <p className="text-xs text-amber-600 flex items-center gap-1">
+              <AlertCircle size={12} /> Ingrese un RUC que inicie con 10 o 20
+            </p>
           )}
 
           {/* Nombre cliente (para boleta, opcional) */}
@@ -297,7 +348,7 @@ export const PagoModal = ({
             <h3 className="text-sm font-semibold text-gray-700">
               Métodos de pago
             </h3>
-            <Button variant="outline" size="sm" onClick={addPago} disabled={metodosPago.length === 0}>
+            <Button variant="outline" size="sm" onClick={addPago}>
               <Plus size={14} className="mr-1" />
               Agregar método
             </Button>
@@ -310,7 +361,7 @@ export const PagoModal = ({
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
             {pagos.map((pago, index) => {
               const { Icon, nombre } = getMethodInfo(pago.metodoPagoId);
               return (

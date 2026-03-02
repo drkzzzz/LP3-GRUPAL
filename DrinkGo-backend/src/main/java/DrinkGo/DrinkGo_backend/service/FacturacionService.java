@@ -5,13 +5,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import DrinkGo.DrinkGo_backend.dto.facturacion.RespuestaPse;
+import DrinkGo.DrinkGo_backend.entity.ConfiguracionPse;
+import DrinkGo.DrinkGo_backend.entity.HistorialPse;
 import DrinkGo.DrinkGo_backend.entity.*;
 import DrinkGo.DrinkGo_backend.repository.*;
 
@@ -22,7 +24,8 @@ import DrinkGo.DrinkGo_backend.repository.*;
  * <ul>
  *   <li>Emisión automática de comprobantes desde ventas POS</li>
  *   <li>Numeración automática con series y correlativos</li>
- *   <li>Simulación de envío a SUNAT (PSE)</li>
+ *   <li>Envío a SUNAT vía PSE (proveedor configurable)</li>
+ *   <li>Registro de historial de comunicaciones PSE</li>
  *   <li>Anulación de comprobantes</li>
  * </ul>
  * <p>
@@ -36,7 +39,9 @@ public class FacturacionService {
     @Autowired private DocumentosFacturacionRepository documentosRepo;
     @Autowired private ClientesRepository clientesRepo;
 
-    @Autowired private PseSimuladorService pseSimulador;
+    @Autowired private PseProviderFactory pseProviderFactory;
+    @Autowired private HistorialPseRepository historialPseRepo;
+    @Autowired private ConfiguracionPseRepository configPseRepo;
 
     // ═══════════════════════════════════════════════════════════════════
     //  EMISIÓN DE COMPROBANTE DESDE VENTA
@@ -61,7 +66,6 @@ public class FacturacionService {
      * @param usuario El usuario que realiza la operación
      * @return El documento creado, o null si no hay serie configurada
      */
-    @Transactional(propagation = Propagation.REQUIRED)
     public DocumentosFacturacion emitirComprobanteDesdeVenta(Ventas venta, Usuarios usuario) {
         // 1. Determinar tipo de documento
         SeriesFacturacion.TipoDocumento tipoDoc;
@@ -108,26 +112,54 @@ public class FacturacionService {
         doc.setTotal(venta.getTotal());
         doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.pendiente_envio);
 
+        // Determinar modo de emisión según configuración del negocio
+        boolean usarPse = Boolean.TRUE.equals(venta.getNegocio().getTienePse());
+        doc.setModoEmision(usarPse
+                ? DocumentosFacturacion.ModoEmision.PSE
+                : DocumentosFacturacion.ModoEmision.LOCAL);
+
         doc = documentosRepo.save(doc);
 
-        // 6. Simular envío a SUNAT (PSE)
-        try {
-            PseSimuladorService.RespuestaPse respuesta = pseSimulador.enviarDocumento(doc);
+        if (usarPse) {
+            // 6. Enviar a SUNAT vía PSE (proveedor resuelto por factory)
+            try {
+                Long negocioId = venta.getNegocio().getId();
+                PseProvider provider = pseProviderFactory.getProvider(negocioId);
+                RespuestaPse respuesta = provider.enviarDocumento(doc);
 
-            doc.setHashSunat(respuesta.getHashCdr());
-            doc.setRespuestaSunat(respuesta.getMensajeRespuesta());
-            doc.setXmlDocumento(respuesta.getXmlGenerado());
+                doc.setHashSunat(respuesta.getHashCdr());
+                doc.setRespuestaSunat(respuesta.getMensajeRespuesta());
+                doc.setXmlDocumento(respuesta.getXmlGenerado());
+                doc.setFechaEnvio(LocalDateTime.now());
+                doc.setIntentosEnvio(1);
+                doc.setCodigoRespuestaSunat(respuesta.getCodigoRespuesta());
 
-            if (respuesta.isAceptado()) {
-                doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.aceptado);
-            } else {
-                doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.rechazado);
+                if (respuesta.isAceptado()) {
+                    // Si SUNAT acepta pero con observaciones → estado "observado"
+                    if (respuesta.getObservaciones() != null && !respuesta.getObservaciones().isBlank()) {
+                        doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.observado);
+                    } else {
+                        doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.aceptado);
+                    }
+                } else {
+                    doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.rechazado);
+                }
+
+                documentosRepo.save(doc);
+
+                // Registrar en historial de comunicaciones PSE
+                String proveedorNombre = pseProviderFactory.getProveedorActual(negocioId);
+                registrarHistorial(doc, "ENVIO", respuesta, proveedorNombre, negocioId);
+            } catch (Exception ex) {
+                // Si falla el PSE, dejar en pendiente_envio
+                doc.setRespuestaSunat("Error PSE: " + ex.getMessage());
+                doc.setIntentosEnvio(1);
+                documentosRepo.save(doc);
             }
-
-            documentosRepo.save(doc);
-        } catch (Exception ex) {
-            // Si falla la simulación PSE, dejar en pendiente_envio
-            doc.setRespuestaSunat("Error PSE: " + ex.getMessage());
+        } else {
+            // Sin PSE: comprobante interno aceptado directamente
+            doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.aceptado);
+            doc.setRespuestaSunat("Emitido localmente (sin PSE)");
             documentosRepo.save(doc);
         }
 
@@ -166,16 +198,68 @@ public class FacturacionService {
             throw new IllegalStateException("Solo se pueden reenviar documentos pendientes o rechazados");
         }
 
-        PseSimuladorService.RespuestaPse respuesta = pseSimulador.enviarDocumento(doc);
+        Long negocioId = doc.getNegocio().getId();
+        PseProvider provider = pseProviderFactory.getProvider(negocioId);
+        RespuestaPse respuesta = provider.enviarDocumento(doc);
 
         doc.setHashSunat(respuesta.getHashCdr());
         doc.setRespuestaSunat(respuesta.getMensajeRespuesta());
         doc.setXmlDocumento(respuesta.getXmlGenerado());
-        doc.setEstadoDocumento(respuesta.isAceptado()
-                ? DocumentosFacturacion.EstadoDocumento.aceptado
-                : DocumentosFacturacion.EstadoDocumento.rechazado);
+        doc.setFechaEnvio(LocalDateTime.now());
+        doc.setCodigoRespuestaSunat(respuesta.getCodigoRespuesta());
+        doc.setIntentosEnvio((doc.getIntentosEnvio() != null ? doc.getIntentosEnvio() : 0) + 1);
+        if (respuesta.isAceptado()) {
+            if (respuesta.getObservaciones() != null && !respuesta.getObservaciones().isBlank()) {
+                doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.observado);
+            } else {
+                doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.aceptado);
+            }
+        } else {
+            doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.rechazado);
+        }
 
-        return documentosRepo.save(doc);
+        doc = documentosRepo.save(doc);
+
+        // Registrar en historial de comunicaciones PSE
+        String proveedorNombre = pseProviderFactory.getProveedorActual(negocioId);
+        registrarHistorial(doc, "REENVIO", respuesta, proveedorNombre, negocioId);
+
+        return doc;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  HISTORIAL PSE
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Registra un intento de comunicación con el PSE en el historial.
+     */
+    private void registrarHistorial(DocumentosFacturacion doc, String tipoOperacion,
+                                     RespuestaPse respuesta, String proveedor, Long negocioId) {
+        try {
+            HistorialPse historial = new HistorialPse();
+            historial.setNegocio(doc.getNegocio());
+            historial.setDocumento(doc);
+            historial.setTipoOperacion(tipoOperacion);
+            historial.setNumeroDocumento(doc.getNumeroDocumento());
+            historial.setRequestPayload(respuesta.getXmlGenerado());
+            historial.setResponsePayload(respuesta.getMensajeRespuesta());
+            historial.setCodigoRespuesta(respuesta.getCodigoRespuesta());
+            historial.setMensajeRespuesta(respuesta.getMensajeRespuesta());
+            historial.setExitoso(respuesta.isAceptado());
+            historial.setIntentoNumero(doc.getIntentosEnvio());
+            historial.setProveedor(proveedor);
+
+            // Obtener entorno de la configuración
+            configPseRepo.findByNegocioId(negocioId)
+                    .ifPresent(config -> historial.setEntorno(
+                            config.getEntorno() != null ? config.getEntorno() : "SANDBOX"));
+
+            historialPseRepo.save(historial);
+        } catch (Exception e) {
+            // No fallar la operación principal por un error en el log
+            System.err.println("Error al registrar historial PSE: " + e.getMessage());
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════

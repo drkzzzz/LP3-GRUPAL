@@ -109,6 +109,7 @@ public class UsuariosController {
         negocioData.put("nombre", negocio.getNombreComercial());
         negocioData.put("ruc", negocio.getRuc());
         negocioData.put("estado", negocio.getEstado());
+        negocioData.put("tienePse", negocio.getTienePse());
 
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);

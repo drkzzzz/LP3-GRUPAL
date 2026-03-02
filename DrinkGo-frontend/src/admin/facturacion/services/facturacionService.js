@@ -84,4 +84,51 @@ export const facturacionService = {
     const { data } = await adminApi.delete(`/admin/facturacion/metodos-pago/${id}`);
     return data;
   },
+
+  /* ═══ PSE (Proveedor de Servicios Electrónicos) ═══ */
+
+  getConfiguracionPse: async (negocioId) => {
+    const { data } = await adminApi.get(`/admin/facturacion/pse/configuracion/${negocioId}`);
+    return data;
+  },
+
+  guardarConfiguracionPse: async (negocioId, configData) => {
+    const { data } = await adminApi.put(`/admin/facturacion/pse/configuracion/${negocioId}`, configData);
+    return data;
+  },
+
+  probarConexionPse: async (negocioId) => {
+    const { data } = await adminApi.post(`/admin/facturacion/pse/probar-conexion/${negocioId}`);
+    return data;
+  },
+
+  togglePse: async (negocioId) => {
+    const { data } = await adminApi.patch(`/admin/facturacion/pse/toggle/${negocioId}`);
+    return data;
+  },
+
+  getBandejaPse: async (negocioId, estado) => {
+    const params = {};
+    if (estado) params.estado = estado;
+    const { data } = await adminApi.get(`/admin/facturacion/pse/bandeja/${negocioId}`, { params });
+    return toArray(data);
+  },
+
+  enviarDocumentoPse: async (documentoId) => {
+    const { data } = await adminApi.post(`/admin/facturacion/pse/enviar/${documentoId}`);
+    return data;
+  },
+
+  reenviarDocumentoPse: async (documentoId) => {
+    const { data } = await adminApi.post(`/admin/facturacion/pse/reenviar/${documentoId}`);
+    return data;
+  },
+
+  /* ═══ PSE – HISTORIAL DE COMUNICACIONES ═══ */
+
+  getHistorialPse: async (negocioId) => {
+    const { data } = await adminApi.get(`/admin/facturacion/pse/historial/${negocioId}`);
+    return toArray(data);
+  },
+
 };

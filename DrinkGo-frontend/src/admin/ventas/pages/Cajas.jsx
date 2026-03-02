@@ -33,7 +33,7 @@ import { useAdminAuthStore } from '@/stores/adminAuthStore';
 export const Cajas = () => {
   const navigate = useNavigate();
   const { user, negocio } = useAdminAuthStore();
-  const { cajas, isLoading, crear, actualizar, isCreating, isUpdating } = useCajas();
+  const { cajas, isLoading, crear, actualizar, toggleHabilitada, isCreating, isUpdating, isToggling } = useCajas();
   const { sesion, hasSesion, isLoading: loadingSesion, refetch: refetchSesion } = useSesionActiva();
   const { sesiones, isLoading: loadingSesiones } = useSesiones();
   const { abrirCaja, cerrarCaja, isAbriendo, isCerrando } = useSesionActions();
@@ -64,6 +64,7 @@ export const Cajas = () => {
   const [montoApertura, setMontoApertura] = useState('100.00');
 
   const cajasActivas = cajas.filter((c) => c.estaActivo !== false);
+  const cajasHabilitadas = cajasActivas.filter((c) => c.estaHabilitada !== false);
   const sesionesAbiertas = sesiones.filter((s) => s.estadoSesion === 'abierta');
 
   /* ─── CRUD Cajas ─── */
@@ -138,6 +139,10 @@ export const Cajas = () => {
       key: 'estado',
       title: 'Estado',
       render: (_, row) => {
+        const habilitada = row.estaHabilitada !== false;
+        if (!habilitada) {
+          return <Badge variant="default">Deshabilitada</Badge>;
+        }
         const abierta = sesionesAbiertas.some((s) => s.caja?.id === row.id);
         return (
           <Badge variant={abierta ? 'success' : 'info'}>
@@ -149,19 +154,32 @@ export const Cajas = () => {
     {
       key: 'actions',
       title: 'Acciones',
-      width: '80px',
+      width: '120px',
       align: 'center',
-      render: (_, row) => (
-        <div className="flex justify-center gap-2">
-          <button
-            title="Editar"
-            onClick={() => openEditar(row)}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <Edit size={16} />
-          </button>
-        </div>
-      ),
+      render: (_, row) => {
+        const habilitada = row.estaHabilitada !== false;
+        return (
+          <div className="flex justify-center gap-2">
+            <button
+              title="Editar"
+              onClick={() => openEditar(row)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <Edit size={16} />
+            </button>
+            <button
+              title={habilitada ? 'Deshabilitar caja' : 'Habilitar caja'}
+              onClick={() => toggleHabilitada(row.id)}
+              disabled={isToggling}
+              className={habilitada
+                ? 'text-green-500 hover:text-red-500'
+                : 'text-red-400 hover:text-green-500'}
+            >
+              <Power size={16} />
+            </button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -307,21 +325,22 @@ export const Cajas = () => {
       key: 'acciones',
       title: '',
       width: '80px',
-      render: (_, row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleVerDetalle(row)}
-          title="Ver detalle"
-        >
-          <Eye size={16} className="text-gray-500" />
-        </Button>
-      ),
+      render: (_, row) =>
+        row.observaciones ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleVerDetalle(row)}
+            title="Ver observaciones"
+          >
+            <Eye size={16} className="text-gray-500" />
+          </Button>
+        ) : null,
     },
   ];
 
-  /* Cajas disponibles para aperturar (sin sesión abierta) */
-  const cajasDisponibles = cajasActivas.filter(
+  /* Cajas disponibles para aperturar (habilitadas y sin sesión abierta) */
+  const cajasDisponibles = cajasHabilitadas.filter(
     (c) => !sesionesAbiertas.some((s) => s.caja?.id === c.id),
   );
 
@@ -493,6 +512,21 @@ export const Cajas = () => {
       <Card className="!p-4">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Historial de Sesiones</h2>
         <div className="flex flex-col lg:flex-row lg:items-end gap-3 mb-4">
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              <User size={12} className="inline mr-1" />Buscar usuario
+            </label>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={filtroBusqueda}
+                onChange={(e) => { setFiltroBusqueda(e.target.value); setPaginaHistorial(1); }}
+                placeholder="Nombre..."
+                className="block w-full border border-gray-300 rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+          </div>
           <div className="flex-1 min-w-[140px]">
             <label className="block text-xs font-medium text-gray-500 mb-1">
               <Calendar size={12} className="inline mr-1" />Desde
@@ -540,21 +574,6 @@ export const Cajas = () => {
               <option value="cerrada">Cerrada</option>
               <option value="con_diferencia">Con diferencia</option>
             </select>
-          </div>
-          <div className="flex-1 min-w-[160px]">
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-              <User size={12} className="inline mr-1" />Buscar usuario
-            </label>
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={filtroBusqueda}
-                onChange={(e) => { setFiltroBusqueda(e.target.value); setPaginaHistorial(1); }}
-                placeholder="Nombre..."
-                className="block w-full border border-gray-300 rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
           </div>
           {(filtroEstado !== 'todos' || filtroCaja !== 'todas' || filtroBusqueda || filtroFechaDesde || filtroFechaHasta) && (
             <Button
@@ -706,7 +725,7 @@ export const Cajas = () => {
                 value={abrirCajaId}
                 onChange={(e) => {
                   setAbrirCajaId(e.target.value);
-                  const caja = cajasActivas.find((c) => c.id === parseInt(e.target.value));
+                  const caja = cajasHabilitadas.find((c) => c.id === parseInt(e.target.value));
                 }}
                 className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
