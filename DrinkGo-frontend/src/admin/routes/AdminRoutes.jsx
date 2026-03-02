@@ -37,6 +37,7 @@ import { POS } from '../ventas/pages/POS';
 import { Cajas } from '../ventas/pages/Cajas';
 import { MovimientosCajaPage } from '../ventas/pages/MovimientosCajaPage';
 import { HistorialVentas } from '../ventas/pages/HistorialVentas';
+import { GastosPage } from '../ventas/pages/GastosPage';
 
 /* ─── Facturación sub-páginas ─── */
 import { ComprobantesTab } from '../facturacion/pages/ComprobantesTab';
@@ -110,6 +111,7 @@ export const AdminRoutes = () => {
           <Route path="cajas" element={<Cajas />} />
           <Route path="movimientos" element={<MovimientosCajaPage />} />
           <Route path="historial" element={<HistorialVentas />} />
+          <Route path="gastos" element={<GastosPage />} />
         </Route>
         <Route path="pedidos" element={<Pedidos />} />
         <Route path="facturacion" element={<Facturacion />}>

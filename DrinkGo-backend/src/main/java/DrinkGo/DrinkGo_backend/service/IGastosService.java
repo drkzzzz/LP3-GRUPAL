@@ -7,6 +7,8 @@ import DrinkGo.DrinkGo_backend.entity.Gastos;
 public interface IGastosService {
     List<Gastos> buscarTodos();
 
+    List<Gastos> buscarPorNegocio(Long negocioId);
+
     void guardar(Gastos gastos);
 
     void modificar(Gastos gastos);
@@ -14,4 +16,6 @@ public interface IGastosService {
     Optional<Gastos> buscarId(Long id);
 
     void eliminar(Long id);
+
+    Gastos marcarPagado(Long id, String metodoPago, String referencia);
 }

@@ -17,6 +17,10 @@ public class CategoriasGastoService implements ICategoriasGastoService {
         return repoCategoriasGasto.findAll();
     }
 
+    public List<CategoriasGasto> buscarPorNegocio(Long negocioId) {
+        return repoCategoriasGasto.findByNegocioId(negocioId);
+    }
+
     public void guardar(CategoriasGasto categoriasGasto) {
         repoCategoriasGasto.save(categoriasGasto);
     }

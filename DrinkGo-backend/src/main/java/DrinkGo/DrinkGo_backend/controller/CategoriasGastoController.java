@@ -25,6 +25,11 @@ public class CategoriasGastoController {
         return service.buscarTodos();
     }
 
+    @GetMapping("/categorias-gasto/negocio/{negocioId}")
+    public List<CategoriasGasto> buscarPorNegocio(@PathVariable("negocioId") Long negocioId) {
+        return service.buscarPorNegocio(negocioId);
+    }
+
     @PostMapping("/categorias-gasto")
     public CategoriasGasto guardar(@RequestBody CategoriasGasto entity) {
         service.guardar(entity);

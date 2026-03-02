@@ -7,11 +7,15 @@ import DrinkGo.DrinkGo_backend.service.IGastosService;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PutMapping;
 
 @RestController
@@ -23,6 +27,11 @@ public class GastosController {
     @GetMapping("/gastos")
     public List<Gastos> buscarTodos() {
         return service.buscarTodos();
+    }
+
+    @GetMapping("/gastos/negocio/{negocioId}")
+    public List<Gastos> buscarPorNegocio(@PathVariable("negocioId") Long negocioId) {
+        return service.buscarPorNegocio(negocioId);
     }
 
     @PostMapping("/gastos")
@@ -46,5 +55,19 @@ public class GastosController {
     public String eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return "Registro eliminado";
+    }
+
+    @PatchMapping("/gastos/{id}/pagar")
+    public ResponseEntity<?> marcarPagado(
+            @PathVariable("id") Long id,
+            @RequestParam(required = false) String metodoPago,
+            @RequestParam(required = false) String referencia) {
+        try {
+            Gastos gasto = service.marcarPagado(id, metodoPago, referencia);
+            return ResponseEntity.ok(gasto);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Map.of("error", e.getMessage()));
+        }
     }
 }

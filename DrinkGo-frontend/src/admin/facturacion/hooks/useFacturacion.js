@@ -5,6 +5,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { facturacionService } from '../services/facturacionService';
+import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
 /* ═══ SERIES ═══ */
 
@@ -140,9 +141,14 @@ export const useTogglePse = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (negocioId) => facturacionService.togglePse(negocioId),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['facturacion', 'pse'] });
       queryClient.refetchQueries({ queryKey: ['facturacion', 'pse', 'config'] });
+      // Actualizar tienePse en el store para que el sidebar reaccione de inmediato
+      const { negocio, setNegocio } = useAdminAuthStore.getState();
+      if (negocio && data?.tienePse !== undefined) {
+        setNegocio({ ...negocio, tienePse: data.tienePse });
+      }
     },
   });
 };

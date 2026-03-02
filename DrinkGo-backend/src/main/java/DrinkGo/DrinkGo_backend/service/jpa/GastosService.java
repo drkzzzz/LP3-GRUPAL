@@ -17,6 +17,10 @@ public class GastosService implements IGastosService {
         return repoGastos.findAll();
     }
 
+    public List<Gastos> buscarPorNegocio(Long negocioId) {
+        return repoGastos.findByNegocioIdOrderByCreadoEnDesc(negocioId);
+    }
+
     public void guardar(Gastos gastos) {
         repoGastos.save(gastos);
     }
@@ -31,5 +35,22 @@ public class GastosService implements IGastosService {
 
     public void eliminar(Long id) {
         repoGastos.deleteById(id);
+    }
+
+    public Gastos marcarPagado(Long id, String metodoPago, String referencia) {
+        Gastos gasto = repoGastos.findById(id)
+                .orElseThrow(() -> new RuntimeException("Gasto no encontrado: " + id));
+        gasto.setEstado(Gastos.EstadoGasto.pagado);
+        if (metodoPago != null && !metodoPago.isBlank()) {
+            try {
+                gasto.setMetodoPago(Gastos.MetodoPago.valueOf(metodoPago));
+            } catch (IllegalArgumentException e) {
+                gasto.setMetodoPago(Gastos.MetodoPago.otro);
+            }
+        }
+        if (referencia != null && !referencia.isBlank()) {
+            gasto.setReferenciaPago(referencia);
+        }
+        return repoGastos.save(gasto);
     }
 }

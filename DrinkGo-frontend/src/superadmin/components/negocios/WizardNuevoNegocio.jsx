@@ -70,6 +70,7 @@ const negocioSchema = z.object({
   // Configuración fiscal
   aplicaIgv: z.boolean().optional(),
   porcentajeIgv: z.coerce.number().min(0).max(100).optional().or(z.literal('')),
+  tienePse: z.boolean().optional(),
 });
 
 const DOC_TYPES = [
@@ -163,6 +164,7 @@ const Step1Form = ({ onNext }) => {
         adminPassword: 'Admin123!',
         aplicaIgv: true,
         porcentajeIgv: 18,
+        tienePse: false,
     },
   });
 
@@ -401,37 +403,47 @@ const Step1Form = ({ onNext }) => {
         </div>
       </div>
 
-      {/* ─── Configuración de IGV ─── */}
+      {/* ─── Configuraciones ─── */}
       <div className="border-t border-gray-200 pt-4 space-y-3">
         <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
           <Percent size={14} className="text-blue-600" />
-          Configuración de IGV
+          Configuraciones
         </h4>
-        <div className="flex items-center gap-6 flex-wrap">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-6 flex-wrap">
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                {...register('aplicaIgv')}
+                className="rounded border-gray-300 text-blue-600"
+              />
+              Este negocio aplica IGV en sus ventas
+            </label>
+            {watch('aplicaIgv') && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500">Porcentaje:</label>
+                <div className="flex items-center gap-1">
+                  <Input
+                    {...register('porcentajeIgv')}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    className="w-24 text-sm"
+                  />
+                  <span className="text-sm text-gray-500 font-medium">%</span>
+                </div>
+              </div>
+            )}
+          </div>
           <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
             <input
               type="checkbox"
-              {...register('aplicaIgv')}
+              {...register('tienePse')}
               className="rounded border-gray-300 text-blue-600"
             />
-            Este negocio aplica IGV en sus ventas
+            Este Negocio tiene PSE
           </label>
-          {watch('aplicaIgv') && (
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-500">Porcentaje:</label>
-              <div className="flex items-center gap-1">
-                <Input
-                  {...register('porcentajeIgv')}
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  className="w-24 text-sm"
-                />
-                <span className="text-sm text-gray-500 font-medium">%</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -566,6 +578,12 @@ const Step3Confirm = ({ negocioData, planId, planes, onBack, onSubmit, isLoading
               <dt className="text-gray-500 w-24 shrink-0">IGV:</dt>
               <dd className="text-gray-900">
                 {negocioData.aplicaIgv ? `Sí (${negocioData.porcentajeIgv ?? 18}%)` : 'No aplica'}
+              </dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="text-gray-500 w-24 shrink-0">PSE:</dt>
+              <dd className="text-gray-900">
+                {negocioData.tienePse ? 'Sí' : 'No'}
               </dd>
             </div>
           </dl>

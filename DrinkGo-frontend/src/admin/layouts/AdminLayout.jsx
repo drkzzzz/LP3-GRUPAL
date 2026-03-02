@@ -31,7 +31,9 @@ import {
   Monitor,
   Wallet,
   Receipt,
-  MapPin,
+  Zap,
+  TrendingDown,
+
 } from 'lucide-react';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
@@ -71,6 +73,7 @@ const VENTAS_SUBITEMS = [
   { to: '/admin/ventas/cajas', label: 'Caja', icon: Wallet, permiso: 'm.ventas.cajas' },
   { to: '/admin/ventas/movimientos', label: 'Movimientos de Caja', icon: Receipt, permiso: 'm.ventas.movimientos' },
   { to: '/admin/ventas/historial', label: 'Historial', icon: History, permiso: 'm.ventas.historial' },
+  { to: '/admin/ventas/gastos', label: 'Gastos', icon: TrendingDown, permiso: 'm.ventas.gastos' },
 ];
 
 /* ─── Sub-items del menú Facturación ─── */
@@ -78,6 +81,7 @@ const FACTURACION_SUBITEMS = [
   { to: '/admin/facturacion/comprobantes', label: 'Comprobantes', icon: FileText, permiso: 'm.facturacion.comprobantes' },
   { to: '/admin/facturacion/series', label: 'Series', icon: Hash, permiso: 'm.facturacion.series' },
   { to: '/admin/facturacion/metodos-pago', label: 'Métodos de Pago', icon: CreditCard, permiso: 'm.facturacion.metodos' },
+  { to: '/admin/facturacion/pse', label: 'PSE Electrónico', icon: Zap, permiso: 'm.facturacion.pse', requiresPse: true },
 ];
 
 const NAV_ITEMS = [

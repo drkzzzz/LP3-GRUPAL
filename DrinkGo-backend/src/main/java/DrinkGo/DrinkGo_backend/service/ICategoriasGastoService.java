@@ -7,6 +7,8 @@ import DrinkGo.DrinkGo_backend.entity.CategoriasGasto;
 public interface ICategoriasGastoService {
     List<CategoriasGasto> buscarTodos();
 
+    List<CategoriasGasto> buscarPorNegocio(Long negocioId);
+
     void guardar(CategoriasGasto categoriasGasto);
 
     void modificar(CategoriasGasto categoriasGasto);
