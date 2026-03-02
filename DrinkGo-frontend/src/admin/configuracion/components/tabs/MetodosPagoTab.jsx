@@ -249,8 +249,8 @@ export const MetodosPagoTab = ({ context }) => {
       </Card>
 
       {/* Modal: Crear / Editar */}
-      <Modal isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setEditing(null); }} title={editing ? 'Editar Método de Pago' : 'Nuevo Método de Pago'} size="md">
-        <MetodoPagoForm initialData={editing} onSubmit={handleSubmit} onCancel={() => { setIsFormOpen(false); setEditing(null); }} isLoading={isSaving} />
+      <Modal isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setEditing(null); }} title={editing ? 'Editar Método de Pago' : 'Agregar Método de Pago'} size="md">
+        <MetodoPagoForm initialData={editing} onSubmit={handleSubmit} onCancel={() => { setIsFormOpen(false); setEditing(null); }} isLoading={isSaving} existingCodigos={metodosPago.map((m) => m.codigo)} existingMetodos={metodosPago} />
       </Modal>
 
       {/* Modal: Confirmar eliminación */}

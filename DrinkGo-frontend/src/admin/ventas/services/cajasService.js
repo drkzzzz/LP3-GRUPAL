@@ -36,6 +36,11 @@ export const cajasService = {
     return data;
   },
 
+  toggleHabilitada: async (cajaId) => {
+    const { data } = await adminApi.patch(`/pos/cajas/${cajaId}/toggle-habilitada`);
+    return data;
+  },
+
   /* ═══ SESIONES DE CAJA (TURNOS) ═══ */
 
   abrirCaja: async (request) => {

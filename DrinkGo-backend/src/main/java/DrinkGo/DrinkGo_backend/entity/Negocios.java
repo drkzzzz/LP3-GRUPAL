@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @JsonPropertyOrder({ "id", "uuid", "razonSocial", "nombreComercial", "ruc", "tipoDocumentoFiscal",
         "representanteLegal", "documentoRepresentante", "tipoNegocio", "email", "telefono", "direccion",
         "ciudad", "departamento", "pais", "codigoPostal", "urlLogo", "aplicaIgv", "porcentajeIgv",
-        "estado", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
+        "tienePse", "estado", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class Negocios {
 
     @Id
@@ -75,6 +75,10 @@ public class Negocios {
     /** Porcentaje de IGV cuando aplica. Default 18.00 (Perú). */
     @Column(name = "porcentaje_igv", precision = 5, scale = 2)
     private BigDecimal porcentajeIgv = new BigDecimal("18.00");
+
+    /** Indica si el negocio tiene habilitado el PSE (facturación electrónica SUNAT). */
+    @Column(name = "tiene_pse")
+    private Boolean tienePse = false;
 
     @Enumerated(EnumType.STRING)
     private EstadoNegocio estado = EstadoNegocio.activo;
@@ -264,6 +268,14 @@ public class Negocios {
 
     public void setPorcentajeIgv(BigDecimal porcentajeIgv) {
         this.porcentajeIgv = porcentajeIgv;
+    }
+
+    public Boolean getTienePse() {
+        return tienePse != null ? tienePse : false;
+    }
+
+    public void setTienePse(Boolean tienePse) {
+        this.tienePse = tienePse;
     }
 
     public EstadoNegocio getEstado() {

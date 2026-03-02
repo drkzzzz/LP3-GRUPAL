@@ -11,4 +11,8 @@ public interface MetodosPagoRepository extends JpaRepository<MetodosPago, Long> 
     List<MetodosPago> findByNegocioIdAndDisponiblePos(Long negocioId, Boolean disponiblePos);
 
     List<MetodosPago> findByNegocioId(Long negocioId);
+
+    List<MetodosPago> findByNegocioIdAndOrden(Long negocioId, Integer orden);
+
+    List<MetodosPago> findByNegocioIdAndOrdenGreaterThanEqual(Long negocioId, Integer orden);
 }

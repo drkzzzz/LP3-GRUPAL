@@ -5,6 +5,7 @@ const VARIANTS = {
   warning: 'bg-yellow-100 text-yellow-700 border-yellow-300',
   error: 'bg-red-100 text-red-700 border-red-300',
   info: 'bg-blue-100 text-blue-700 border-blue-300',
+  default: 'bg-gray-100 text-gray-500 border-gray-300',
 };
 
 export const Badge = ({ children, variant = 'info', className }) => (

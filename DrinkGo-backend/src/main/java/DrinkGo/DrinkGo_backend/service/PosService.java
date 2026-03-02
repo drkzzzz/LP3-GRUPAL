@@ -316,6 +316,7 @@ public class PosService {
         }
 
         CajasRegistradoras caja = cajasRepo.getReferenceById(request.getCajaId());
+
         Usuarios usuario = usuariosRepo.getReferenceById(request.getUsuarioId());
 
         SesionesCaja sesion = new SesionesCaja();

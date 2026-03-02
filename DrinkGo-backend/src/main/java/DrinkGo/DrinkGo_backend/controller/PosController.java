@@ -280,6 +280,20 @@ public class PosController {
         }
     }
 
+    @PatchMapping("/cajas/{cajaId}/toggle-habilitada")
+    public ResponseEntity<?> toggleHabilitada(@PathVariable Long cajaId) {
+        try {
+            CajasRegistradoras caja = cajasRepo.findById(cajaId)
+                    .orElseThrow(() -> new RuntimeException("Caja no encontrada"));
+            caja.setEstaHabilitada(!Boolean.TRUE.equals(caja.getEstaHabilitada()));
+            cajasRepo.save(caja);
+            return ResponseEntity.ok(caja);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // SESIONES DE CAJA
 
     @PostMapping("/sesiones/abrir")
