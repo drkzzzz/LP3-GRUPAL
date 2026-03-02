@@ -39,6 +39,12 @@ export const useNegocios = () => {
     queryFn: negociosService.getAllUsuarios,
   });
 
+  /* ─── Facturas Query ─── */
+  const facturasQuery = useQuery({
+    queryKey: ['facturas-suscripcion'],
+    queryFn: negociosService.getAllFacturas,
+  });
+
   /* ─── Negocios Mutations ─── */
   const createNegocio = useMutation({
     mutationFn: negociosService.create,
@@ -155,6 +161,41 @@ export const useNegocios = () => {
     },
   });
 
+  /* ─── Facturas Mutations ─── */
+  const generarFactura = useMutation({
+    mutationFn: negociosService.generarFactura,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facturas-suscripcion'] });
+      message.success('Factura generada exitosamente');
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.error || 'Error al generar factura');
+    },
+  });
+
+  const pagarFactura = useMutation({
+    mutationFn: negociosService.pagarFactura,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facturas-suscripcion'] });
+      queryClient.invalidateQueries({ queryKey: ['suscripciones'] });
+      message.success('Factura marcada como pagada. Suscripción extendida un mes.');
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.error || 'Error al registrar pago');
+    },
+  });
+
+  const cancelarFacturaMutation = useMutation({
+    mutationFn: negociosService.cancelarFactura,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facturas-suscripcion'] });
+      message.success('Factura anulada');
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.error || 'Error al anular factura');
+    },
+  });
+
   /* ─── Helpers: filter by negocio ─── */
   const getSedesForNegocio = (negocioId) => {
     if (!sedesQuery.data || !negocioId) return [];
@@ -178,6 +219,13 @@ export const useNegocios = () => {
     return usuariosQuery.data.filter(
       (u) => (u.negocio?.id ?? u.negocioId) === negocioId,
     );
+  };
+
+  const getFacturasForNegocio = (negocioId) => {
+    if (!facturasQuery.data || !negocioId) return [];
+    return facturasQuery.data
+      .filter((f) => (f.negocio?.id ?? f.negocioId) === negocioId)
+      .sort((a, b) => new Date(b.emitidoEn || b.creadoEn) - new Date(a.emitidoEn || a.creadoEn));
   };
 
   /* ─── Stats ─── */
@@ -241,5 +289,14 @@ export const useNegocios = () => {
     updateUsuario: updateUsuario.mutateAsync,
     isCreatingUsuario: createUsuario.isPending,
     isUpdatingUsuario: updateUsuario.isPending,
+
+    /* Facturas suscripción */
+    getFacturasForNegocio,
+    generarFactura: generarFactura.mutateAsync,
+    pagarFactura: pagarFactura.mutateAsync,
+    cancelarFactura: cancelarFacturaMutation.mutateAsync,
+    isGenerandoFactura: generarFactura.isPending,
+    isPagandoFactura: pagarFactura.isPending,
+    isCancelandoFactura: cancelarFacturaMutation.isPending,
   };
 };

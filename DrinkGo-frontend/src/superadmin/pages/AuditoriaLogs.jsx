@@ -284,7 +284,7 @@ export const AuditoriaLogs = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-500">IP</p>
-                <p className="font-mono text-sm">{selected.ip || '—'}</p>
+                <p className="font-mono text-sm">{selected.direccionIp || '—'}</p>
               </div>
             </div>
 
@@ -295,24 +295,24 @@ export const AuditoriaLogs = () => {
               </p>
             </div>
 
-            {selected.datosAnteriores && (
+            {selected.valoresAnteriores && (
               <div>
                 <p className="text-sm text-gray-500 mb-1">Datos Anteriores</p>
                 <pre className="text-xs bg-gray-50 rounded-lg p-3 overflow-x-auto">
-                  {typeof selected.datosAnteriores === 'string'
-                    ? selected.datosAnteriores
-                    : JSON.stringify(selected.datosAnteriores, null, 2)}
+                  {typeof selected.valoresAnteriores === 'string'
+                    ? selected.valoresAnteriores
+                    : JSON.stringify(selected.valoresAnteriores, null, 2)}
                 </pre>
               </div>
             )}
 
-            {selected.datosNuevos && (
+            {selected.valoresNuevos && (
               <div>
                 <p className="text-sm text-gray-500 mb-1">Datos Nuevos</p>
                 <pre className="text-xs bg-gray-50 rounded-lg p-3 overflow-x-auto">
-                  {typeof selected.datosNuevos === 'string'
-                    ? selected.datosNuevos
-                    : JSON.stringify(selected.datosNuevos, null, 2)}
+                  {typeof selected.valoresNuevos === 'string'
+                    ? selected.valoresNuevos
+                    : JSON.stringify(selected.valoresNuevos, null, 2)}
                 </pre>
               </div>
             )}

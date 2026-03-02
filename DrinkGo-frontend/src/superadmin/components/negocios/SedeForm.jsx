@@ -5,7 +5,6 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 
 const schema = z.object({
-  codigo: z.string().min(2, 'Código requerido (mín. 2 caracteres)'),
   nombre: z.string().min(2, 'Nombre requerido'),
   direccion: z.string().min(3, 'Dirección requerida'),
   ciudad: z.string().optional(),
@@ -30,7 +29,6 @@ export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      codigo: '',
       nombre: '',
       direccion: '',
       ciudad: '',
@@ -47,28 +45,16 @@ export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {/* Row 1: Código + Nombre */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Código <span className="text-red-500">*</span>
-          </label>
-          <Input
-            {...register('codigo')}
-            placeholder="SEDE-001"
-            error={errors.codigo?.message}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre <span className="text-red-500">*</span>
-          </label>
-          <Input
-            {...register('nombre')}
-            placeholder="Sede Principal"
-            error={errors.nombre?.message}
-          />
-        </div>
+      {/* Row 1: Nombre */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Nombre <span className="text-red-500">*</span>
+        </label>
+        <Input
+          {...register('nombre')}
+          placeholder="Sede Principal"
+          error={errors.nombre?.message}
+        />
       </div>
 
       {/* Row 2: Dirección */}

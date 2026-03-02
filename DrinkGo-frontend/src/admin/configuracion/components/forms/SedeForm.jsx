@@ -21,7 +21,6 @@ export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
   } = useForm({
     resolver: zodResolver(sedeSchema),
     defaultValues: {
-      codigo: '',
       nombre: '',
       direccion: '',
       ciudad: '',
@@ -38,7 +37,6 @@ export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
   useEffect(() => {
     if (initialData) {
       reset({
-        codigo: initialData.codigo || '',
         nombre: initialData.nombre || '',
         direccion: initialData.direccion || '',
         ciudad: initialData.ciudad || '',
@@ -60,14 +58,6 @@ export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Código"
-          required
-          {...register('codigo')}
-          error={errors.codigo?.message}
-          placeholder="SEDE-01"
-          disabled={isEditing}
-        />
         <Input
           label="Nombre"
           required

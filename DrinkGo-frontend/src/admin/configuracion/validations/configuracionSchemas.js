@@ -84,11 +84,6 @@ export const negocioSchema = z.object({
  *  SEDE
  * ================================================================ */
 export const sedeSchema = z.object({
-  codigo: z
-    .string()
-    .min(2, 'Código debe tener al menos 2 caracteres')
-    .max(20, 'Máximo 20 caracteres')
-    .regex(/^[A-Z0-9\-]+$/, 'Solo letras mayúsculas, números y guiones'),
   nombre: z
     .string()
     .min(3, 'Nombre debe tener al menos 3 caracteres')

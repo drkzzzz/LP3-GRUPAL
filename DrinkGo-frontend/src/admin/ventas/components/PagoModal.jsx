@@ -5,12 +5,13 @@
  * y pagos mixtos (abonos) que deben sumar al menos el total.
  */
 import { useState, useEffect, useMemo } from 'react';
-import { CreditCard, Banknote, Smartphone, QrCode, Plus, X, AlertCircle } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, QrCode, Plus, X, AlertCircle, Search, Loader2 } from 'lucide-react';
 import { Modal } from '@/admin/components/ui/Modal';
 import { Button } from '@/admin/components/ui/Button';
 import { Input } from '@/admin/components/ui/Input';
 import { Badge } from '@/admin/components/ui/Badge';
 import { formatCurrency } from '@/shared/utils/formatters';
+import { useConsultarRuc, useConsultarDni } from '@/shared/hooks/useConsultaDocumento';
 
 const ICON_MAP = {
   efectivo: Banknote,
@@ -70,6 +71,9 @@ export const PagoModal = ({
   const [docClienteDireccion, setDocClienteDireccion] = useState('');
   const [docError, setDocError] = useState(null);
 
+  const rucLookup = useConsultarRuc();
+  const dniLookup = useConsultarDni();
+
   /* Inicializar al abrir */
   useEffect(() => {
     if (isOpen) {
@@ -79,6 +83,8 @@ export const PagoModal = ({
       setDocClienteNombre('');
       setDocClienteDireccion('');
       setDocError(null);
+      rucLookup.reset();
+      dniLookup.reset();
 
       if (metodosPago.length > 0) {
         const efectivo = metodosPago.find(
@@ -191,6 +197,23 @@ export const PagoModal = ({
     });
   };
 
+  /** Buscar datos por documento */
+  const handleBuscarDocumento = async () => {
+    if (tipoDocumento === 'RUC' && /^\d{11}$/.test(docClienteNumero)) {
+      const resultado = await rucLookup.buscar(docClienteNumero);
+      if (resultado) {
+        setDocClienteNombre(resultado.razon_social || '');
+      }
+    } else if (tipoDocumento === 'DNI' && /^\d{8}$/.test(docClienteNumero)) {
+      const resultado = await dniLookup.buscar(docClienteNumero);
+      if (resultado) {
+        setDocClienteNombre(resultado.nombre_completo || '');
+      }
+    }
+  };
+
+  const isBuscando = rucLookup.isLoading || dniLookup.isLoading;
+
   /* Max digits for doc type */
   const docMaxLength = tipoDocumento === 'DNI' ? 8 : tipoDocumento === 'RUC' ? 11 : 20;
 
@@ -246,30 +269,46 @@ export const PagoModal = ({
               </select>
             </div>
 
-            {/* Número documento */}
+            {/* Número documento + búsqueda */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 N° Documento {docRequired && <span className="text-red-500">*</span>}
               </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={docClienteNumero}
-                onChange={(e) => setDocClienteNumero(e.target.value.replace(/\D/g, ''))}
-                maxLength={docMaxLength}
-                placeholder={
-                  tipoDocumento === 'DNI'
-                    ? '12345678'
-                    : tipoDocumento === 'RUC'
-                      ? '20123456789'
-                      : 'N° documento'
-                }
-                disabled={!tipoDocumento}
-                className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100"
-              />
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={docClienteNumero}
+                  onChange={(e) => setDocClienteNumero(e.target.value.replace(/\D/g, ''))}
+                  maxLength={docMaxLength}
+                  placeholder={
+                    tipoDocumento === 'DNI'
+                      ? '12345678'
+                      : tipoDocumento === 'RUC'
+                        ? '20123456789'
+                        : 'N° documento'
+                  }
+                  disabled={!tipoDocumento}
+                  className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100"
+                />
+                <button
+                  type="button"
+                  onClick={handleBuscarDocumento}
+                  disabled={isBuscando || !tipoDocumento || !docClienteNumero || (tipoDocumento === 'DNI' && docClienteNumero.length !== 8) || (tipoDocumento === 'RUC' && docClienteNumero.length !== 11)}
+                  title="Buscar datos por documento"
+                  className="shrink-0 flex items-center justify-center px-2.5 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isBuscando ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                </button>
+              </div>
               {docError && (
                 <p className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
                   <AlertCircle size={12} /> {docError}
+                </p>
+              )}
+              {(rucLookup.error || dniLookup.error) && (
+                <p className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
+                  <AlertCircle size={12} /> {rucLookup.error || dniLookup.error}
                 </p>
               )}
             </div>

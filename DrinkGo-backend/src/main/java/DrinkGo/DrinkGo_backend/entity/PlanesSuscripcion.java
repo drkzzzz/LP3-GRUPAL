@@ -11,7 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "planes_suscripcion")
+@Table(name = "planes_suscripcion", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_plan_nombre", columnNames = { "nombre" }) })
 @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 @SQLDelete(sql = "UPDATE planes_suscripcion SET esta_activo = 0 WHERE id = ?")
 @SQLRestriction("esta_activo = 1")

@@ -21,12 +21,15 @@ import {
   Eye,
   EyeOff,
   Percent,
+  Search,
+  AlertCircle,
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { formatCurrency } from '@/shared/utils/formatters';
+import { useConsultarRuc, useConsultarDni } from '@/shared/hooks/useConsultaDocumento';
 
 /* ---------- Schema Paso 1 ---------- */
 const negocioSchema = z.object({
@@ -79,9 +82,6 @@ const DOC_TYPES = [
 const TIPOS_NEGOCIO = [
   { value: 'licoreria', label: 'Licorería' },
   { value: 'bar', label: 'Bar' },
-  { value: 'restaurante', label: 'Restaurante' },
-  { value: 'distribuidor', label: 'Distribuidor' },
-  { value: 'otro', label: 'Otro' },
 ];
 
 /* ---------- Step indicator ---------- */
@@ -133,11 +133,14 @@ const StepIndicator = ({ current }) => (
 /* ---------- Step 1: Datos del Negocio ---------- */
 const Step1Form = ({ onNext }) => {
   const [showAdminPass, setShowAdminPass] = useState(false);
+  const rucLookup = useConsultarRuc();
+  const dniLookup = useConsultarDni();
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(negocioSchema),
@@ -172,6 +175,28 @@ const Step1Form = ({ onNext }) => {
     },
   });
 
+  const rucValue = watch('ruc');
+  const docRepValue = watch('documentoRepresentante');
+
+  /** Buscar datos de empresa por RUC (PeruDevs API) */
+  const handleBuscarRuc = async () => {
+    const resultado = await rucLookup.buscar(rucValue);
+    if (resultado) {
+      setValue('razonSocial', resultado.razon_social || '', { shouldDirty: true });
+      setValue('nombreComercial', resultado.nombre_comercial || '', { shouldDirty: true });
+      setValue('direccion', resultado.direccion?.trim() || '', { shouldDirty: true });
+    }
+  };
+
+  /** Buscar datos de persona por DNI (representante) — PeruDevs API */
+  const handleBuscarDni = async () => {
+    const resultado = await dniLookup.buscar(docRepValue);
+    if (resultado) {
+      const nombre = `${resultado.nombres} ${resultado.apellido_paterno} ${resultado.apellido_materno}`;
+      setValue('representanteLegal', nombre.trim(), { shouldDirty: true });
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit(onNext)} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -197,12 +222,34 @@ const Step1Form = ({ onNext }) => {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             RUC <span className="text-red-500">*</span>
           </label>
-          <Input
-            {...numericField(register('ruc'))}
-            placeholder="20123456789"
-            maxLength={11}
-          />
+          <div className="flex gap-1.5">
+            <Input
+              {...numericField(register('ruc'))}
+              placeholder="20123456789"
+              maxLength={11}
+            />
+            <button
+              type="button"
+              onClick={handleBuscarRuc}
+              disabled={rucLookup.isLoading || !rucValue || rucValue.length !== 11}
+              title="Buscar datos por RUC (SUNAT)"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {rucLookup.isLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+              SUNAT
+            </button>
+          </div>
           {errors.ruc && <p className="text-xs text-red-500 mt-1">{errors.ruc.message}</p>}
+          {rucLookup.data && (
+            <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+              <CheckCircle size={12} /> {rucLookup.data.razon_social} — {rucLookup.data.estado}
+            </p>
+          )}
+          {rucLookup.error && (
+            <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+              <AlertCircle size={12} /> {rucLookup.error}
+            </p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -252,11 +299,33 @@ const Step1Form = ({ onNext }) => {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Documento Representante
           </label>
-          <Input
-            {...numericField(register('documentoRepresentante'))}
-            placeholder="DNI (8 dígitos)"
-            maxLength={8}
-          />
+          <div className="flex gap-1.5">
+            <Input
+              {...numericField(register('documentoRepresentante'))}
+              placeholder="DNI (8 dígitos)"
+              maxLength={8}
+            />
+            <button
+              type="button"
+              onClick={handleBuscarDni}
+              disabled={dniLookup.isLoading || !docRepValue || docRepValue.length !== 8}
+              title="Buscar datos por DNI (RENIEC)"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {dniLookup.isLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+              RENIEC
+            </button>
+          </div>
+          {dniLookup.data && (
+            <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+              <CheckCircle size={12} /> {dniLookup.data.full_name}
+            </p>
+          )}
+          {dniLookup.error && (
+            <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+              <AlertCircle size={12} /> {dniLookup.error}
+            </p>
+          )}
         </div>
       </div>
 

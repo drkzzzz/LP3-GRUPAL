@@ -1,5 +1,7 @@
 package DrinkGo.DrinkGo_backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -7,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "usuarios_roles")
-@JsonPropertyOrder({ "id", "usuarioId", "rolId", "asignadoEn", "asignadoPor" })
+@JsonPropertyOrder({ "id", "usuarioId", "rolId", "rolNombre", "asignadoEn", "asignadoPor" })
 public class UsuariosRoles {
 
     @Id
@@ -42,18 +44,34 @@ public class UsuariosRoles {
         this.id = id;
     }
 
+    @JsonIgnore
     public Usuarios getUsuario() {
         return usuario;
     }
 
+    public Long getUsuarioId() {
+        return usuario != null ? usuario.getId() : null;
+    }
+
+    @JsonProperty("usuario")
     public void setUsuario(Usuarios usuario) {
         this.usuario = usuario;
     }
 
+    @JsonIgnore
     public Roles getRol() {
         return rol;
     }
 
+    public Long getRolId() {
+        return rol != null ? rol.getId() : null;
+    }
+
+    public String getRolNombre() {
+        return rol != null ? rol.getNombre() : null;
+    }
+
+    @JsonProperty("rol")
     public void setRol(Roles rol) {
         this.rol = rol;
     }

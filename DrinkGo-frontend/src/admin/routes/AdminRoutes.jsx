@@ -51,8 +51,11 @@ import { OperacionesPage } from '../configuracion/components/tabs/OperacionesPag
 
 
 const ProtectedRoute = ({ children }) => {
-  const { token } = useAdminAuthStore();
+  const { token, negocio } = useAdminAuthStore();
   if (!token) {
+    return <Navigate to="/admin/login" replace />;
+  }
+  if (negocio && negocio.estado !== 'activo') {
     return <Navigate to="/admin/login" replace />;
   }
   return children;

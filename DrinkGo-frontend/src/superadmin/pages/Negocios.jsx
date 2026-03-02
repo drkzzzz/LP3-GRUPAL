@@ -90,6 +90,13 @@ export const Negocios = () => {
     getUsuariosForNegocio,
     isCreatingUsuario,
     isUpdatingUsuario,
+    getFacturasForNegocio,
+    generarFactura,
+    pagarFactura,
+    cancelarFactura,
+    isGenerandoFactura,
+    isPagandoFactura,
+    isCancelandoFactura,
   } = useNegocios();
 
   /* ---------- helpers: enrich negocios with plan & sede count ---------- */
@@ -514,6 +521,13 @@ export const Negocios = () => {
         onUpdateUsuario={updateUsuario}
         isCreatingUsuario={isCreatingUsuario}
         isUpdatingUsuario={isUpdatingUsuario}
+        facturas={selected ? getFacturasForNegocio(selected.id) : []}
+        onGenerarFactura={generarFactura}
+        onPagarFactura={pagarFactura}
+        onCancelarFactura={cancelarFactura}
+        isGenerandoFactura={isGenerandoFactura}
+        isPagandoFactura={isPagandoFactura}
+        isCancelandoFactura={isCancelandoFactura}
       />
 
       {/* Activar con Plan */}

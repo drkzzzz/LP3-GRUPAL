@@ -18,12 +18,8 @@ public class ClientesDTO {
     private String telefono;
     private LocalDate fechaNacimiento;
     private String direccion;
-    private BigDecimal limiteCredito;
-    private Integer diasCredito;
-    private BigDecimal saldoPendiente;
     private BigDecimal totalCompras;
     private LocalDateTime ultimaCompraEn;
-    private String observaciones;
     private Boolean estaActivo;
     private LocalDateTime creadoEn;
     private LocalDateTime actualizadoEn;
@@ -35,8 +31,7 @@ public class ClientesDTO {
 
     public ClientesDTO(Long id, Long negocioId, String tipoDocumento, String numeroDocumento, String nombres,
             String apellidos, String razonSocial, String nombreComercial, String email, String telefono,
-            LocalDate fechaNacimiento, String direccion, BigDecimal limiteCredito, Integer diasCredito,
-            BigDecimal saldoPendiente, BigDecimal totalCompras, LocalDateTime ultimaCompraEn, String observaciones,
+            LocalDate fechaNacimiento, String direccion, BigDecimal totalCompras, LocalDateTime ultimaCompraEn,
             Boolean estaActivo, LocalDateTime creadoEn, LocalDateTime actualizadoEn, LocalDateTime eliminadoEn) {
         this.id = id;
         this.negocioId = negocioId;
@@ -50,12 +45,8 @@ public class ClientesDTO {
         this.telefono = telefono;
         this.fechaNacimiento = fechaNacimiento;
         this.direccion = direccion;
-        this.limiteCredito = limiteCredito;
-        this.diasCredito = diasCredito;
-        this.saldoPendiente = saldoPendiente;
         this.totalCompras = totalCompras;
         this.ultimaCompraEn = ultimaCompraEn;
-        this.observaciones = observaciones;
         this.estaActivo = estaActivo;
         this.creadoEn = creadoEn;
         this.actualizadoEn = actualizadoEn;
@@ -159,30 +150,6 @@ public class ClientesDTO {
         this.direccion = direccion;
     }
 
-    public BigDecimal getLimiteCredito() {
-        return limiteCredito;
-    }
-
-    public void setLimiteCredito(BigDecimal limiteCredito) {
-        this.limiteCredito = limiteCredito;
-    }
-
-    public Integer getDiasCredito() {
-        return diasCredito;
-    }
-
-    public void setDiasCredito(Integer diasCredito) {
-        this.diasCredito = diasCredito;
-    }
-
-    public BigDecimal getSaldoPendiente() {
-        return saldoPendiente;
-    }
-
-    public void setSaldoPendiente(BigDecimal saldoPendiente) {
-        this.saldoPendiente = saldoPendiente;
-    }
-
     public BigDecimal getTotalCompras() {
         return totalCompras;
     }
@@ -197,14 +164,6 @@ public class ClientesDTO {
 
     public void setUltimaCompraEn(LocalDateTime ultimaCompraEn) {
         this.ultimaCompraEn = ultimaCompraEn;
-    }
-
-    public String getObservaciones() {
-        return observaciones;
-    }
-
-    public void setObservaciones(String observaciones) {
-        this.observaciones = observaciones;
     }
 
     public Boolean getEstaActivo() {

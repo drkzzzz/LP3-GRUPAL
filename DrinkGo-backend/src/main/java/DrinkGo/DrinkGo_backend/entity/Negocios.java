@@ -81,7 +81,7 @@ public class Negocios {
     private Boolean tienePse = false;
 
     @Enumerated(EnumType.STRING)
-    private EstadoNegocio estado = EstadoNegocio.pendiente;
+    private EstadoNegocio estado = EstadoNegocio.activo;
 
     @Column(name = "esta_activo")
     private Boolean estaActivo = true;

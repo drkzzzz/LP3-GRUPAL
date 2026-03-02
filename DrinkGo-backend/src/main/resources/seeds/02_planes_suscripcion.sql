@@ -1,24 +1,29 @@
 -- ============================================================
 -- SEED: PLANES DE SUSCRIPCIÓN
--- Base de datos: licores_drinkgo
 -- Tabla: planes_suscripcion
 -- ============================================================
--- Estructura de planes:
+-- Planes disponibles:
 -- 1. Plan Básico (Emprendedor)
 -- 2. Plan Profesional (Crecimiento)
 -- 3. Plan Enterprise (Corporativo)
--- 4. Plan Free (Prueba gratuita)
 -- ============================================================
 
 USE drinkgo_db;
 
--- Limpiar datos existentes (solo para desarrollo)
--- DELETE FROM planes_suscripcion;
+-- ============================================================
+-- CLEANUP: Eliminar duplicados (mantener el de menor id)
+-- ============================================================
+DELETE p1 FROM planes_suscripcion p1
+INNER JOIN planes_suscripcion p2
+    ON p1.nombre = p2.nombre AND p1.id > p2.id;
+
+-- Eliminar Plan Free si existe
+DELETE FROM planes_suscripcion WHERE nombre = 'Plan Free';
 
 -- ============================================================
 -- PLAN 1: BÁSICO / EMPRENDEDOR
 -- ============================================================
-INSERT IGNORE INTO planes_suscripcion (
+INSERT INTO planes_suscripcion (
     nombre,
     descripcion,
     precio,
@@ -66,12 +71,12 @@ INSERT IGNORE INTO planes_suscripcion (
     ),
     1,                  -- Activo
     1                   -- Orden de visualización
-);
+) ON DUPLICATE KEY UPDATE nombre = nombre;
 
 -- ============================================================
 -- PLAN 2: PROFESIONAL / CRECIMIENTO
 -- ============================================================
-INSERT IGNORE INTO planes_suscripcion (
+INSERT INTO planes_suscripcion (
     nombre,
     descripcion,
     precio,
@@ -122,12 +127,12 @@ INSERT IGNORE INTO planes_suscripcion (
     ),
     1,                  -- Activo
     2                   -- Orden de visualización
-);
+) ON DUPLICATE KEY UPDATE nombre = nombre;
 
 -- ============================================================
 -- PLAN 3: ENTERPRISE / CORPORATIVO
 -- ============================================================
-INSERT IGNORE INTO planes_suscripcion (
+INSERT INTO planes_suscripcion (
     nombre,
     descripcion,
     precio,
@@ -186,63 +191,8 @@ INSERT IGNORE INTO planes_suscripcion (
     ),
     1,                  -- Activo
     3                   -- Orden de visualización
-);
+) ON DUPLICATE KEY UPDATE nombre = nombre;
 
--- ============================================================
--- PLAN 4: FREE / PRUEBA GRATUITA
--- ============================================================
-INSERT IGNORE INTO planes_suscripcion (
-    nombre,
-    descripcion,
-    precio,
-    moneda,
-    periodo_facturacion,
-    max_sedes,
-    max_usuarios,
-    max_productos,
-    max_almacenes_por_sede,
-    permite_pos,
-    permite_tienda_online,
-    permite_delivery,
-    permite_mesas,
-    permite_facturacion_electronica,
-    permite_multi_almacen,
-    permite_reportes_avanzados,
-    permite_acceso_api,
-    funcionalidades_json,
-    esta_activo,
-    orden
-) VALUES (
-    'Plan Free',
-    'Prueba gratuita por 30 días. Perfecto para conocer la plataforma antes de suscribirte.',
-    0.00,
-    'PEN',
-    'mensual',
-    1,                  -- 1 sede
-    2,                  -- 2 usuarios
-    100,                -- 100 productos
-    1,                  -- 1 almacén
-    1,                  -- Permite POS
-    0,                  -- NO permite tienda online
-    0,                  -- NO permite delivery
-    0,                  -- NO permite mesas
-    0,                  -- NO permite facturación electrónica
-    0,                  -- NO permite multi-almacén
-    0,                  -- NO permite reportes avanzados
-    0,                  -- NO permite API
-    JSON_OBJECT(
-        'soporte', 'email',
-        'duracion_dias', 30,
-        'backup_diario', false,
-        'almacenamiento_gb', 1,
-        'transacciones_mes', 100,
-        'marca_agua', true,
-        'reportes_basicos', true,
-        'trial', true
-    ),
-    1,                  -- Activo
-    4                   -- Orden de visualización
-);
 
 -- Verificar inserción
 SELECT 
@@ -269,5 +219,4 @@ ORDER BY orden;
 -- 1. Plan Básico: S/149/mes - 1 sede, 3 usuarios, 500 productos
 -- 2. Plan Profesional: S/349/mes - 3 sedes, 10 usuarios, 2000 productos
 -- 3. Plan Enterprise: S/899/mes - Ilimitado
--- 4. Plan Free: S/0 - Prueba 30 días, limitado
--- ============================================================
+ -- ============================================================

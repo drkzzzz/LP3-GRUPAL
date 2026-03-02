@@ -98,4 +98,33 @@ export const negociosService = {
     const { data } = await api.put('/usuarios', usuario);
     return data;
   },
+
+  /* ─── Facturas de suscripción ─── */
+  getAllFacturas: async () => {
+    const { data } = await api.get('/facturas-suscripcion');
+    return Array.isArray(data) ? data : [];
+  },
+
+  getFacturasByNegocio: async (negocioId) => {
+    const { data } = await api.get(`/facturas-suscripcion/por-negocio/${negocioId}`);
+    return toArray(data);
+  },
+
+  generarFactura: async (suscripcionId) => {
+    const { data } = await api.post(`/facturas-suscripcion/generar/${suscripcionId}`);
+    return data;
+  },
+
+  pagarFactura: async ({ id, metodoPago, referencia }) => {
+    const params = new URLSearchParams();
+    if (metodoPago) params.append('metodoPago', metodoPago);
+    if (referencia) params.append('referencia', referencia);
+    const { data } = await api.patch(`/facturas-suscripcion/${id}/pagar?${params}`);
+    return data;
+  },
+
+  cancelarFactura: async (id) => {
+    const { data } = await api.patch(`/facturas-suscripcion/${id}/cancelar`);
+    return data;
+  },
 };

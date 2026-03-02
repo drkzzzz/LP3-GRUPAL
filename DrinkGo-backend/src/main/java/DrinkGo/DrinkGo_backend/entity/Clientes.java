@@ -15,8 +15,8 @@ import java.time.LocalDateTime;
 @SQLDelete(sql = "UPDATE clientes SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "negocioId", "tipoDocumento", "numeroDocumento", "nombres", "apellidos", "razonSocial",
-        "nombreComercial", "email", "telefono", "fechaNacimiento", "direccion", "limiteCredito", "diasCredito",
-        "saldoPendiente", "totalCompras", "ultimaCompraEn", "observaciones", "estaActivo", "creadoEn", "actualizadoEn",
+        "nombreComercial", "email", "telefono", "fechaNacimiento", "direccion",
+        "totalCompras", "ultimaCompraEn", "estaActivo", "creadoEn", "actualizadoEn",
         "eliminadoEn" })
 public class Clientes {
 
@@ -54,23 +54,11 @@ public class Clientes {
 
     private String direccion;
 
-    @Column(name = "limite_credito", precision = 10, scale = 2)
-    private BigDecimal limiteCredito = BigDecimal.ZERO;
-
-    @Column(name = "dias_credito")
-    private Integer diasCredito = 0;
-
-    @Column(name = "saldo_pendiente", precision = 10, scale = 2)
-    private BigDecimal saldoPendiente = BigDecimal.ZERO;
-
     @Column(name = "total_compras", precision = 10, scale = 2)
     private BigDecimal totalCompras = BigDecimal.ZERO;
 
     @Column(name = "ultima_compra_en")
     private LocalDateTime ultimaCompraEn;
-
-    @Column(columnDefinition = "TEXT")
-    private String observaciones;
 
     @Column(name = "esta_activo")
     private Boolean estaActivo = true;
@@ -196,30 +184,6 @@ public class Clientes {
         this.direccion = direccion;
     }
 
-    public BigDecimal getLimiteCredito() {
-        return limiteCredito;
-    }
-
-    public void setLimiteCredito(BigDecimal limiteCredito) {
-        this.limiteCredito = limiteCredito;
-    }
-
-    public Integer getDiasCredito() {
-        return diasCredito;
-    }
-
-    public void setDiasCredito(Integer diasCredito) {
-        this.diasCredito = diasCredito;
-    }
-
-    public BigDecimal getSaldoPendiente() {
-        return saldoPendiente;
-    }
-
-    public void setSaldoPendiente(BigDecimal saldoPendiente) {
-        this.saldoPendiente = saldoPendiente;
-    }
-
     public BigDecimal getTotalCompras() {
         return totalCompras;
     }
@@ -234,14 +198,6 @@ public class Clientes {
 
     public void setUltimaCompraEn(LocalDateTime ultimaCompraEn) {
         this.ultimaCompraEn = ultimaCompraEn;
-    }
-
-    public String getObservaciones() {
-        return observaciones;
-    }
-
-    public void setObservaciones(String observaciones) {
-        this.observaciones = observaciones;
     }
 
     public Boolean getEstaActivo() {

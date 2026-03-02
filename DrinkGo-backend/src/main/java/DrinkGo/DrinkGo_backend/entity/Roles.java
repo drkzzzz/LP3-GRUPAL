@@ -3,6 +3,8 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -61,12 +63,18 @@ public class Roles {
         this.id = id;
     }
 
+    @JsonIgnore
     public Negocios getNegocio() {
         return negocio;
     }
 
+    @JsonProperty("negocio")
     public void setNegocio(Negocios negocio) {
         this.negocio = negocio;
+    }
+
+    public Long getNegocioId() {
+        return negocio != null ? negocio.getId() : null;
     }
 
     public String getNombre() {

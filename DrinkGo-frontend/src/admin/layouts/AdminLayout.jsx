@@ -37,40 +37,40 @@ import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
 /* ─── Sub-items del menú Configuración ─── */
 const CONFIGURACION_SUBITEMS = [
-  { to: '/admin/configuracion/negocio', label: 'Negocio y Sedes', icon: Building2 },
-  { to: '/admin/configuracion/operaciones', label: 'Operaciones', icon: SlidersHorizontal },
+  { to: '/admin/configuracion/negocio', label: 'Negocio y Sedes', icon: Building2, permiso: 'm.configuracion.negocio' },
+  { to: '/admin/configuracion/operaciones', label: 'Operaciones', icon: SlidersHorizontal, permiso: 'm.configuracion.operaciones' },
 ];
 
 /* ─── Sub-items del menú Catálogo ─── */
 const CATALOGO_SUBITEMS = [
-  { to: '/admin/catalogo/productos', label: 'Productos', icon: Package },
-  { to: '/admin/catalogo/clasificaciones', label: 'Clasificaciones', icon: Layers },
-  { to: '/admin/catalogo/combos', label: 'Combos', icon: Gift },
-  { to: '/admin/catalogo/promociones', label: 'Promociones', icon: Tag },
+  { to: '/admin/catalogo/productos', label: 'Productos', icon: Package, permiso: 'm.catalogo.productos' },
+  { to: '/admin/catalogo/clasificaciones', label: 'Clasificaciones', icon: Layers, permiso: 'm.catalogo.clasificaciones' },
+  { to: '/admin/catalogo/combos', label: 'Combos', icon: Gift, permiso: 'm.catalogo.combos' },
+  { to: '/admin/catalogo/promociones', label: 'Promociones', icon: Tag, permiso: 'm.catalogo.promociones' },
 ];
 
 /* ─── Sub-items del menú Inventario ─── */
 const INVENTARIO_SUBITEMS = [
-  { to: '/admin/inventario/almacenes', label: 'Almacenes', icon: Warehouse },
-  { to: '/admin/inventario/lotes', label: 'Lotes', icon: Boxes },
-  { to: '/admin/inventario/transferencias', label: 'Transferencias', icon: ArrowRightLeft },
-  { to: '/admin/inventario/reportes', label: 'Reportes', icon: BarChart3 },
+  { to: '/admin/inventario/almacenes', label: 'Almacenes', icon: Warehouse, permiso: 'm.inventario.almacenes' },
+  { to: '/admin/inventario/lotes', label: 'Lotes', icon: Boxes, permiso: 'm.inventario.lotes' },
+  { to: '/admin/inventario/transferencias', label: 'Transferencias', icon: ArrowRightLeft, permiso: 'm.inventario.transferencias' },
+  { to: '/admin/inventario/reportes', label: 'Reportes', icon: BarChart3, permiso: 'm.inventario.reportes' },
 ];
 
 /* ─── Sub-items del menú Compras ─── */
 const COMPRAS_SUBITEMS = [
-  { to: '/admin/compras/proveedores', label: 'Proveedores', icon: Users },
-  { to: '/admin/compras/productos-proveedor', label: 'Productos Proveedor', icon: Package },
-  { to: '/admin/compras/ordenes', label: 'Órdenes de Compra', icon: ClipboardList },
-  { to: '/admin/compras/recepcion', label: 'Recepción', icon: ShoppingCart },
+  { to: '/admin/compras/proveedores', label: 'Proveedores', icon: Users, permiso: 'm.compras.proveedores' },
+  { to: '/admin/compras/productos-proveedor', label: 'Productos Proveedor', icon: Package, permiso: 'm.compras.productos' },
+  { to: '/admin/compras/ordenes', label: 'Órdenes de Compra', icon: ClipboardList, permiso: 'm.compras.ordenes' },
+  { to: '/admin/compras/recepcion', label: 'Recepción', icon: ShoppingCart, permiso: 'm.compras.recepcion' },
 ];
 
 /* ─── Sub-items del menú Ventas / POS ─── */
 const VENTAS_SUBITEMS = [
-  { to: '/admin/ventas/pos', label: 'Punto de Venta', icon: Monitor },
-  { to: '/admin/ventas/cajas', label: 'Caja', icon: Wallet },
-  { to: '/admin/ventas/movimientos', label: 'Movimientos de Caja', icon: Receipt },
-  { to: '/admin/ventas/historial', label: 'Historial', icon: History },
+  { to: '/admin/ventas/pos', label: 'Punto de Venta', icon: Monitor, permiso: 'm.ventas.pos' },
+  { to: '/admin/ventas/cajas', label: 'Caja', icon: Wallet, permiso: 'm.ventas.cajas' },
+  { to: '/admin/ventas/movimientos', label: 'Movimientos de Caja', icon: Receipt, permiso: 'm.ventas.movimientos' },
+  { to: '/admin/ventas/historial', label: 'Historial', icon: History, permiso: 'm.ventas.historial' },
 ];
 
 /* ─── Sub-items del menú Facturación ─── */
@@ -78,6 +78,10 @@ const FACTURACION_SUBITEMS = [
   { to: '/admin/facturacion/comprobantes', label: 'Comprobantes', icon: FileText },
   { to: '/admin/facturacion/series', label: 'Series', icon: Hash },
   { to: '/admin/facturacion/pse', label: 'PSE', icon: Zap, requiresPse: true },
+=======
+  { to: '/admin/facturacion/comprobantes', label: 'Comprobantes', icon: FileText, permiso: 'm.facturacion.comprobantes' },
+  { to: '/admin/facturacion/series', label: 'Series', icon: Hash, permiso: 'm.facturacion.series' },
+  { to: '/admin/facturacion/metodos-pago', label: 'Métodos de Pago', icon: CreditCard, permiso: 'm.facturacion.metodos' },
 ];
 
 const NAV_ITEMS = [
@@ -85,58 +89,67 @@ const NAV_ITEMS = [
     to: '/admin/dashboard',
     icon: LayoutDashboard,
     label: 'Dashboard',
+    permiso: 'm.dashboard',
   },
   {
     key: 'configuracion',
     icon: Settings,
     label: 'Configuración',
+    permiso: 'm.configuracion',
     children: CONFIGURACION_SUBITEMS,
   },
   {
     to: '/admin/usuarios',
     icon: Users,
     label: 'Usuarios y Clientes',
+    permiso: 'm.usuarios',
   },
   {
-    /* Catálogo es ahora un grupo colapsable, no un NavLink directo */
     key: 'catalogo',
     icon: Package,
     label: 'Catálogo',
+    permiso: 'm.catalogo',
     children: CATALOGO_SUBITEMS,
   },
   {
     key: 'inventario',
     icon: Warehouse,
     label: 'Inventario',
+    permiso: 'm.inventario',
     children: INVENTARIO_SUBITEMS,
   },
   {
     key: 'compras',
     icon: Truck,
     label: 'Proveedores y Compras',
+    permiso: 'm.compras',
     children: COMPRAS_SUBITEMS,
   },
   {
     key: 'ventas',
     icon: CreditCard,
     label: 'Ventas / POS',
+    permiso: 'm.ventas',
     children: VENTAS_SUBITEMS,
   },
   {
     to: '/admin/pedidos',
     icon: ShoppingCart,
     label: 'Pedidos',
+    permiso: 'm.pedidos',
   },
   {
     key: 'facturacion',
     icon: ClipboardList,
     label: 'Facturación',
+    permiso: 'm.facturacion',
     children: FACTURACION_SUBITEMS,
   },
   {
     to: '/admin/reportes',
     icon: BarChart3,
     label: 'Reportes',
+    permiso: 'm.reportes',
   },
 ];
 
@@ -146,7 +159,21 @@ export const AdminLayout = () => {
   const [openMenus, setOpenMenus] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, negocio, logout } = useAdminAuthStore();
+  const { user, negocio, logout, hasPermiso, permisos } = useAdminAuthStore();
+
+  /**
+   * Filtra los items del menú según los permisos del usuario.
+   * Si permisos está vacío el usuario no tiene acceso a ningún módulo.
+   */
+  const navItems = NAV_ITEMS.map((item) => {
+      if (item.children) {
+        const childrenFiltrados = item.children.filter((s) => hasPermiso(s.permiso));
+        // Mostrar el padre solo si al menos un hijo es accesible O tiene permiso propio
+        if (childrenFiltrados.length === 0 && !hasPermiso(item.permiso)) return null;
+        return { ...item, children: childrenFiltrados };
+      }
+      return hasPermiso(item.permiso) ? item : null;
+    }).filter(Boolean);
 
   /* Toggle para grupos colapsables */
   const toggleMenu = (key) => setOpenMenus((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -179,7 +206,7 @@ export const AdminLayout = () => {
 
       {/* Navigation */}
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) =>
+        {navItems.map((item) =>
           item.children ? (
             /* ─── Grupo colapsable (Catálogo) ─── */
             <div key={item.key}>

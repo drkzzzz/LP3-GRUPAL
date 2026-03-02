@@ -6,7 +6,7 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-  DollarSign,
+  Plus,
 } from 'lucide-react';
 import { useFacturacion } from '../hooks/useFacturacion';
 import { useDebounce } from '@/shared/hooks/useDebounce';
@@ -37,7 +37,11 @@ export const Facturacion = () => {
   const [isPagarOpen, setIsPagarOpen] = useState(false);
   const [isCancelarOpen, setIsCancelarOpen] = useState(false);
   const [isReintentarOpen, setIsReintentarOpen] = useState(false);
+  const [isGenerarOpen, setIsGenerarOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [selectedSuscripcionId, setSelectedSuscripcionId] = useState('');
+  const [metodoPagoInput, setMetodoPagoInput] = useState('');
+  const [referenciaInput, setReferenciaInput] = useState('');
 
   const {
     facturas,
@@ -45,9 +49,12 @@ export const Facturacion = () => {
     marcarPagada,
     cancelarFactura,
     reintentarFactura,
+    generarFactura,
     isMarkingPaid,
     isCanceling,
     isRetrying,
+    isGenerating,
+    suscripciones,
   } = useFacturacion();
 
   /* ---------- client-side filtering ---------- */
@@ -85,9 +92,11 @@ export const Facturacion = () => {
   };
 
   const handlePagarConfirm = async () => {
-    await marcarPagada(selected);
+    await marcarPagada({ id: selected.id, metodoPago: metodoPagoInput, referenciaPago: referenciaInput });
     setIsPagarOpen(false);
     setSelected(null);
+    setMetodoPagoInput('');
+    setReferenciaInput('');
   };
 
   const handleCancelarClick = (factura) => {
@@ -96,7 +105,7 @@ export const Facturacion = () => {
   };
 
   const handleCancelarConfirm = async () => {
-    await cancelarFactura(selected);
+    await cancelarFactura({ id: selected.id });
     setIsCancelarOpen(false);
     setSelected(null);
   };
@@ -107,9 +116,16 @@ export const Facturacion = () => {
   };
 
   const handleReintentarConfirm = async () => {
-    await reintentarFactura(selected);
+    await reintentarFactura({ id: selected.id });
     setIsReintentarOpen(false);
     setSelected(null);
+  };
+
+  const handleGenerarConfirm = async () => {
+    if (!selectedSuscripcionId) return;
+    await generarFactura(selectedSuscripcionId);
+    setIsGenerarOpen(false);
+    setSelectedSuscripcionId('');
   };
 
   /* ---------- summary stats ---------- */
@@ -233,11 +249,20 @@ export const Facturacion = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Facturación</h1>
-        <p className="text-gray-600 mt-1">
-          Control de facturas emitidas por suscripciones
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Facturación</h1>
+          <p className="text-gray-600 mt-1">
+            Control de facturas emitidas por suscripciones
+          </p>
+        </div>
+        <button
+          onClick={() => setIsGenerarOpen(true)}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          <Plus size={16} />
+          Nueva Factura
+        </button>
       </div>
 
       {/* Summary Cards */}
@@ -335,15 +360,53 @@ export const Facturacion = () => {
       </Modal>
 
       {/* Marcar como Pagada — RF-FAC-001 */}
-      <ConfirmDialog
+      <Modal
         isOpen={isPagarOpen}
         onClose={() => { setIsPagarOpen(false); setSelected(null); }}
-        onConfirm={handlePagarConfirm}
         title="Marcar como Pagada"
-        message={`¿Confirma que la factura "${selected?.numeroFactura}" ha sido pagada? Se registrará la fecha de pago actual.`}
-        confirmText="Confirmar Pago"
-        isLoading={isMarkingPaid}
-      />
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Confirme el pago de la factura <strong>{selected?.numeroFactura}</strong>.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
+            <input
+              type="text"
+              value={metodoPagoInput}
+              onChange={(e) => setMetodoPagoInput(e.target.value)}
+              placeholder="Ej: Transferencia, Yape, Efectivo..."
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Referencia / Número de operación</label>
+            <input
+              type="text"
+              value={referenciaInput}
+              onChange={(e) => setReferenciaInput(e.target.value)}
+              placeholder="Número de operación o voucher"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => { setIsPagarOpen(false); setSelected(null); }}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handlePagarConfirm}
+              disabled={isMarkingPaid}
+              className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
+            >
+              {isMarkingPaid ? 'Procesando...' : 'Confirmar Pago'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Cancelar Factura — RF-FAC-002 */}
       <ConfirmDialog
@@ -362,10 +425,59 @@ export const Facturacion = () => {
         onClose={() => { setIsReintentarOpen(false); setSelected(null); }}
         onConfirm={handleReintentarConfirm}
         title="Reintentar Cobro"
-        message={`¿Reintentar el cobro de la factura "${selected?.numeroFactura}"? La factura volverá al estado pendiente para un nuevo intento de pago.`}
+        message={`¿Reintentar el cobro de la factura "${selected?.numeroFactura}"? La factura volverá al estado pendiente.`}
         confirmText="Reintentar"
         isLoading={isRetrying}
       />
+
+      {/* Nueva Factura — generar cargo mensual */}
+      <Modal
+        isOpen={isGenerarOpen}
+        onClose={() => { setIsGenerarOpen(false); setSelectedSuscripcionId(''); }}
+        title="Nueva Factura de Suscripción"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Selecciona la suscripción a la que deseas emitir el cargo mensual. El sistema auto-calculará el monto según el plan.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Suscripción / Negocio <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={selectedSuscripcionId}
+              onChange={(e) => setSelectedSuscripcionId(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">-- Seleccionar --</option>
+              {suscripciones
+                .filter((s) => s.estado === 'activa')
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.negocio?.razonSocial || s.negocio?.nombreComercial || `Negocio #${s.negocio?.id}`}
+                    {s.plan ? ` — ${s.plan.nombre} (S/ ${s.plan.precio})` : ''}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => { setIsGenerarOpen(false); setSelectedSuscripcionId(''); }}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleGenerarConfirm}
+              disabled={!selectedSuscripcionId || isGenerating}
+              className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50"
+            >
+              {isGenerating ? 'Generando...' : 'Generar Factura'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

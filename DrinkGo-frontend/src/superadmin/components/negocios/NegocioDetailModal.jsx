@@ -36,6 +36,13 @@ export const NegocioDetailModal = ({
   onUpdateUsuario,
   isCreatingUsuario,
   isUpdatingUsuario,
+  facturas = [],
+  onGenerarFactura,
+  onPagarFactura,
+  onCancelarFactura,
+  isGenerandoFactura,
+  isPagandoFactura,
+  isCancelandoFactura,
 }) => {
   const [activeTab, setActiveTab] = useState('info');
 
@@ -121,6 +128,13 @@ export const NegocioDetailModal = ({
                 isUpdating={isUpdatingSuscripcion}
                 onUpdateNegocio={onUpdateNegocio}
                 isUpdatingNegocio={isUpdatingNegocio}
+                facturas={facturas}
+                onGenerarFactura={onGenerarFactura}
+                onPagarFactura={onPagarFactura}
+                onCancelarFactura={onCancelarFactura}
+                isGenerandoFactura={isGenerandoFactura}
+                isPagandoFactura={isPagandoFactura}
+                isCancelandoFactura={isCancelandoFactura}
               />
             )}
 

@@ -14,7 +14,7 @@ public class RegistrosAuditoriaService implements IRegistrosAuditoriaService {
     private RegistrosAuditoriaRepository repoRegistrosAuditoria;
 
     public List<RegistrosAuditoria> buscarTodos() {
-        return repoRegistrosAuditoria.findAll();
+        return repoRegistrosAuditoria.findAllByOrderByCreadoEnDesc();
     }
 
     public void guardar(RegistrosAuditoria registrosAuditoria) {

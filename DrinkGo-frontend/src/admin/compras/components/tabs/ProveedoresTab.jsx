@@ -19,10 +19,13 @@ import {
   Eye,
   Phone,
   Mail,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { useProveedores } from '../../hooks/useProveedores';
 import { proveedorSchema } from '../../validations/comprasSchemas';
 import { useDebounce } from '@/shared/hooks/useDebounce';
+import { useConsultarRuc, useConsultarDni } from '@/shared/hooks/useConsultaDocumento';
 import { formatDateTime } from '@/shared/utils/formatters';
 import { Card } from '@/admin/components/ui/Card';
 import { Table } from '@/admin/components/ui/Table';
@@ -54,6 +57,10 @@ export const ProveedoresTab = () => {
   const [editing, setEditing] = useState(null);
   const [selected, setSelected] = useState(null);
 
+  /* ─── Consulta documento hooks ─── */
+  const rucLookup = useConsultarRuc();
+  const dniLookup = useConsultarDni();
+
   /* ─── Data hooks ─── */
   const {
     proveedores,
@@ -71,6 +78,8 @@ export const ProveedoresTab = () => {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(proveedorSchema),
@@ -89,6 +98,27 @@ export const ProveedoresTab = () => {
       estaActivo: true,
     },
   });
+
+  const tipoDocWatch = watch('tipoDocumento');
+  const numDocWatch = watch('numeroDocumento');
+
+  /** Buscar datos del proveedor por RUC o DNI (PeruDevs API) */
+  const handleBuscarProveedor = async () => {
+    if (tipoDocWatch === 'RUC' && /^\d{11}$/.test(numDocWatch)) {
+      const resultado = await rucLookup.buscar(numDocWatch);
+      if (resultado) {
+        setValue('razonSocial', resultado.razon_social || '', { shouldDirty: true });
+        setValue('direccion', resultado.direccion?.trim() || '', { shouldDirty: true });
+      }
+    } else if (tipoDocWatch === 'DNI' && /^\d{8}$/.test(numDocWatch)) {
+      const resultado = await dniLookup.buscar(numDocWatch);
+      if (resultado) {
+        setValue('razonSocial', resultado.nombre_completo || '', { shouldDirty: true });
+      }
+    }
+  };
+
+  const isBuscandoDoc = rucLookup.isLoading || dniLookup.isLoading;
 
   /* ─── Filtrado ─── */
   const filtered = useMemo(() => {
@@ -436,13 +466,44 @@ export const ProveedoresTab = () => {
               {...register('tipoDocumento')}
               error={errors.tipoDocumento?.message}
             />
-            <Input
-              label="Número de Documento"
-              required
-              placeholder="20123456789"
-              {...register('numeroDocumento')}
-              error={errors.numeroDocumento?.message}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Número de Documento <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-1.5">
+                <Input
+                  placeholder="20123456789"
+                  {...register('numeroDocumento')}
+                  error={errors.numeroDocumento?.message}
+                />
+                <button
+                  type="button"
+                  onClick={handleBuscarProveedor}
+                  disabled={
+                    isBuscandoDoc ||
+                    !tipoDocWatch ||
+                    !numDocWatch ||
+                    (tipoDocWatch === 'RUC' && numDocWatch.length !== 11) ||
+                    (tipoDocWatch === 'DNI' && numDocWatch.length !== 8)
+                  }
+                  title="Buscar datos por documento"
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isBuscandoDoc ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                  Buscar
+                </button>
+              </div>
+              {(rucLookup.data || dniLookup.data) && (
+                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <CheckCircle size={12} /> Datos cargados automáticamente
+                </p>
+              )}
+              {(rucLookup.error || dniLookup.error) && (
+                <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                  <AlertCircle size={12} /> {rucLookup.error || dniLookup.error}
+                </p>
+              )}
+            </div>
           </div>
 
           <Input

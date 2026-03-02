@@ -26,24 +26,32 @@ export const facturacionService = {
     return data;
   },
 
-  // Marca una factura como pagada (RF-FAC-001)
-  marcarPagada: async (factura) => {
-    const payload = { ...factura, estado: 'pagada', pagadoEn: new Date().toISOString() };
-    const { data } = await api.put('/facturas-suscripcion', payload);
+  /** Genera automáticamente una factura para una suscripción (cargo mensual) */
+  generar: async (suscripcionId) => {
+    const { data } = await api.post(`/facturas-suscripcion/generar/${suscripcionId}`);
     return data;
   },
 
-  // Cancela una factura pendiente (RF-FAC-002)
-  cancelar: async (factura) => {
-    const payload = { ...factura, estado: 'cancelada' };
-    const { data } = await api.put('/facturas-suscripcion', payload);
+  /** Marca una factura como pagada */
+  marcarPagada: async ({ id, metodoPago, referenciaPago }) => {
+    const params = {};
+    if (metodoPago) params.metodoPago = metodoPago;
+    if (referenciaPago) params.referencia = referenciaPago;
+    const { data } = await api.patch(`/facturas-suscripcion/${id}/pagar`, null, { params });
     return data;
   },
 
-  // Reintenta cobro de factura vencida/fallida (RF-FAC-001)
-  reintentar: async (factura) => {
-    const payload = { ...factura, estado: 'pendiente' };
-    const { data } = await api.put('/facturas-suscripcion', payload);
+  /** Cancela/anula una factura pendiente */
+  cancelar: async ({ id }) => {
+    const { data } = await api.patch(`/facturas-suscripcion/${id}/cancelar`);
+    return data;
+  },
+
+  /** Reintenta cobro: vuelve al estado pendiente */
+  reintentar: async ({ id }) => {
+    const { data } = await api.patch(`/facturas-suscripcion/${id}/pagar`, null, {
+      params: { metodoPago: 'pendiente' },
+    });
     return data;
   },
 };

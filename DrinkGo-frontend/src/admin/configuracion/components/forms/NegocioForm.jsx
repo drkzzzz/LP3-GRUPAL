@@ -11,7 +11,8 @@ import { negocioSchema } from '../../validations/configuracionSchemas';
 import { Input } from '@/admin/components/ui/Input';
 import { Select } from '@/admin/components/ui/Select';
 import { Button } from '@/admin/components/ui/Button';
-import { Save } from 'lucide-react';
+import { Save, Search, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { useConsultarRuc, useConsultarDni } from '@/shared/hooks/useConsultaDocumento';
 
 const DOC_TYPE_OPTIONS = [
   { value: 'RUC', label: 'RUC' },
@@ -29,10 +30,15 @@ const TIPO_NEGOCIO_OPTIONS = [
 ];
 
 export const NegocioForm = ({ initialData, onSubmit, isLoading }) => {
+  const rucLookup = useConsultarRuc();
+  const dniLookup = useConsultarDni();
+
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isDirty },
   } = useForm({
     resolver: zodResolver(negocioSchema),
@@ -81,6 +87,28 @@ export const NegocioForm = ({ initialData, onSubmit, isLoading }) => {
     }
   }, [initialData, reset]);
 
+  const rucValue = watch('ruc');
+  const docRepValue = watch('documentoRepresentante');
+
+  /** Buscar datos de empresa por RUC (PeruDevs API) */
+  const handleBuscarRuc = async () => {
+    const resultado = await rucLookup.buscar(rucValue);
+    if (resultado) {
+      setValue('razonSocial', resultado.razon_social || '', { shouldDirty: true });
+      setValue('nombreComercial', resultado.nombre_comercial || '', { shouldDirty: true });
+      setValue('direccion', resultado.direccion?.trim() || '', { shouldDirty: true });
+    }
+  };
+
+  /** Buscar datos de persona por DNI (representante) — PeruDevs API */
+  const handleBuscarDni = async () => {
+    const resultado = await dniLookup.buscar(docRepValue);
+    if (resultado) {
+      const nombre = `${resultado.nombres} ${resultado.apellido_paterno} ${resultado.apellido_materno}`;
+      setValue('representanteLegal', nombre.trim(), { shouldDirty: true });
+    }
+  };
+
   const handleFormSubmit = (data) => {
     onSubmit({ ...initialData, ...data });
   };
@@ -115,14 +143,40 @@ export const NegocioForm = ({ initialData, onSubmit, isLoading }) => {
             {...register('tipoDocumentoFiscal')}
             error={errors.tipoDocumentoFiscal?.message}
           />
-          <Input
-            label="RUC"
-            required
-            {...register('ruc')}
-            error={errors.ruc?.message}
-            placeholder="20123456789"
-            maxLength={11}
-          />
+          <div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input
+                  label="RUC"
+                  required
+                  {...register('ruc')}
+                  error={errors.ruc?.message}
+                  placeholder="20123456789"
+                  maxLength={11}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleBuscarRuc}
+                disabled={rucLookup.isLoading || !rucValue || rucValue.length !== 11}
+                title="Buscar datos por RUC (SUNAT)"
+                className="mb-0.5 flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {rucLookup.isLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                SUNAT
+              </button>
+            </div>
+            {rucLookup.data && (
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                <CheckCircle size={12} /> {rucLookup.data.razon_social} — {rucLookup.data.estado}
+              </p>
+            )}
+            {rucLookup.error && (
+              <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                <AlertCircle size={12} /> {rucLookup.error}
+              </p>
+            )}
+          </div>
           <Select
             label="Tipo de Negocio"
             options={TIPO_NEGOCIO_OPTIONS}
@@ -145,12 +199,39 @@ export const NegocioForm = ({ initialData, onSubmit, isLoading }) => {
             error={errors.representanteLegal?.message}
             placeholder="José Pérez García"
           />
-          <Input
-            label="Documento del Representante"
-            {...register('documentoRepresentante')}
-            error={errors.documentoRepresentante?.message}
-            placeholder="43215678"
-          />
+          <div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input
+                  label="Documento del Representante"
+                  {...register('documentoRepresentante')}
+                  error={errors.documentoRepresentante?.message}
+                  placeholder="43215678"
+                  maxLength={8}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleBuscarDni}
+                disabled={dniLookup.isLoading || !docRepValue || docRepValue.length !== 8}
+                title="Buscar datos por DNI (RENIEC)"
+                className="mb-0.5 flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {dniLookup.isLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                RENIEC
+              </button>
+            </div>
+            {dniLookup.data && (
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                <CheckCircle size={12} /> {dniLookup.data.full_name}
+              </p>
+            )}
+            {dniLookup.error && (
+              <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                <AlertCircle size={12} /> {dniLookup.error}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

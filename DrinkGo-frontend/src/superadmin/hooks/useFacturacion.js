@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { facturacionService } from '../services/facturacionService';
+import { suscripcionesService } from '../services/suscripcionesService';
 import { message } from '@/shared/utils/notifications';
 
 export const useFacturacion = () => {
@@ -8,6 +9,11 @@ export const useFacturacion = () => {
   const query = useQuery({
     queryKey: ['facturas'],
     queryFn: facturacionService.getAll,
+  });
+
+  const suscripcionesQuery = useQuery({
+    queryKey: ['suscripciones'],
+    queryFn: suscripcionesService.getAll,
   });
 
   const createMutation = useMutation({
@@ -32,6 +38,17 @@ export const useFacturacion = () => {
     },
   });
 
+  const generarMutation = useMutation({
+    mutationFn: facturacionService.generar,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facturas'] });
+      message.success('Factura generada exitosamente');
+    },
+    onError: (error) => {
+      message.error(error.response?.data?.error || 'Error al generar factura');
+    },
+  });
+
   const marcarPagadaMutation = useMutation({
     mutationFn: facturacionService.marcarPagada,
     onSuccess: () => {
@@ -39,7 +56,7 @@ export const useFacturacion = () => {
       message.success('Factura marcada como pagada');
     },
     onError: (error) => {
-      message.error(error.response?.data?.message || 'Error al marcar factura');
+      message.error(error.response?.data?.error || 'Error al marcar factura');
     },
   });
 
@@ -47,10 +64,10 @@ export const useFacturacion = () => {
     mutationFn: facturacionService.cancelar,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['facturas'] });
-      message.success('Factura cancelada');
+      message.success('Factura anulada');
     },
     onError: (error) => {
-      message.error(error.response?.data?.message || 'Error al cancelar factura');
+      message.error(error.response?.data?.error || 'Error al cancelar factura');
     },
   });
 
@@ -61,7 +78,7 @@ export const useFacturacion = () => {
       message.success('Reintento de cobro encolado');
     },
     onError: (error) => {
-      message.error(error.response?.data?.message || 'Error al reintentar factura');
+      message.error(error.response?.data?.error || 'Error al reintentar factura');
     },
   });
 
@@ -69,14 +86,17 @@ export const useFacturacion = () => {
     facturas: query.data || [],
     isLoading: query.isLoading,
     isError: query.isError,
+    suscripciones: suscripcionesQuery.data || [],
 
     createFactura: createMutation.mutateAsync,
     updateFactura: updateMutation.mutateAsync,
+    generarFactura: generarMutation.mutateAsync,
     marcarPagada: marcarPagadaMutation.mutateAsync,
     cancelarFactura: cancelarMutation.mutateAsync,
     reintentarFactura: reintentarMutation.mutateAsync,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
+    isGenerating: generarMutation.isPending,
     isMarkingPaid: marcarPagadaMutation.isPending,
     isCanceling: cancelarMutation.isPending,
     isRetrying: reintentarMutation.isPending,

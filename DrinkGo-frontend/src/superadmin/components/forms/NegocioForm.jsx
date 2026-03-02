@@ -53,9 +53,6 @@ const ESTADOS = [
 const TIPOS_NEGOCIO = [
   { value: 'licoreria', label: 'Licorería' },
   { value: 'bar', label: 'Bar' },
-  { value: 'restaurante', label: 'Restaurante' },
-  { value: 'distribuidor', label: 'Distribuidor' },
-  { value: 'otro', label: 'Otro' },
 ];
 
 export const NegocioForm = ({ initialData, onSubmit, onCancel, isLoading }) => {

@@ -3,8 +3,10 @@ package DrinkGo.DrinkGo_backend.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import DrinkGo.DrinkGo_backend.entity.UsuariosRoles;
+import DrinkGo.DrinkGo_backend.repository.UsuariosRolesRepository;
 import DrinkGo.DrinkGo_backend.service.IUsuariosRolesService;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,15 +22,28 @@ public class UsuariosRolesController {
     @Autowired
     private IUsuariosRolesService service;
 
+    @Autowired
+    private UsuariosRolesRepository repo;
+
     @GetMapping("/usuarios-roles")
     public List<UsuariosRoles> buscarTodos() {
         return service.buscarTodos();
     }
 
     @PostMapping("/usuarios-roles")
-    public UsuariosRoles guardar(@RequestBody UsuariosRoles entity) {
+    public Map<String, Object> guardar(@RequestBody UsuariosRoles entity) {
         service.guardar(entity);
-        return entity;
+        // Recargar con JOIN FETCH para que la serialización no dispare lazy loading
+        List<UsuariosRoles> recargados = repo.findByUsuarioId(entity.getUsuario().getId());
+        UsuariosRoles guardado = recargados.stream()
+                .filter(ur -> ur.getId().equals(entity.getId()))
+                .findFirst()
+                .orElse(entity);
+        return Map.of(
+                "id", guardado.getId(),
+                "usuarioId", guardado.getUsuarioId() != null ? guardado.getUsuarioId() : 0,
+                "rolId", guardado.getRolId() != null ? guardado.getRolId() : 0,
+                "rolNombre", guardado.getRolNombre() != null ? guardado.getRolNombre() : "");
     }
 
     @PutMapping("/usuarios-roles")

@@ -5,8 +5,11 @@ import org.springframework.web.bind.annotation.RestController;
 import DrinkGo.DrinkGo_backend.entity.Sedes;
 import DrinkGo.DrinkGo_backend.service.ISedesService;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,9 +29,14 @@ public class SedesController {
     }
 
     @PostMapping("/sedes")
-    public Sedes guardar(@RequestBody Sedes entity) {
-        service.guardar(entity);
-        return entity;
+    public ResponseEntity<?> guardar(@RequestBody Sedes entity) {
+        try {
+            service.guardar(entity);
+            return ResponseEntity.ok(entity);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/sedes")

@@ -25,6 +25,10 @@ public class RegistrosAuditoria {
     @Column(name = "usuario_plataforma_id")
     private Long usuarioPlataformaId;
 
+    /** Nombre o email del actor, guardado directamente para evitar JOINs. */
+    @Column(name = "usuario", length = 200)
+    private String usuario;
+
     @Column(nullable = false)
     private String accion;
 
@@ -97,6 +101,14 @@ public class RegistrosAuditoria {
 
     public void setUsuarioPlataformaId(Long usuarioPlataformaId) {
         this.usuarioPlataformaId = usuarioPlataformaId;
+    }
+
+    public String getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(String usuario) {
+        this.usuario = usuario;
     }
 
     public String getAccion() {

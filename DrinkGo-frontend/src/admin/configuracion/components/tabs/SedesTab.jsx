@@ -95,7 +95,6 @@ export const SedesTab = ({ context }) => {
   const handleSubmit = async (formData) => {
     const payload = {
       negocio: { id: negocioId },
-      codigo: formData.codigo.trim(),
       nombre: formData.nombre.trim(),
       direccion: formData.direccion.trim(),
       ciudad: formData.ciudad?.trim() || null,
