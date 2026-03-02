@@ -1,27 +1,63 @@
-import { Users } from 'lucide-react';
+/**
+ * Usuarios.jsx
+ * ────────────
+ * Módulo 3: Seguridad, Usuarios y Clientes
+ *
+ * Tabs:
+ *  - Usuarios del negocio (CRUD)
+ *  - Clientes (CRUD + búsqueda DNI/RUC + validación mayoría de edad)
+ *  - Roles personalizados (CRUD)
+ */
+import { useState } from 'react';
+import { Users, UserCheck, Shield } from 'lucide-react';
+import { UsuariosTab } from '@/admin/usuarios/components/tabs/UsuariosTab';
+import { ClientesTab } from '@/admin/usuarios/components/tabs/ClientesTab';
+import { RolesTab } from '@/admin/usuarios/components/tabs/RolesTab';
+
+const TABS = [
+  { key: 'usuarios', label: 'Usuarios', icon: Users },
+  { key: 'clientes', label: 'Clientes', icon: UserCheck },
+  { key: 'roles', label: 'Roles', icon: Shield },
+];
 
 export const Usuarios = () => {
+  const [activeTab, setActiveTab] = useState('usuarios');
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Usuarios y Clientes</h1>
         <p className="text-gray-600 mt-1">
-          Gestión de usuarios del negocio, roles, permisos y base de clientes
+          Gestión de usuarios del negocio, base de clientes y roles personalizados
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-12 flex flex-col items-center justify-center text-center">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <Users size={32} className="text-gray-500" />
-        </div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-2">
-          Usuarios y Clientes
-        </h2>
-        <p className="text-gray-500 max-w-sm">
-          Registro de usuarios del negocio, asignación de roles y sedes, gestión de
-          clientes y comunicaciones. Módulo en construcción.
-        </p>
+      {/* Tabs de navegación */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex gap-1">
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={[
+                'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
+                activeTab === key
+                  ? 'border-green-600 text-green-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+              ].join(' ')}
+            >
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
+        </nav>
       </div>
+
+      {/* Contenido del tab activo */}
+      {activeTab === 'usuarios' && <UsuariosTab />}
+      {activeTab === 'clientes' && <ClientesTab />}
+      {activeTab === 'roles' && <RolesTab />}
     </div>
   );
 };

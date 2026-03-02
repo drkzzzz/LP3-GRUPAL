@@ -32,7 +32,7 @@ export const Login = () => {
     setIsLoading(true);
     try {
       const data = await adminAuthService.login(formData.email, formData.password);
-      login(data.usuario, data.token, data.negocio);
+      login(data.usuario, data.token, data.negocio, data.permisos || []);
       message.success('Bienvenido al panel de administración');
       navigate('/admin/dashboard', { replace: true });
     } catch (error) {

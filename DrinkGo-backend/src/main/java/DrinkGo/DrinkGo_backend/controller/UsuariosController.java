@@ -5,7 +5,9 @@ import org.springframework.web.bind.annotation.RestController;
 import DrinkGo.DrinkGo_backend.entity.Negocios;
 import DrinkGo.DrinkGo_backend.entity.Suscripciones;
 import DrinkGo.DrinkGo_backend.entity.Usuarios;
+import DrinkGo.DrinkGo_backend.entity.UsuariosRoles;
 import DrinkGo.DrinkGo_backend.repository.SuscripcionesRepository;
+import DrinkGo.DrinkGo_backend.repository.UsuariosRolesRepository;
 import DrinkGo.DrinkGo_backend.security.JwtUtil;
 import DrinkGo.DrinkGo_backend.service.IUsuariosService;
 import java.time.LocalDate;
@@ -40,6 +42,19 @@ public class UsuariosController {
     @Autowired
     private SuscripcionesRepository repoSuscripciones;
 
+    @Autowired
+    private UsuariosRolesRepository usuariosRolesRepo;
+
+    @GetMapping("/usuarios/{id}/permisos")
+    public List<String> obtenerPermisos(@PathVariable Long id) {
+        return usuariosRolesRepo.findCodigosPermisoByUsuarioId(id);
+    }
+
+    @GetMapping("/usuarios/{id}/roles")
+    public List<UsuariosRoles> getRolesByUsuario(@PathVariable("id") Long id) {
+        return usuariosRolesRepo.findByUsuarioId(id);
+    }
+
     @GetMapping("/usuarios")
     public List<Usuarios> buscarTodos() {
         return service.buscarTodos();
@@ -52,9 +67,32 @@ public class UsuariosController {
     }
 
     @PutMapping("/usuarios")
-    public Usuarios modificar(@RequestBody Usuarios entity) {
-        service.modificar(entity);
-        return entity;
+    public ResponseEntity<?> modificar(@RequestBody Usuarios incomingData) {
+        Optional<Usuarios> existingOpt = service.buscarId(incomingData.getId());
+        if (existingOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Usuario no encontrado"));
+        }
+        Usuarios existing = existingOpt.get();
+
+        // Actualizar solo los campos editables
+        existing.setNombres(incomingData.getNombres());
+        existing.setApellidos(incomingData.getApellidos());
+        existing.setEmail(incomingData.getEmail());
+        existing.setTipoDocumento(incomingData.getTipoDocumento());
+        existing.setNumeroDocumento(incomingData.getNumeroDocumento());
+        existing.setTelefono(incomingData.getTelefono());
+        if (incomingData.getEstaActivo() != null) {
+            existing.setEstaActivo(incomingData.getEstaActivo());
+        }
+
+        // Solo actualizar contraseña si se envió una nueva
+        if (incomingData.getHashContrasena() != null && !incomingData.getHashContrasena().isBlank()) {
+            existing.setHashContrasena(incomingData.getHashContrasena());
+        }
+
+        service.modificar(existing);
+        return ResponseEntity.ok(existing);
     }
 
     @GetMapping("/usuarios/{id}")
@@ -172,6 +210,7 @@ public class UsuariosController {
                 "nombres", usuario.getNombres(),
                 "apellidos", usuario.getApellidos()));
         response.put("negocio", negocioData);
+        response.put("permisos", usuariosRolesRepo.findCodigosPermisoByUsuarioId(usuario.getId()));
         if (suscripcionData != null) {
             response.put("suscripcion", suscripcionData);
         }
