@@ -18,6 +18,7 @@ public class CrearVentaPosRequest {
     private String tipoComprobante; // boleta | factura | nota_venta
     private String docClienteNumero;
     private String docClienteNombre;
+    private String docClienteDireccion;
     private List<ItemVenta> items;
     private List<PagoVenta> pagos;
 
@@ -74,6 +75,8 @@ public class CrearVentaPosRequest {
     public void setDocClienteNumero(String docClienteNumero) { this.docClienteNumero = docClienteNumero; }
     public String getDocClienteNombre() { return docClienteNombre; }
     public void setDocClienteNombre(String docClienteNombre) { this.docClienteNombre = docClienteNombre; }
+    public String getDocClienteDireccion() { return docClienteDireccion; }
+    public void setDocClienteDireccion(String docClienteDireccion) { this.docClienteDireccion = docClienteDireccion; }
     public List<ItemVenta> getItems() { return items; }
     public void setItems(List<ItemVenta> items) { this.items = items; }
     public List<PagoVenta> getPagos() { return pagos; }

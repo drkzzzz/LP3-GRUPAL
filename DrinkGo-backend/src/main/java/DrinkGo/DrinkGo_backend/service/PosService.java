@@ -195,6 +195,7 @@ public class PosService {
         }
         venta.setDocClienteNumero(request.getDocClienteNumero());
         venta.setDocClienteNombre(request.getDocClienteNombre());
+        venta.setDocClienteDireccion(request.getDocClienteDireccion());
 
         // Resolver cliente opcional
         if (request.getClienteId() != null) {
@@ -259,7 +260,12 @@ public class PosService {
 
         // ── 12. Generar comprobante de facturación (transacción separada) ──
         try {
-            facturacionService.emitirComprobanteDesdeVenta(venta, usuario);
+            DocumentosFacturacion doc = facturacionService.emitirComprobanteDesdeVenta(venta, usuario);
+            if (doc != null) {
+                // Pasar el número del comprobante como campo transitorio
+                // para que el frontend lo muestre en el recibo sin hacer refresh
+                venta.setNumeroDocumentoFacturacion(doc.getNumeroDocumento());
+            }
         } catch (Exception ex) {
             System.err.println("WARN: No se pudo generar comprobante automático: " + ex.getMessage());
         }

@@ -279,9 +279,48 @@ public class FacturacionService {
             return venta.getCliente();
         }
 
-        // Para facturas, el cliente es obligatorio
+        // Para facturas, intentar crear/buscar cliente a partir del RUC del documento
         if (venta.getTipoComprobante() == Ventas.TipoComprobante.factura) {
-            throw new IllegalStateException("La factura requiere un cliente con RUC");
+            String rucDoc = venta.getDocClienteNumero();
+            if (rucDoc == null || rucDoc.isBlank()) {
+                throw new IllegalStateException("La factura requiere un RUC de cliente");
+            }
+
+            Long negocioId = venta.getNegocio().getId();
+
+            // Buscar cliente existente con ese RUC en el mismo negocio
+            Optional<Clientes> existente = clientesRepo
+                    .findByNegocioIdAndNumeroDocumento(negocioId, rucDoc);
+            if (existente.isPresent()) {
+                Clientes c = existente.get();
+                // Actualizar nombre y dirección si vienen en la venta
+                boolean modified = false;
+                if (venta.getDocClienteNombre() != null && !venta.getDocClienteNombre().isBlank()) {
+                    c.setRazonSocial(venta.getDocClienteNombre());
+                    modified = true;
+                }
+                if (venta.getDocClienteDireccion() != null && !venta.getDocClienteDireccion().isBlank()) {
+                    c.setDireccion(venta.getDocClienteDireccion());
+                    modified = true;
+                }
+                if (modified) {
+                    clientesRepo.save(c);
+                }
+                return c;
+            }
+
+            // Crear cliente temporal para este comprobante
+            Clientes nuevo = new Clientes();
+            nuevo.setNegocio(venta.getNegocio());
+            nuevo.setTipoDocumento(Clientes.TipoDocumento.RUC);
+            nuevo.setNumeroDocumento(rucDoc);
+            String nombreRuc = venta.getDocClienteNombre() != null
+                    ? venta.getDocClienteNombre() : rucDoc;
+            nuevo.setRazonSocial(nombreRuc);
+            if (venta.getDocClienteDireccion() != null) {
+                nuevo.setDireccion(venta.getDocClienteDireccion());
+            }
+            return clientesRepo.save(nuevo);
         }
 
         // Para boletas sin cliente → "Consumidor Final"

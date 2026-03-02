@@ -172,8 +172,15 @@ export const PagoModal = ({
 
   /* Validation */
   const docRequired = tipoComprobante === 'factura';
+  // RUC 10 (persona natural) no siempre cuenta con dirección fiscal en la API;
+  // se permite null para ellos. RUC 20 sí requiere dirección.
+  const direccionRequerida = docRequired && esPersonaJuridica;
   const isDocValid =
-    !docRequired || (!docError && docClienteNumero.length > 0 && docClienteNombre.length > 0 && docClienteDireccion.length > 0);
+    !docRequired ||
+    (!docError &&
+      docClienteNumero.length > 0 &&
+      docClienteNombre.length > 0 &&
+      (!direccionRequerida || docClienteDireccion.length > 0));
   const isPaymentValid = totalPagado >= total && pagos.some((p) => parseFloat(p.monto) > 0);
   const canConfirm = isPaymentValid && isDocValid && !docError;
 
@@ -203,6 +210,10 @@ export const PagoModal = ({
       const resultado = await rucLookup.buscar(docClienteNumero);
       if (resultado) {
         setDocClienteNombre(resultado.razon_social || '');
+        // RUC 20 (persona jurídica) trae dirección de SUNAT; RUC 10 no siempre
+        if (resultado.direccion) {
+          setDocClienteDireccion(resultado.direccion);
+        }
       }
     } else if (tipoDocumento === 'DNI' && /^\d{8}$/.test(docClienteNumero)) {
       const resultado = await dniLookup.buscar(docClienteNumero);
@@ -343,13 +354,14 @@ export const PagoModal = ({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Dirección Fiscal <span className="text-red-500">*</span>
+                    Dirección Fiscal {esPersonaJuridica && <span className="text-red-500">*</span>}
+                    {esPersonaNatural && <span className="text-gray-400 text-xs">(opcional)</span>}
                   </label>
                   <input
                     type="text"
                     value={docClienteDireccion}
                     onChange={(e) => setDocClienteDireccion(e.target.value)}
-                    placeholder="Ej: Av. Los Olivos 123, Lima"
+                    placeholder={esPersonaNatural ? 'Sin dirección si no aplica' : 'Ej: Av. Los Olivos 123, Lima'}
                     className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>

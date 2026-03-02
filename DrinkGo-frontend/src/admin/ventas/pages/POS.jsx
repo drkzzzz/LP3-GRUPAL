@@ -59,7 +59,7 @@ export const POS = () => {
   };
 
   /* ─── Procesar venta ─── */
-  const handlePago = async ({ pagos, tipoComprobante, docClienteNumero, docClienteNombre }) => {
+  const handlePago = async ({ pagos, tipoComprobante, docClienteNumero, docClienteNombre, docClienteDireccion }) => {
     /* Snapshot de los ítems ANTES de limpiar el carrito */
     const itemsSnapshot = items.map((i) => ({ ...i, producto: { ...i.producto } }));
 
@@ -74,6 +74,7 @@ export const POS = () => {
       tipoComprobante,
       docClienteNumero,
       docClienteNombre,
+      docClienteDireccion: docClienteDireccion || null,
       items: items.map((i) => ({
         productoId: i.producto.id,
         nombreProducto: i.producto.nombre,
