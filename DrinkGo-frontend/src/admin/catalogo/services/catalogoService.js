@@ -185,8 +185,9 @@ export const detalleCombosService = {
  *  PROMOCIONES (también cubre "Descuentos")
  * ================================================================ */
 export const promocionesService = {
-  getAll: async () => {
-    const { data } = await adminApi.get('/promociones');
+  getAll: async (negocioId) => {
+    const url = negocioId ? `/promociones/negocio/${negocioId}` : '/promociones';
+    const { data } = await adminApi.get(url);
     return toArray(data);
   },
   getById: async (id) => {
