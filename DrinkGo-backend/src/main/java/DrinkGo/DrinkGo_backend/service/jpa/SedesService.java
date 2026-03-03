@@ -23,7 +23,7 @@ public class SedesService implements ISedesService {
     }
 
     public List<Sedes> buscarPorNegocio(Long negocioId) {
-        return repoSedes.findByNegocioId(negocioId);
+        return repoSedes.findByNegocio_Id(negocioId);
     }
 
     public void guardar(Sedes sedes) {

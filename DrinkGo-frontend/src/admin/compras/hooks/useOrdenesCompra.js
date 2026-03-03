@@ -13,6 +13,7 @@ import {
   sedesComprasService,
   almacenesComprasService,
   productosComprasService,
+  productosProveedorService,
 } from '../services/comprasService';
 import { message } from '@/shared/utils/notifications';
 
@@ -72,6 +73,13 @@ export const useOrdenesCompra = (negocioId) => {
     queryKey: ['productos-compras', negocioId],
     queryFn: () => productosComprasService.getAll(negocioId),
     enabled: !!negocioId,
+  });
+
+  const productosProveedorQuery = useQuery({
+    queryKey: ['productos-proveedor', negocioId],
+    queryFn: productosProveedorService.getAll,
+    enabled: !!negocioId,
+    select: (data) => data.filter((pp) => (pp.negocio?.id ?? pp.negocioId) === negocioId),
   });
 
   /* ─── Mutation: crear orden de compra CON detalles ─── */
@@ -186,6 +194,7 @@ export const useOrdenesCompra = (negocioId) => {
     sedes: sedesQuery.data || [],
     almacenes: almacenesQuery.data || [],
     productos: productosQuery.data || [],
+    productosProveedor: productosProveedorQuery.data || [],
     isLoading: ordenesQuery.isLoading,
 
     generateNumeroOrden: () =>

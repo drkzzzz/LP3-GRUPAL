@@ -239,7 +239,7 @@ public class PosController {
                     .orElseThrow(() -> new RuntimeException("Negocio no encontrado"));
 
             // Obtener la primera sede del negocio
-            List<Sedes> sedes = sedesRepo.findByNegocioId(negocioId);
+            List<Sedes> sedes = sedesRepo.findByNegocio_Id(negocioId);
             if (sedes.isEmpty()) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "El negocio no tiene sedes configuradas"));

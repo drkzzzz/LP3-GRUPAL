@@ -73,6 +73,7 @@ export const OrdenesCompraTab = () => {
     sedes: sedesOrden,
     almacenes: almacenesOrden,
     productos: productosOrden,
+    productosProveedor: productosProveedorOrden,
     isLoading,
     generateNumeroOrden,
     createOrdenWithDetalles,
@@ -92,6 +93,7 @@ export const OrdenesCompraTab = () => {
     reset,
     control,
     watch,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(ordenCompraSchema),
@@ -110,6 +112,7 @@ export const OrdenesCompraTab = () => {
   });
 
   const watchedItems = watch('items');
+  const watchedProveedorId = watch('proveedorId');
 
   /* ─── Cálculos ─── */
   const formTotals = useMemo(() => {
@@ -185,10 +188,24 @@ export const OrdenesCompraTab = () => {
     [almacenesOrden],
   );
 
-  const productoOptions = useMemo(
-    () => productosOrden.map((p) => ({ value: String(p.id), label: p.nombre })),
-    [productosOrden],
-  );
+  const productoOptions = useMemo(() => {
+    if (!watchedProveedorId) return [];
+    const asignados = productosProveedorOrden.filter(
+      (pp) => String(pp.proveedor?.id ?? pp.proveedorId) === String(watchedProveedorId),
+    );
+    return asignados.map((pp) => ({
+      value: String(pp.producto?.id ?? pp.productoId),
+      label: pp.producto?.nombre || `Producto #${pp.productoId}`,
+      precioUnitario: pp.precioUnitario,
+    }));
+  }, [watchedProveedorId, productosProveedorOrden]);
+
+  const handleProductoSelect = (index, productoId) => {
+    const match = productoOptions.find((o) => o.value === String(productoId));
+    if (match?.precioUnitario != null) {
+      setValue(`items.${index}.precioUnitario`, String(match.precioUnitario));
+    }
+  };
 
   /* ─── Handlers ─── */
   const openCreate = () => {
@@ -524,9 +541,16 @@ export const OrdenesCompraTab = () => {
                   <div className="col-span-12 sm:col-span-5">
                     <Select
                       label={index === 0 ? 'Producto' : undefined}
-                      placeholder="Seleccione..."
+                      placeholder={
+                        watchedProveedorId
+                          ? 'Seleccione producto...'
+                          : 'Primero seleccione un proveedor'
+                      }
                       options={productoOptions}
-                      {...register(`items.${index}.productoId`)}
+                      disabled={!watchedProveedorId}
+                      {...register(`items.${index}.productoId`, {
+                        onChange: (e) => handleProductoSelect(index, e.target.value),
+                      })}
                       error={errors.items?.[index]?.productoId?.message}
                     />
                   </div>

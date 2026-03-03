@@ -25,6 +25,9 @@ import {
   CheckCircle,
   AlertTriangle,
   ArrowLeft,
+  Search,
+  Calendar,
+  User,
 } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
@@ -244,6 +247,46 @@ export const MovimientosCajaPage = () => {
   const [showCategoriasModal, setShowCategoriasModal] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState('todos');
 
+  /* --- Filtros historial de sesiones --- */
+  const [filtroEstadoHist, setFiltroEstadoHist] = useState('todos');
+  const [filtroBusquedaHist, setFiltroBusquedaHist] = useState('');
+  const [filtroFechaDesdeHist, setFiltroFechaDesdeHist] = useState('');
+  const [filtroFechaHastaHist, setFiltroFechaHastaHist] = useState('');
+  const [paginaHist, setPaginaHist] = useState(1);
+  const PAGE_SIZE_HIST = 8;
+
+  /* --- Filtrado de sesiones historicas --- */
+  const sesionesHistoricasFiltradas = useMemo(() => {
+    let result = sesionesHistoricas;
+    if (filtroEstadoHist !== 'todos') {
+      result = result.filter((s) => s.estadoSesion === filtroEstadoHist);
+    }
+    if (filtroBusquedaHist.trim()) {
+      const q = filtroBusquedaHist.toLowerCase();
+      result = result.filter((s) =>
+        `${s.usuario?.nombres || ''} ${s.usuario?.apellidos || ''}`.toLowerCase().includes(q),
+      );
+    }
+    if (filtroFechaDesdeHist) {
+      const desde = new Date(filtroFechaDesdeHist);
+      desde.setHours(0, 0, 0, 0);
+      result = result.filter((s) => new Date(s.fechaApertura) >= desde);
+    }
+    if (filtroFechaHastaHist) {
+      const hasta = new Date(filtroFechaHastaHist);
+      hasta.setHours(23, 59, 59, 999);
+      result = result.filter((s) => new Date(s.fechaApertura) <= hasta);
+    }
+    return result;
+  }, [sesionesHistoricas, filtroEstadoHist, filtroBusquedaHist, filtroFechaDesdeHist, filtroFechaHastaHist]);
+
+  const sesionesHistPage = useMemo(() => {
+    const start = (paginaHist - 1) * PAGE_SIZE_HIST;
+    return sesionesHistoricasFiltradas.slice(start, start + PAGE_SIZE_HIST);
+  }, [sesionesHistoricasFiltradas, paginaHist]);
+
+  const totalPaginasHist = Math.max(1, Math.ceil(sesionesHistoricasFiltradas.length / PAGE_SIZE_HIST));
+
   /* --- Filtrar movimientos del turno activo --- */
   const movimientosFiltrados = useMemo(() => {
     if (filtroTipo === 'todos') return movimientos;
@@ -396,6 +439,10 @@ export const MovimientosCajaPage = () => {
               setSelectedCajaId(Number(e.target.value));
               setSelectedSesionId(null);
               setFiltroTipo('todos');
+              setFiltroEstadoHist('todos');
+              setFiltroBusquedaHist('');
+              setFiltroFechaDesdeHist('');
+              setFiltroFechaHastaHist('');
             }}
             className="flex-1 max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           >
@@ -509,31 +556,126 @@ export const MovimientosCajaPage = () => {
           ) : (
             /* --- Lista de sesiones (clickeables) --- */
             <>
-              <div className="flex items-center gap-2 text-sm bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
-                <Clock size={16} className="text-gray-400" />
-                <span className="text-gray-600">
-                  Historial de sesiones de <span className="font-medium text-gray-800">{selectedCajaName}</span>
-                  <span className="text-gray-400 ml-2">
-                    &middot; {sesionesHistoricas.length} sesion{sesionesHistoricas.length !== 1 ? 'es' : ''} encontrada{sesionesHistoricas.length !== 1 ? 's' : ''}
-                  </span>
-                </span>
+              {/* Stats de sesiones */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                  <p className="text-xs text-gray-500">Total sesiones</p>
+                  <p className="text-xl font-bold text-gray-900">{sesionesHistoricasFiltradas.length}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <Clock size={12} className="text-blue-500" />
+                    <p className="text-xs text-gray-500">Abiertas</p>
+                  </div>
+                  <p className="text-xl font-bold text-blue-600">
+                    {sesionesHistoricasFiltradas.filter((s) => s.estadoSesion === 'abierta').length}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <CheckCircle size={12} className="text-green-500" />
+                    <p className="text-xs text-gray-500">Cerradas OK</p>
+                  </div>
+                  <p className="text-xl font-bold text-green-600">
+                    {sesionesHistoricasFiltradas.filter((s) => s.estadoSesion === 'cerrada').length}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <AlertTriangle size={12} className="text-amber-500" />
+                    <p className="text-xs text-gray-500">Con diferencia</p>
+                  </div>
+                  <p className="text-xl font-bold text-amber-600">
+                    {sesionesHistoricasFiltradas.filter((s) => s.estadoSesion === 'con_diferencia').length}
+                  </p>
+                </div>
               </div>
+
+              {/* Filtros */}
+              <Card className="!p-4">
+                <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      <User size={12} className="inline mr-1" />Buscar usuario
+                    </label>
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={filtroBusquedaHist}
+                      onChange={(e) => { setFiltroBusquedaHist(e.target.value); setPaginaHist(1); }}
+                        placeholder="Nombre..."
+                        className="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-[130px]">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      <Calendar size={12} className="inline mr-1" />Desde
+                    </label>
+                    <input
+                      type="date"
+                      value={filtroFechaDesdeHist}
+                      onChange={(e) => { setFiltroFechaDesdeHist(e.target.value); setPaginaHist(1); }}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[130px]">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      <Calendar size={12} className="inline mr-1" />Hasta
+                    </label>
+                    <input
+                      type="date"
+                      value={filtroFechaHastaHist}
+                      onChange={(e) => { setFiltroFechaHastaHist(e.target.value); setPaginaHist(1); }}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[130px]">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+                    <select
+                      value={filtroEstadoHist}
+                      onChange={(e) => { setFiltroEstadoHist(e.target.value); setPaginaHist(1); }}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="todos">Todos</option>
+                      <option value="abierta">Abierta</option>
+                      <option value="cerrada">Cerrada</option>
+                      <option value="con_diferencia">Con diferencia</option>
+                    </select>
+                  </div>
+                  {(filtroEstadoHist !== 'todos' || filtroBusquedaHist || filtroFechaDesdeHist || filtroFechaHastaHist) && (
+                    <button
+                      onClick={() => {
+                        setFiltroEstadoHist('todos');
+                        setFiltroBusquedaHist('');
+                        setFiltroFechaDesdeHist('');
+                        setFiltroFechaHastaHist('');
+                        setPaginaHist(1);
+                      }}
+                      className="text-xs text-gray-500 hover:text-gray-800 whitespace-nowrap underline"
+                    >
+                      Limpiar filtros
+                    </button>
+                  )}
+                </div>
+              </Card>
 
               {loadingSesiones ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="w-6 h-6 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : sesionesHistoricas.length === 0 ? (
+              ) : sesionesHistoricasFiltradas.length === 0 ? (
                 <Card className="!py-12 text-center">
                   <AlertCircle size={32} className="text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No hay sesiones registradas para esta caja.</p>
+                  <p className="text-gray-500">No hay sesiones para los filtros aplicados.</p>
                   <p className="text-sm text-gray-400 mt-1">
-                    Las sesiones aparecen aqui cuando se cierra un turno en esta caja.
+                    Las sesiones aparecen aquí cuando se cierra un turno en esta caja.
                   </p>
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {sesionesHistoricas.map((ses) => {
+                  {sesionesHistPage.map((ses) => {
                     const ec = ESTADO_SESION[ses.estadoSesion] || ESTADO_SESION.cerrada;
                     const usr = ses.usuario
                       ? `${ses.usuario.nombres || ''} ${ses.usuario.apellidos || ''}`.trim()
@@ -570,6 +712,55 @@ export const MovimientosCajaPage = () => {
                       </Card>
                     );
                   })}
+
+                  {/* Controles de paginación */}
+                  {totalPaginasHist > 1 && (
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-sm text-gray-500">
+                        Página {paginaHist} de {totalPaginasHist} &middot; {sesionesHistoricasFiltradas.length} sesiones
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setPaginaHist((p) => Math.max(1, p - 1))}
+                          disabled={paginaHist === 1}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                        >
+                          ← Anterior
+                        </button>
+                        {Array.from({ length: totalPaginasHist }, (_, i) => i + 1)
+                          .filter((p) => p === 1 || p === totalPaginasHist || Math.abs(p - paginaHist) <= 1)
+                          .reduce((acc, p, idx, arr) => {
+                            if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                            acc.push(p);
+                            return acc;
+                          }, [])
+                          .map((p, idx) =>
+                            p === '...' ? (
+                              <span key={`ellipsis-${idx}`} className="px-1 text-gray-400">…</span>
+                            ) : (
+                              <button
+                                key={p}
+                                onClick={() => setPaginaHist(p)}
+                                className={`px-3 py-1.5 text-sm border rounded-lg transition-colors ${
+                                  p === paginaHist
+                                    ? 'bg-green-600 text-white border-green-600'
+                                    : 'border-gray-300 hover:bg-gray-50'
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            ),
+                          )}
+                        <button
+                          onClick={() => setPaginaHist((p) => Math.min(totalPaginasHist, p + 1))}
+                          disabled={paginaHist === totalPaginasHist}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                        >
+                          Siguiente →
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>

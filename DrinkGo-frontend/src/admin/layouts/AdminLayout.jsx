@@ -56,7 +56,7 @@ const INVENTARIO_SUBITEMS = [
   { to: '/admin/inventario/almacenes', label: 'Almacenes', icon: Warehouse, permiso: 'm.inventario.almacenes' },
   { to: '/admin/inventario/lotes', label: 'Lotes', icon: Boxes, permiso: 'm.inventario.lotes' },
   { to: '/admin/inventario/transferencias', label: 'Transferencias', icon: ArrowRightLeft, permiso: 'm.inventario.transferencias' },
-  { to: '/admin/inventario/reportes', label: 'Reportes', icon: BarChart3, permiso: 'm.inventario.reportes' },
+  { to: '/admin/inventario/reportes', label: 'Análisis de Stock', icon: BarChart3, permiso: 'm.inventario.reportes' },
 ];
 
 /* ─── Sub-items del menú Compras ─── */

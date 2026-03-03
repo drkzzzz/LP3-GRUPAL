@@ -495,6 +495,10 @@ export const LotesTab = () => {
             almacenes={almacenes}
             negocioId={negocioId}
             userId={user?.id}
+            initialProductoId={selected?.producto?.id ?? selected?.productoId}
+            initialProductoNombre={selected?.producto?.nombre}
+            initialAlmacenId={selected?.almacen?.id ?? selected?.almacenId}
+            initialAlmacenNombre={selected?.almacen?.nombre}
             onSubmit={handleAjusteSubmit}
             onCancel={() => { setIsAjusteOpen(false); setSelected(null); }}
             isLoading={isCreatingAjuste}

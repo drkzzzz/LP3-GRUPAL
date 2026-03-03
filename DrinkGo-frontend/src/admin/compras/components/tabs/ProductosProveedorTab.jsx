@@ -14,7 +14,6 @@ import {
   Pencil,
   Trash2,
   Package,
-  Star,
   Filter,
 } from 'lucide-react';
 import { useProductosProveedor } from '../../hooks/useProductosProveedor';
@@ -74,7 +73,6 @@ export const ProductosProveedorTab = () => {
       skuProveedor: '',
       precioCompra: '0',
       tiempoEntregaDias: '',
-      esPredeterminado: false,
     },
   });
 
@@ -112,7 +110,6 @@ export const ProductosProveedorTab = () => {
     () => ({
       total: productosProveedor.length,
       proveedoresConProductos: new Set(productosProveedor.map((pp) => pp.proveedor?.id)).size,
-      predeterminados: productosProveedor.filter((pp) => pp.esPredeterminado).length,
     }),
     [productosProveedor],
   );
@@ -126,7 +123,6 @@ export const ProductosProveedorTab = () => {
       skuProveedor: '',
       precioCompra: '0',
       tiempoEntregaDias: '',
-      esPredeterminado: false,
     });
     setIsFormOpen(true);
   };
@@ -139,7 +135,6 @@ export const ProductosProveedorTab = () => {
       skuProveedor: item.skuProveedor || '',
       precioCompra: String(item.precioCompra ?? 0),
       tiempoEntregaDias: String(item.tiempoEntregaDias ?? ''),
-      esPredeterminado: item.esPredeterminado || false,
     });
     setIsFormOpen(true);
   };
@@ -159,7 +154,6 @@ export const ProductosProveedorTab = () => {
       tiempoEntregaDias: formData.tiempoEntregaDias
         ? Number(formData.tiempoEntregaDias)
         : null,
-      esPredeterminado: formData.esPredeterminado,
     };
 
     if (editing) {
@@ -234,18 +228,6 @@ export const ProductosProveedorTab = () => {
       ),
     },
     {
-      key: 'predeterminado',
-      title: 'Predet.',
-      width: '80px',
-      align: 'center',
-      render: (_, row) =>
-        row.esPredeterminado ? (
-          <Star size={16} className="text-yellow-500 mx-auto" fill="currentColor" />
-        ) : (
-          <span className="text-gray-300">—</span>
-        ),
-    },
-    {
       key: 'actions',
       title: 'Acciones',
       width: '100px',
@@ -293,19 +275,13 @@ export const ProductosProveedorTab = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <StatCard title="Total asignaciones" value={stats.total} icon={Package} />
         <StatCard
           title="Proveedores con productos"
           value={stats.proveedoresConProductos}
           icon={Filter}
           className="border-l-4 border-l-blue-500"
-        />
-        <StatCard
-          title="Predeterminados"
-          value={stats.predeterminados}
-          icon={Star}
-          className="border-l-4 border-l-yellow-500"
         />
       </div>
 
@@ -416,18 +392,6 @@ export const ProductosProveedorTab = () => {
             {...register('tiempoEntregaDias')}
             error={errors.tiempoEntregaDias?.message}
           />
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="esPredeterminado"
-              {...register('esPredeterminado')}
-              className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-            />
-            <label htmlFor="esPredeterminado" className="text-sm text-gray-700">
-              Marcar como proveedor predeterminado para este producto
-            </label>
-          </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <Button

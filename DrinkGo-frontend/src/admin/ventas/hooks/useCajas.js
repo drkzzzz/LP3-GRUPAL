@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cajasService } from '../services/cajasService';
 import { message } from '@/shared/utils/notifications';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
+import { useCartStore } from '../stores/cartStore';
 
 /* ═══ CAJAS REGISTRADORAS ═══ */
 
@@ -115,6 +116,7 @@ export const useSesionActions = () => {
   const abrirMutation = useMutation({
     mutationFn: cajasService.abrirCaja,
     onSuccess: () => {
+      useCartStore.getState().clearCart();
       queryClient.invalidateQueries({ queryKey: ['sesion-activa'] });
       queryClient.invalidateQueries({ queryKey: ['sesiones'] });
       message.success('Caja abierta exitosamente');
@@ -127,6 +129,7 @@ export const useSesionActions = () => {
   const cerrarMutation = useMutation({
     mutationFn: cajasService.cerrarCaja,
     onSuccess: () => {
+      useCartStore.getState().clearCart();
       queryClient.invalidateQueries({ queryKey: ['sesion-activa'] });
       queryClient.invalidateQueries({ queryKey: ['sesiones'] });
       queryClient.invalidateQueries({ queryKey: ['resumen-turno'] });

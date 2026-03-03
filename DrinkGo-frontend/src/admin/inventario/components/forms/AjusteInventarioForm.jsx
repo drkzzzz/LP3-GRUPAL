@@ -39,6 +39,10 @@ export const AjusteInventarioForm = ({
   onSubmit,
   onCancel,
   isLoading = false,
+  initialProductoId = null,
+  initialProductoNombre = null,
+  initialAlmacenId = null,
+  initialAlmacenNombre = null,
 }) => {
   const {
     register,
@@ -47,8 +51,8 @@ export const AjusteInventarioForm = ({
   } = useForm({
     resolver: zodResolver(ajusteInventarioSchema),
     defaultValues: {
-      productoId: '',
-      almacenId: '',
+      productoId: initialProductoId ? String(initialProductoId) : '',
+      almacenId: initialAlmacenId ? String(initialAlmacenId) : '',
       tipoAjuste: '',
       cantidad: '',
       motivoMovimiento: '',
@@ -99,14 +103,24 @@ export const AjusteInventarioForm = ({
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* Producto y Tipo de ajuste */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Select
-          label="Producto"
-          required
-          placeholder="Seleccionar producto..."
-          options={productoOptions}
-          {...register('productoId')}
-          error={errors.productoId?.message}
-        />
+        {initialProductoId ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Producto</label>
+            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-800 font-medium">
+              {initialProductoNombre || `Producto #${initialProductoId}`}
+            </div>
+            <input type="hidden" {...register('productoId')} />
+          </div>
+        ) : (
+          <Select
+            label="Producto"
+            required
+            placeholder="Seleccionar producto..."
+            options={productoOptions}
+            {...register('productoId')}
+            error={errors.productoId?.message}
+          />
+        )}
         <Select
           label="Tipo de ajuste"
           required
@@ -119,14 +133,24 @@ export const AjusteInventarioForm = ({
 
       {/* Almacén y Cantidad */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Select
-          label="Almacén"
-          required
-          placeholder="Seleccionar almacén..."
-          options={almacenOptions}
-          {...register('almacenId')}
-          error={errors.almacenId?.message}
-        />
+        {initialAlmacenId ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Almacén</label>
+            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-800 font-medium">
+              {initialAlmacenNombre || `Almacén #${initialAlmacenId}`}
+            </div>
+            <input type="hidden" {...register('almacenId')} />
+          </div>
+        ) : (
+          <Select
+            label="Almacén"
+            required
+            placeholder="Seleccionar almacén..."
+            options={almacenOptions}
+            {...register('almacenId')}
+            error={errors.almacenId?.message}
+          />
+        )}
         <Input
           label="Cantidad"
           required
