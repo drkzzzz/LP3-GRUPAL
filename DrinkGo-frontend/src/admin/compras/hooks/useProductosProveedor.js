@@ -19,7 +19,7 @@ export const useProductosProveedor = (negocioId) => {
     queryKey: ['productos-proveedor', negocioId],
     queryFn: productosProveedorService.getAll,
     enabled: !!negocioId,
-    select: (data) => data.filter((pp) => pp.negocio?.id === negocioId),
+    select: (data) => data.filter((pp) => (pp.negocio?.id ?? pp.negocioId) === negocioId),
   });
 
   /* ─── Query: listar productos del catálogo (para selects) ─── */

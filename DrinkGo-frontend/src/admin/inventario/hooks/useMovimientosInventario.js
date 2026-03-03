@@ -16,7 +16,7 @@ export const useMovimientosInventario = (negocioId) => {
     queryKey: ['movimientos-inventario', negocioId],
     queryFn: movimientosInventarioService.getAll,
     enabled: !!negocioId,
-    select: (data) => data.filter((m) => m.negocio?.id === negocioId),
+    select: (data) => data.filter((m) => (m.negocio?.id ?? m.negocioId) === negocioId),
   });
 
   /* ─── Mutation: crear movimiento ─── */

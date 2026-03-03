@@ -15,7 +15,7 @@ export const useMetodosPago = (negocioId) => {
     queryFn: async () => {
       const all = await metodosPagoService.getAll();
       return negocioId
-        ? all.filter((m) => m.negocio?.id === negocioId)
+        ? all.filter((m) => (m.negocio?.id ?? m.negocioId) === negocioId)
         : all;
     },
     enabled: !!negocioId,

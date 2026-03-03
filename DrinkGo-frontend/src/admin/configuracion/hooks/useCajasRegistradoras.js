@@ -15,7 +15,7 @@ export const useCajasRegistradoras = (negocioId) => {
     queryFn: async () => {
       const all = await cajasRegistradorasService.getAll();
       return negocioId
-        ? all.filter((c) => c.negocio?.id === negocioId)
+        ? all.filter((c) => (c.negocio?.id ?? c.negocioId) === negocioId)
         : all;
     },
     enabled: !!negocioId,

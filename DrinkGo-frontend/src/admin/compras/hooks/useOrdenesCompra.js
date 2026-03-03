@@ -43,7 +43,7 @@ export const useOrdenesCompra = (negocioId) => {
     queryKey: ['ordenes-compra', negocioId],
     queryFn: ordenesCompraService.getAll,
     enabled: !!negocioId,
-    select: (data) => data.filter((o) => o.negocio?.id === negocioId),
+    select: (data) => data.filter((o) => (o.negocio?.id ?? o.negocioId) === negocioId),
   });
 
   /* ─── Queries auxiliares para selects ─── */
@@ -51,14 +51,14 @@ export const useOrdenesCompra = (negocioId) => {
     queryKey: ['proveedores', negocioId],
     queryFn: proveedoresService.getAll,
     enabled: !!negocioId,
-    select: (data) => data.filter((p) => p.negocio?.id === negocioId && p.estaActivo !== false),
+    select: (data) => data.filter((p) => (p.negocio?.id ?? p.negocioId) === negocioId && p.estaActivo !== false),
   });
 
   const sedesQuery = useQuery({
     queryKey: ['sedes-compras', negocioId],
     queryFn: sedesComprasService.getAll,
     enabled: !!negocioId,
-    select: (data) => data.filter((s) => s.negocio?.id === negocioId),
+    select: (data) => data.filter((s) => (s.negocio?.id ?? s.negocioId) === negocioId),
   });
 
   const almacenesQuery = useQuery({

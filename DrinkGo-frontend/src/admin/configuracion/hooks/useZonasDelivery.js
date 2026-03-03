@@ -15,7 +15,7 @@ export const useZonasDelivery = (negocioId) => {
     queryFn: async () => {
       const all = await zonasDeliveryService.getAll();
       return negocioId
-        ? all.filter((z) => z.negocio?.id === negocioId)
+        ? all.filter((z) => (z.negocio?.id ?? z.negocioId) === negocioId)
         : all;
     },
     enabled: !!negocioId,

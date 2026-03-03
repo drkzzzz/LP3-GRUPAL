@@ -15,7 +15,7 @@ export const useSedesConfig = (negocioId) => {
     queryFn: async () => {
       const all = await sedesService.getAll();
       return negocioId
-        ? all.filter((s) => s.negocio?.id === negocioId)
+        ? all.filter((s) => (s.negocio?.id ?? s.negocioId) === negocioId)
         : all;
     },
     enabled: !!negocioId,

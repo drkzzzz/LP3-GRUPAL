@@ -16,7 +16,7 @@ export const useProveedores = (negocioId) => {
     queryKey: ['proveedores', negocioId],
     queryFn: proveedoresService.getAll,
     enabled: !!negocioId,
-    select: (data) => data.filter((p) => p.negocio?.id === negocioId),
+    select: (data) => data.filter((p) => (p.negocio?.id ?? p.negocioId) === negocioId),
   });
 
   /* ─── Mutation: crear proveedor ─── */

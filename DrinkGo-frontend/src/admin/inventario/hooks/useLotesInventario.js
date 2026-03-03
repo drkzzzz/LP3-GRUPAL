@@ -16,7 +16,7 @@ export const useLotesInventario = (negocioId) => {
     queryKey: ['lotes-inventario', negocioId],
     queryFn: lotesInventarioService.getAll,
     enabled: !!negocioId,
-    select: (data) => data.filter((l) => l.negocio?.id === negocioId),
+    select: (data) => data.filter((l) => (l.negocio?.id ?? l.negocioId) === negocioId),
   });
 
   /* ─── Mutation: crear lote (entrada de mercancía) ─── */
