@@ -50,7 +50,7 @@ export const PromocionesTab = () => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = usePromociones();
+  } = usePromociones(negocioId);
 
   const { categorias } = useCategorias(negocioId);
   const { productos } = useProductos(negocioId);

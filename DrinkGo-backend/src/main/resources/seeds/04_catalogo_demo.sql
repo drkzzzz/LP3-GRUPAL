@@ -755,6 +755,268 @@ WHERE NOT EXISTS (
 );
 
 
+-- ╔══════════════════════════════════════════════════════════════╗
+-- ║  6. PROMOCIONES  (4 por negocio × 4 negocios = 16)         ║
+-- ║                                                              ║
+-- ║  Promo 1: "Descuento en Rones"                              ║
+-- ║    → 15% dto. sobre categoría Rones                         ║
+-- ║    → Mín. S/40.00 | Máx. 50 usos                           ║
+-- ║    → Vigencia: 2026-03-01 ─ 2026-06-30                     ║
+-- ║                                                              ║
+-- ║  Promo 2: "Promo Verano Cervezas"                           ║
+-- ║    → 10% dto. sobre categoría Cervezas                      ║
+-- ║    → Mín. S/15.00 | Máx. 100 usos                          ║
+-- ║    → Vigencia: 2026-03-01 ─ 2026-04-30                     ║
+-- ║                                                              ║
+-- ║  Promo 3: "Ahorro en Vinos"                                 ║
+-- ║    → S/5.00 dto. fijo sobre categoría Vinos y Espumantes    ║
+-- ║    → Mín. S/30.00 | Máx. 30 usos                           ║
+-- ║    → Vigencia: 2026-03-01 ─ 2026-05-31                     ║
+-- ║                                                              ║
+-- ║  Promo 4: "Oferta Ron Cartavio"                             ║
+-- ║    → 12% dto. sobre producto Ron Cartavio Black 750ml       ║
+-- ║    → Mín. S/45.00 | Máx. 20 usos                           ║
+-- ║    → Vigencia: 2026-03-01 ─ 2026-03-31                     ║
+-- ╚══════════════════════════════════════════════════════════════╝
+
+-- ── DON PEPE ──
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_donpepe, 'Descuento en Rones', 'DP-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-RON15');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_donpepe, 'Promo Verano Cervezas', 'DP-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-CER10');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_donpepe, 'Ahorro en Vinos', 'DP-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-VIN5');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_donpepe, 'Oferta Ron Cartavio', 'DP-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-CART12');
+
+-- ── LA BODEGA ──
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_labodega, 'Descuento en Rones', 'LB-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-RON15');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_labodega, 'Promo Verano Cervezas', 'LB-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-CER10');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_labodega, 'Ahorro en Vinos', 'LB-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-VIN5');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_labodega, 'Oferta Ron Cartavio', 'LB-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-CART12');
+
+-- ── EL IMPERIO ──
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_elimperio, 'Descuento en Rones', 'EI-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-RON15');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_elimperio, 'Promo Verano Cervezas', 'EI-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-CER10');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_elimperio, 'Ahorro en Vinos', 'EI-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-VIN5');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_elimperio, 'Oferta Ron Cartavio', 'EI-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-CART12');
+
+-- ── PREMIUM WINES ──
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_premium, 'Descuento en Rones', 'PW-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-RON15');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_premium, 'Promo Verano Cervezas', 'PW-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-CER10');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_premium, 'Ahorro en Vinos', 'PW-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-VIN5');
+
+INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_premium, 'Oferta Ron Cartavio', 'PW-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-CART12');
+
+
+-- ╔══════════════════════════════════════════════════════════════╗
+-- ║  7. CONDICIONES DE PROMOCIÓN  (4 por negocio × 4 = 16)     ║
+-- ╚══════════════════════════════════════════════════════════════╝
+
+-- ── DON PEPE ──
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-RON15'   LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_donpepe AND nombre = 'Rones' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-RON15' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-CER10'  LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_donpepe AND nombre = 'Cervezas' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-CER10' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-VIN5'   LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_donpepe AND nombre = 'Vinos y Espumantes' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-VIN5' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-CART12' LIMIT 1),
+    'producto',
+    (SELECT id FROM productos WHERE negocio_id = @n_donpepe AND sku = 'DP-RON-001' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-CART12' LIMIT 1)
+);
+
+-- ── LA BODEGA ──
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-RON15'   LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_labodega AND nombre = 'Rones' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-RON15' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-CER10'  LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_labodega AND nombre = 'Cervezas' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-CER10' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-VIN5'   LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_labodega AND nombre = 'Vinos y Espumantes' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-VIN5' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-CART12' LIMIT 1),
+    'producto',
+    (SELECT id FROM productos WHERE negocio_id = @n_labodega AND sku = 'LB-RON-001' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-CART12' LIMIT 1)
+);
+
+-- ── EL IMPERIO ──
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-RON15'   LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_elimperio AND nombre = 'Rones' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-RON15' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-CER10'  LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_elimperio AND nombre = 'Cervezas' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-CER10' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-VIN5'   LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_elimperio AND nombre = 'Vinos y Espumantes' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-VIN5' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-CART12' LIMIT 1),
+    'producto',
+    (SELECT id FROM productos WHERE negocio_id = @n_elimperio AND sku = 'EI-RON-001' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-CART12' LIMIT 1)
+);
+
+-- ── PREMIUM WINES ──
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-RON15'   LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_premium AND nombre = 'Rones' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-RON15' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-CER10'  LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_premium AND nombre = 'Cervezas' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-CER10' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-VIN5'   LIMIT 1),
+    'categoria',
+    (SELECT id FROM categorias WHERE negocio_id = @n_premium AND nombre = 'Vinos y Espumantes' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-VIN5' LIMIT 1)
+);
+
+INSERT INTO condiciones_promocion (promocion_id, tipo_entidad, entidad_id)
+SELECT
+    (SELECT id FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-CART12' LIMIT 1),
+    'producto',
+    (SELECT id FROM productos WHERE negocio_id = @n_premium AND sku = 'PW-RON-001' LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM condiciones_promocion
+    WHERE promocion_id = (SELECT id FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-CART12' LIMIT 1)
+);
+
+
 -- ============================================================
 -- RESUMEN DE DATOS INSERTADOS
 -- ============================================================
@@ -791,4 +1053,24 @@ WHERE NOT EXISTS (
 --   • Combo Ron + Gaseosa   → 1 Ron + 2 Coca-Cola   (S/57→S/49.90)
 --
 -- Detalle Combos:  4 × 4 negocios = 16 registros
+--
+-- Promociones:     4 × 4 negocios = 16 registros
+--   Código         Nombre                   Tipo         Valor   Aplica a    Vigencia
+--   ─────────────────────────────────────────────────────────────────────────────────
+--   XX-RON15       Descuento en Rones       porcentaje   15%     categoria   Mar–Jun 2026
+--   XX-CER10       Promo Verano Cervezas    porcentaje   10%     categoria   Mar–Abr 2026
+--   XX-VIN5        Ahorro en Vinos          monto_fijo   S/5.00  categoria   Mar–May 2026
+--   XX-CART12      Oferta Ron Cartavio      porcentaje   12%     producto    Mar      2026
+--
+-- Condiciones:     4 × 4 negocios = 16 registros
+--   XX-RON15   → categoria  → "Rones"
+--   XX-CER10   → categoria  → "Cervezas"
+--   XX-VIN5    → categoria  → "Vinos y Espumantes"
+--   XX-CART12  → producto   → Ron Cartavio Black 750ml (SKU: XX-RON-001)
+--
+-- Prefijos por negocio:
+--   DP = Don Pepe Licores   (RUC 20123456789)
+--   LB = La Bodega          (RUC 20987654321)
+--   EI = El Imperio         (RUC 20456789123)
+--   PW = Premium Wines      (RUC 20111222333)
 -- ============================================================
