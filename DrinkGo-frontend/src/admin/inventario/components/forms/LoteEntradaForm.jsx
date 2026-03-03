@@ -62,7 +62,7 @@ export const LoteEntradaForm = ({
   }));
   const almacenOptions = almacenes.map((a) => ({
     value: String(a.id),
-    label: `${a.nombre} ${a.esPredeterminado ? '(Principal)' : ''}`,
+    label: a.nombre,
   }));
 
   return (

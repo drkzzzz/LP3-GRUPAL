@@ -15,7 +15,7 @@ export const useAlmacenesConfig = (negocioId) => {
     queryFn: async () => {
       const all = await almacenesConfigService.getAll();
       return negocioId
-        ? all.filter((a) => a.negocio?.id === negocioId)
+        ? all.filter((a) => (a.negocio?.id ?? a.negocioId) === negocioId)
         : all;
     },
     enabled: !!negocioId,

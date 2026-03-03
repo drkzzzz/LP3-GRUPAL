@@ -16,7 +16,7 @@ export const useStockInventario = (negocioId) => {
     queryKey: ['stock-inventario', negocioId],
     queryFn: stockInventarioService.getAll,
     enabled: !!negocioId,
-    select: (data) => data.filter((s) => s.negocio?.id === negocioId),
+    select: (data) => data.filter((s) => (s.negocio?.id ?? s.negocioId) === negocioId),
   });
 
   /* ─── Mutation: crear registro de stock ─── */

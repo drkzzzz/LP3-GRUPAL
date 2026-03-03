@@ -65,7 +65,7 @@ export const useOrdenesCompra = (negocioId) => {
     queryKey: ['almacenes-compras', negocioId],
     queryFn: almacenesComprasService.getAll,
     enabled: !!negocioId,
-    select: (data) => data.filter((a) => a.negocio?.id === negocioId),
+    select: (data) => data.filter((a) => (a.negocio?.id ?? a.negocioId) === negocioId),
   });
 
   const productosQuery = useQuery({

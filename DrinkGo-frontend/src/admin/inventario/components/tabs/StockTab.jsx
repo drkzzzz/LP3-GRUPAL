@@ -45,23 +45,50 @@ export const StockTab = () => {
   const { stock, isLoading } = useStockInventario(negocioId);
   const { almacenes } = useAlmacenes(negocioId);
 
-  /* ─── Filtrado client-side ─── */
+  /* ─── Paso 1: pre-filtrar por almacén seleccionado (registros crudos) ─── */
+  const stockPreFiltrado = useMemo(() => {
+    if (!filterAlmacen) return stock;
+    return stock.filter((s) => String(s.almacen?.id ?? s.almacenId) === filterAlmacen);
+  }, [stock, filterAlmacen]);
+
+  /* ─── Paso 2: consolidar por producto (1 fila por producto) ─── */
+  const stockConsolidado = useMemo(() => {
+    const map = new Map();
+    for (const s of stockPreFiltrado) {
+      const key = s.producto?.id ?? '';
+      if (!map.has(key)) {
+        map.set(key, {
+          ...s,
+          cantidadActual: Number(s.cantidadActual || 0),
+          cantidadDisponible: Number(s.cantidadDisponible || 0),
+          cantidadReservada: Number(s.cantidadReservada || 0),
+          _costoTotal: Number(s.cantidadActual || 0) * Number(s.costoPromedio || 0),
+          _almacenFiltrado: filterAlmacen ? s.almacen : null,
+        });
+      } else {
+        const existing = map.get(key);
+        const addCant = Number(s.cantidadActual || 0);
+        const newCant = existing.cantidadActual + addCant;
+        existing._costoTotal += addCant * Number(s.costoPromedio || 0);
+        existing.cantidadActual = newCant;
+        existing.cantidadDisponible += Number(s.cantidadDisponible || 0);
+        existing.cantidadReservada += Number(s.cantidadReservada || 0);
+        existing.costoPromedio = newCant > 0 ? existing._costoTotal / newCant : 0;
+      }
+    }
+    return Array.from(map.values());
+  }, [stockPreFiltrado, filterAlmacen]);
+
+  /* ─── Paso 3: filtro de búsqueda por texto ─── */
   const filtered = useMemo(() => {
-    let result = stock;
-    if (debouncedSearch) {
-      const q = debouncedSearch.toLowerCase();
-      result = result.filter(
-        (s) =>
-          s.producto?.nombre?.toLowerCase().includes(q) ||
-          s.producto?.sku?.toLowerCase().includes(q) ||
-          s.almacen?.nombre?.toLowerCase().includes(q),
-      );
-    }
-    if (filterAlmacen) {
-      result = result.filter((s) => String(s.almacen?.id) === filterAlmacen);
-    }
-    return result;
-  }, [stock, debouncedSearch, filterAlmacen]);
+    if (!debouncedSearch) return stockConsolidado;
+    const q = debouncedSearch.toLowerCase();
+    return stockConsolidado.filter(
+      (s) =>
+        s.producto?.nombre?.toLowerCase().includes(q) ||
+        s.producto?.sku?.toLowerCase().includes(q),
+    );
+  }, [stockConsolidado, debouncedSearch]);
 
   /* ─── Paginación client-side ─── */
   const paginatedData = useMemo(() => {
@@ -69,14 +96,14 @@ export const StockTab = () => {
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  /* ─── Stats ─── */
+  /* ─── Stats: siempre reflejan el almacén seleccionado ─── */
   const stats = useMemo(() => {
-    const total = stock.length;
-    const stockBajo = stock.filter((s) => Number(s.cantidadActual) <= STOCK_MINIMO && Number(s.cantidadActual) > STOCK_CRITICO).length;
-    const stockCritico = stock.filter((s) => Number(s.cantidadActual) <= STOCK_CRITICO).length;
-    const valorTotal = stock.reduce((acc, s) => acc + (Number(s.cantidadActual) * Number(s.costoPromedio || 0)), 0);
+    const total = stockConsolidado.length;
+    const stockBajo = stockConsolidado.filter((s) => Number(s.cantidadActual) <= STOCK_MINIMO && Number(s.cantidadActual) > STOCK_CRITICO).length;
+    const stockCritico = stockConsolidado.filter((s) => Number(s.cantidadActual) <= STOCK_CRITICO).length;
+    const valorTotal = stockConsolidado.reduce((acc, s) => acc + (Number(s.cantidadActual) * Number(s.costoPromedio || 0)), 0);
     return { total, stockBajo, stockCritico, valorTotal };
-  }, [stock]);
+  }, [stockConsolidado]);
 
   /* ─── Helpers ─── */
   const getStockBadge = (cantidad) => {
@@ -114,9 +141,11 @@ export const StockTab = () => {
     {
       key: 'almacen',
       title: 'Almacén',
-      width: '150px',
+      width: '160px',
       render: (_, row) => (
-        <span className="text-sm text-gray-600">{row.almacen?.nombre || '—'}</span>
+        row._almacenFiltrado
+          ? <span className="text-sm text-gray-600">{row._almacenFiltrado.nombre}</span>
+          : <span className="text-xs text-gray-400 italic">Todos los almacenes</span>
       ),
     },
     {
@@ -279,7 +308,9 @@ export const StockTab = () => {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-gray-500">Almacén</p>
-                <p className="font-medium">{selected.almacen?.nombre || '—'}</p>
+                <p className="font-medium">
+                  {selected._almacenFiltrado?.nombre || 'Todos los almacenes'}
+                </p>
               </div>
               <div>
                 <p className="text-gray-500">Estado</p>

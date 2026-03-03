@@ -3,6 +3,7 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -23,6 +24,7 @@ public class Sedes {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "negocio_id", nullable = false)
     private Negocios negocio;
@@ -53,6 +55,7 @@ public class Sedes {
 
     private String telefono;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_gerente_id")
     private Usuarios usuarioGerente;
@@ -101,6 +104,14 @@ public class Sedes {
     // Getters y Setters
     public Long getId() {
         return id;
+    }
+
+    public Long getNegocioId() {
+        return negocio != null ? negocio.getId() : null;
+    }
+
+    public Long getUsuarioGerenteId() {
+        return usuarioGerente != null ? usuarioGerente.getId() : null;
     }
 
     public void setId(Long id) {

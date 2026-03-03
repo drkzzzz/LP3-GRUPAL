@@ -19,10 +19,14 @@ export const useAlmacenes = (negocioId) => {
     queryFn: almacenesService.getAll,
     enabled: !!negocioId,
     select: (data) => {
-      const porNegocio = data.filter((a) => a.negocio?.id === negocioId);
+      const porNegocio = data.filter((a) =>
+        (a.negocio?.id ?? a.negocioId) === negocioId
+      );
       // Si hay sede activa, mostrar solo almacenes de esa sede
       if (sedeActiva?.id) {
-        return porNegocio.filter((a) => a.sede?.id === sedeActiva.id);
+        return porNegocio.filter((a) =>
+          (a.sede?.id ?? a.sedeId) === sedeActiva.id
+        );
       }
       return porNegocio;
     },
@@ -32,7 +36,7 @@ export const useAlmacenes = (negocioId) => {
     queryKey: ['sedes', negocioId],
     queryFn: sedesService.getAll,
     enabled: !!negocioId,
-    select: (data) => data.filter((s) => s.negocio?.id === negocioId),
+    select: (data) => data.filter((s) => (s.negocio?.id ?? s.negocioId) === negocioId),
   });
 
   /* ─── Mutations ─── */

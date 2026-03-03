@@ -3,7 +3,9 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.annotation.JsonSetter;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -68,20 +70,32 @@ public class Almacenes {
         this.id = id;
     }
 
+    @JsonIgnore
     public Negocios getNegocio() {
         return negocio;
     }
 
+    @JsonSetter
     public void setNegocio(Negocios negocio) {
         this.negocio = negocio;
     }
 
+    public Long getNegocioId() {
+        return negocio != null ? negocio.getId() : null;
+    }
+
+    @JsonIgnore
     public Sedes getSede() {
         return sede;
     }
 
+    @JsonSetter
     public void setSede(Sedes sede) {
         this.sede = sede;
+    }
+
+    public Long getSedeId() {
+        return sede != null ? sede.getId() : null;
     }
 
     public String getCodigo() {

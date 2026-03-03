@@ -72,7 +72,7 @@ export const productoProveedorSchema = z.object({
     .optional()
     .default('')
     .refine((v) => !v || Number(v) >= 0, 'Debe ser un número positivo'),
-  esPredeterminado: z.boolean().optional().default(false),
+
 });
 
 /* ================================================================

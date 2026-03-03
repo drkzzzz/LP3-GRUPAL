@@ -26,10 +26,6 @@ export const almacenSchema = z.object({
   sedeId: z
     .string()
     .min(1, 'La sede es obligatoria'),
-  esPredeterminado: z
-    .boolean()
-    .optional()
-    .default(false),
 });
 
 /* ================================================================

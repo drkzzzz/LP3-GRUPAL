@@ -16,7 +16,6 @@ import {
   Warehouse,
   CheckCircle,
   XCircle,
-  Star,
 } from 'lucide-react';
 import { useAlmacenes } from '../../hooks/useAlmacenes';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
@@ -73,7 +72,6 @@ export const AlmacenesTab = () => {
       nombre: '',
       descripcion: '',
       sedeId: '',
-      esPredeterminado: false,
     },
   });
 
@@ -99,13 +97,12 @@ export const AlmacenesTab = () => {
   const stats = useMemo(() => ({
     total: almacenes.length,
     activos: almacenes.filter((a) => a.estaActivo !== false).length,
-    predeterminados: almacenes.filter((a) => a.esPredeterminado).length,
   }), [almacenes]);
 
   /* ─── Handlers ─── */
   const openCreate = () => {
     setEditing(null);
-    reset({ codigo: '', nombre: '', descripcion: '', sedeId: '', esPredeterminado: false });
+    reset({ codigo: '', nombre: '', descripcion: '', sedeId: '' });
     setIsFormOpen(true);
   };
 
@@ -115,8 +112,7 @@ export const AlmacenesTab = () => {
       codigo: item.codigo || '',
       nombre: item.nombre || '',
       descripcion: item.descripcion || '',
-      sedeId: String(item.sede?.id || ''),
-      esPredeterminado: item.esPredeterminado || false,
+      sedeId: String(item.sede?.id ?? item.sedeId ?? ''),
     });
     setIsFormOpen(true);
   };
@@ -133,7 +129,6 @@ export const AlmacenesTab = () => {
       codigo: formData.codigo.trim(),
       nombre: formData.nombre.trim(),
       descripcion: formData.descripcion?.trim() || null,
-      esPredeterminado: formData.esPredeterminado,
     };
 
     if (editing) {
@@ -188,22 +183,12 @@ export const AlmacenesTab = () => {
       key: 'sede',
       title: 'Sede',
       width: '150px',
-      render: (_, row) => (
-        <span className="text-sm text-gray-600">{row.sede?.nombre || '—'}</span>
-      ),
+      render: (_, row) => {
+        const sedeNombre = sedes.find((s) => s.id === (row.sede?.id ?? row.sedeId))?.nombre;
+        return <span className="text-sm text-gray-600">{sedeNombre || '—'}</span>;
+      },
     },
-    {
-      key: 'predeterminado',
-      title: 'Predet.',
-      width: '90px',
-      align: 'center',
-      render: (_, row) =>
-        row.esPredeterminado ? (
-          <Star size={16} className="text-yellow-500 mx-auto" fill="currentColor" />
-        ) : (
-          <span className="text-gray-300">—</span>
-        ),
-    },
+
     {
       key: 'estado',
       title: 'Estado',
@@ -264,19 +249,13 @@ export const AlmacenesTab = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <StatCard title="Total almacenes" value={stats.total} icon={Warehouse} />
         <StatCard
           title="Activos"
           value={stats.activos}
           icon={CheckCircle}
           className="border-l-4 border-l-green-500"
-        />
-        <StatCard
-          title="Predeterminados"
-          value={stats.predeterminados}
-          icon={Star}
-          className="border-l-4 border-l-yellow-500"
         />
       </div>
 
@@ -349,18 +328,6 @@ export const AlmacenesTab = () => {
             {...register('descripcion')}
             error={errors.descripcion?.message}
           />
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="esPredeterminado"
-              {...register('esPredeterminado')}
-              className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-            />
-            <label htmlFor="esPredeterminado" className="text-sm text-gray-700">
-              Marcar como almacén predeterminado
-            </label>
-          </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <Button
