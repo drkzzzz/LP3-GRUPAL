@@ -30,8 +30,11 @@ adminApi.interceptors.response.use(
     if (error.response?.status === 401) {
       const isLoginPage = window.location.pathname.includes('/login');
       if (!isLoginPage) {
+        const { esProgramador } = useAdminAuthStore.getState();
         useAdminAuthStore.getState().logout();
-        window.location.href = '/admin/login';
+        window.location.href = esProgramador
+          ? '/superadmin/programador/negocios'
+          : '/admin/login';
       }
     }
     return Promise.reject(error);

@@ -34,8 +34,11 @@ import {
   Zap,
   TrendingDown,
   MapPin,
+  Code2,
+  ArrowLeft,
 } from 'lucide-react';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
+import { useAuthStore } from '@/stores/authStore';
 
 /* ─── Sub-items del menú Configuración ─── */
 const CONFIGURACION_SUBITEMS = [
@@ -158,7 +161,8 @@ export const AdminLayout = () => {
   const [openMenus, setOpenMenus] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, negocio, sede, logout, hasPermiso, permisos } = useAdminAuthStore();
+  const { user, negocio, sede, logout, hasPermiso, permisos, esProgramador } = useAdminAuthStore();
+  const { logout: superadminLogout } = useAuthStore();
 
 
   /**
@@ -187,11 +191,24 @@ export const AdminLayout = () => {
     navigate('/admin/login');
   };
 
+  /** Solo para programadores: vuelve a la selección de negocio sin cerrar la sesión superadmin */
+  const handleVolver = () => {
+    logout(); // limpia adminAuthStore
+    navigate('/superadmin/programador/negocios', { replace: true });
+  };
+
+  /** Cerrar sesión completa para programadores */
+  const handleLogoutProgramador = () => {
+    logout();
+    superadminLogout();
+    navigate('/superadmin/login', { replace: true });
+  };
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-gray-700">
-        <div className="p-2 bg-green-600 rounded-lg shrink-0">
+        <div className={`p-2 rounded-lg shrink-0 ${esProgramador ? 'bg-blue-600' : 'bg-green-600'}`}>
           <Wine size={20} className="text-white" />
         </div>
         {sidebarOpen && (
@@ -200,8 +217,20 @@ export const AdminLayout = () => {
             <p className="text-xs text-gray-400 whitespace-nowrap truncate max-w-[140px]">
               {negocio?.nombre || negocio?.razonSocial || 'Panel Admin'}
             </p>
-            {sede && (
+            {esProgramador && (
+              <p className="text-xs text-blue-400 whitespace-nowrap truncate max-w-[140px] flex items-center gap-1 mt-0.5">
+                <Code2 size={10} />
+                Modo Programador
+              </p>
+            )}
+            {sede && !esProgramador && (
               <p className="text-xs text-green-400 whitespace-nowrap truncate max-w-[140px] flex items-center gap-1 mt-0.5">
+                <MapPin size={10} />
+                {sede.nombre}
+              </p>
+            )}
+            {esProgramador && sede && (
+              <p className="text-xs text-gray-400 whitespace-nowrap truncate max-w-[140px] flex items-center gap-1 mt-0.5">
                 <MapPin size={10} />
                 {sede.nombre}
               </p>
@@ -290,6 +319,16 @@ export const AdminLayout = () => {
 
       {/* User Section */}
       <div className="border-t border-gray-700 p-4">
+        {/* Botón volver al listado de negocios (solo programador) */}
+        {esProgramador && sidebarOpen && (
+          <button
+            onClick={handleVolver}
+            className="w-full flex items-center gap-2 px-3 py-2 mb-3 rounded-lg text-sm text-blue-300 hover:text-white hover:bg-blue-600/20 transition-colors"
+          >
+            <ArrowLeft size={15} className="shrink-0" />
+            <span>Cambiar negocio</span>
+          </button>
+        )}
         {sidebarOpen ? (
           <div className="flex items-center gap-3">
             <button
@@ -312,7 +351,7 @@ export const AdminLayout = () => {
               </div>
             </button>
             <button
-              onClick={handleLogout}
+              onClick={esProgramador ? handleLogoutProgramador : handleLogout}
               className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors shrink-0"
               title="Cerrar sesión"
             >
@@ -404,6 +443,19 @@ export const AdminLayout = () => {
               {sede.nombre}
               {sede.codigo && <span className="text-gray-400">· {sede.codigo}</span>}
             </span>
+          )}
+
+          {/* Programador mode badge */}
+          {esProgramador && (
+            <button
+              onClick={handleVolver}
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100 transition-colors"
+              title="Volver a selección de negocio"
+            >
+              <Code2 size={11} />
+              Programador · {user?.nombres}
+              <ArrowLeft size={11} />
+            </button>
           )}
 
           {/* Negocio badge */}

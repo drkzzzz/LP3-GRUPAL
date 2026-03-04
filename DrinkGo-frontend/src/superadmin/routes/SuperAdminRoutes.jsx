@@ -9,6 +9,7 @@ import { ConfiguracionGlobal } from '../pages/ConfiguracionGlobal';
 import { AuditoriaLogs } from '../pages/AuditoriaLogs';
 import { Reportes } from '../pages/Reportes';
 import { MiPerfil } from '../pages/MiPerfil';
+import { ProgramadorNegocios } from '../pages/ProgramadorNegocios';
 import { useAuthStore } from '@/stores/authStore';
 
 const ProtectedRoute = ({ children }) => {
@@ -19,15 +20,43 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+/** Ruta exclusiva para el rol superadmin/soporte/visualizador (no programador) */
+const SuperAdminOnlyRoute = ({ children }) => {
+  const { token, user } = useAuthStore();
+  if (!token) return <Navigate to="/superadmin/login" replace />;
+  if (user?.rol === 'programador') return <Navigate to="/superadmin/programador/negocios" replace />;
+  return children;
+};
+
+/** Ruta exclusiva para el rol programador */
+const ProgramadorRoute = ({ children }) => {
+  const { token, user } = useAuthStore();
+  if (!token) return <Navigate to="/superadmin/login" replace />;
+  if (user?.rol !== 'programador') return <Navigate to="/superadmin/dashboard" replace />;
+  return children;
+};
+
 export const SuperAdminRoutes = () => {
   return (
     <Routes>
       <Route path="login" element={<Login />} />
+
+      {/* Ruta de selección de negocio para programadores */}
+      <Route
+        path="programador/negocios"
+        element={
+          <ProgramadorRoute>
+            <ProgramadorNegocios />
+          </ProgramadorRoute>
+        }
+      />
+
+      {/* Panel superadmin (solo roles no-programador) */}
       <Route
         element={
-          <ProtectedRoute>
+          <SuperAdminOnlyRoute>
             <SuperAdminLayout />
-          </ProtectedRoute>
+          </SuperAdminOnlyRoute>
         }
       >
         <Route index element={<Navigate to="dashboard" replace />} />

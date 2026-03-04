@@ -2,11 +2,18 @@ package DrinkGo.DrinkGo_backend.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import DrinkGo.DrinkGo_backend.entity.Negocios;
+import DrinkGo.DrinkGo_backend.entity.Sedes;
 import DrinkGo.DrinkGo_backend.entity.UsuariosPlataforma;
+import DrinkGo.DrinkGo_backend.repository.NegociosRepository;
+import DrinkGo.DrinkGo_backend.repository.SedesRepository;
 import DrinkGo.DrinkGo_backend.security.JwtUtil;
 import DrinkGo.DrinkGo_backend.service.IUsuariosPlataformaService;
+import java.security.Principal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -21,7 +28,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import java.security.Principal;
 
 @RestController
 @RequestMapping("/restful")
@@ -34,6 +40,12 @@ public class UsuariosPlataformaController {
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
+    private NegociosRepository negociosRepository;
+
+    @Autowired
+    private SedesRepository sedesRepository;
 
     @GetMapping("/usuarios-plataforma")
     public List<UsuariosPlataforma> buscarTodos() {
@@ -120,17 +132,89 @@ public class UsuariosPlataformaController {
         String token = jwtUtil.generarToken(email);
 
         // Preparar respuesta
+        Map<String, Object> usuarioData = new LinkedHashMap<>();
+        usuarioData.put("id", usuario.getId());
+        usuarioData.put("uuid", usuario.getUuid());
+        usuarioData.put("email", usuario.getEmail());
+        usuarioData.put("nombres", usuario.getNombres());
+        usuarioData.put("apellidos", usuario.getApellidos());
+        usuarioData.put("rol", usuario.getRol().toString());
+        // Incluir modulos asignados solo para programadores
+        if (usuario.getRol() == UsuariosPlataforma.RolPlataforma.programador) {
+            usuarioData.put("modulosAsignados", usuario.getModulosAsignados());
+        }
+
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
-        response.put("usuario", Map.of(
-                "id", usuario.getId(),
-                "uuid", usuario.getUuid(),
-                "email", usuario.getEmail(),
-                "nombres", usuario.getNombres(),
-                "apellidos", usuario.getApellidos(),
-                "rol", usuario.getRol().toString()));
+        response.put("usuario", usuarioData);
 
         return ResponseEntity.ok(response);
+    }
+
+    // ── Programador Endpoints ─────────────────────────────────
+
+    /**
+     * Devuelve todos los negocios activos con sus sedes anidadas.
+     * Usado por el rol programador al seleccionar un negocio para probar sus
+     * módulos.
+     */
+    @GetMapping("/superadmin/programador/negocios-con-sedes")
+    public ResponseEntity<?> getNegociosConSedes() {
+        List<Negocios> negocios = negociosRepository.findAll();
+        List<Map<String, Object>> resultado = new ArrayList<>();
+        for (Negocios negocio : negocios) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", negocio.getId());
+            item.put("uuid", negocio.getUuid());
+            item.put("nombreComercial", negocio.getNombreComercial());
+            item.put("razonSocial", negocio.getRazonSocial());
+            item.put("ruc", negocio.getRuc());
+            item.put("estado", negocio.getEstado());
+            item.put("urlLogo", negocio.getUrlLogo());
+            List<Sedes> sedes = sedesRepository.findByNegocioId(negocio.getId());
+            List<Map<String, Object>> sedesData = new ArrayList<>();
+            for (Sedes sede : sedes) {
+                Map<String, Object> sedeItem = new LinkedHashMap<>();
+                sedeItem.put("id", sede.getId());
+                sedeItem.put("codigo", sede.getCodigo());
+                sedeItem.put("nombre", sede.getNombre());
+                sedeItem.put("direccion", sede.getDireccion());
+                sedeItem.put("ciudad", sede.getCiudad());
+                sedeItem.put("esPrincipal", sede.getEsPrincipal());
+                sedesData.add(sedeItem);
+            }
+            item.put("sedes", sedesData);
+            resultado.add(item);
+        }
+        return ResponseEntity.ok(resultado);
+    }
+
+    /**
+     * Actualiza los módulos asignados a un programador.
+     * Solo aplica cuando el usuario tiene rol = programador.
+     */
+    @PatchMapping("/superadmin/usuarios-plataforma/{id}/modulos")
+    public ResponseEntity<?> actualizarModulosProgramador(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        Optional<UsuariosPlataforma> opt = service.buscarId(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Usuario no encontrado"));
+        }
+        UsuariosPlataforma usuario = opt.get();
+        if (usuario.getRol() != UsuariosPlataforma.RolPlataforma.programador) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El usuario no tiene rol de programador"));
+        }
+        Object modulos = body.get("modulosAsignados");
+        if (modulos == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "modulosAsignados es requerido"));
+        }
+        // modulos puede ser un String JSON o una Lista - se almacena como String JSON
+        usuario.setModulosAsignados(modulos.toString());
+        service.modificar(usuario);
+        return ResponseEntity.ok(Map.of(
+                "message", "Módulos actualizados exitosamente",
+                "modulosAsignados", usuario.getModulosAsignados()));
     }
 
     // ── Profile Endpoints ──────────────────────────────────────

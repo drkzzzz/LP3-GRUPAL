@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 @SQLDelete(sql = "UPDATE usuarios_plataforma SET esta_activo = 0 WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "uuid", "email", "hashContrasena", "nombres", "apellidos", "telefono", "rol",
-        "estaActivo", "ultimoAccesoEn", "contrasenacambiadaEn", "intentosFallidosAcceso", "bloqueadoHasta",
-        "creadoEn", "actualizadoEn" })
+        "modulosAsignados", "estaActivo", "ultimoAccesoEn", "contrasenacambiadaEn", "intentosFallidosAcceso",
+        "bloqueadoHasta", "creadoEn", "actualizadoEn" })
 public class UsuariosPlataforma {
 
     @Id
@@ -41,6 +41,14 @@ public class UsuariosPlataforma {
     @Enumerated(EnumType.STRING)
     private RolPlataforma rol = RolPlataforma.superadmin;
 
+    /**
+     * Array JSON de códigos de módulo asignados. Solo aplica cuando rol =
+     * programador.
+     * Ejemplo: ["m.catalogo", "m.devoluciones"]
+     */
+    @Column(name = "modulos_asignados", columnDefinition = "JSON")
+    private String modulosAsignados;
+
     @Column(name = "esta_activo")
     private Boolean estaActivo = true;
 
@@ -63,7 +71,7 @@ public class UsuariosPlataforma {
     private LocalDateTime actualizadoEn;
 
     public enum RolPlataforma {
-        superadmin, soporte_plataforma, visualizador_plataforma
+        superadmin, soporte_plataforma, visualizador_plataforma, programador
     }
 
     @PrePersist
@@ -145,6 +153,14 @@ public class UsuariosPlataforma {
         this.rol = rol;
     }
 
+    public String getModulosAsignados() {
+        return modulosAsignados;
+    }
+
+    public void setModulosAsignados(String modulosAsignados) {
+        this.modulosAsignados = modulosAsignados;
+    }
+
     public Boolean getEstaActivo() {
         return estaActivo;
     }
@@ -204,7 +220,8 @@ public class UsuariosPlataforma {
     @Override
     public String toString() {
         return "UsuariosPlataforma [id=" + id + ", uuid=" + uuid + ", email=" + email + ", nombres=" + nombres
-                + ", apellidos=" + apellidos + ", telefono=" + telefono + ", rol=" + rol + ", estaActivo=" + estaActivo
+                + ", apellidos=" + apellidos + ", telefono=" + telefono + ", rol=" + rol
+                + ", modulosAsignados=" + modulosAsignados + ", estaActivo=" + estaActivo
                 + ", ultimoAccesoEn=" + ultimoAccesoEn + ", intentosFallidosAcceso=" + intentosFallidosAcceso
                 + ", bloqueadoHasta=" + bloqueadoHasta + ", creadoEn=" + creadoEn + ", actualizadoEn=" + actualizadoEn
                 + "]";

@@ -33,8 +33,15 @@ export const Login = () => {
     try {
       const data = await authService.login(formData.email, formData.password);
       login(data.usuario, data.token);
-      message.success('Bienvenido al panel de SuperAdmin');
-      navigate('/superadmin/dashboard', { replace: true });
+
+      // Redirigir según el rol
+      if (data.usuario?.rol === 'programador') {
+        message.success(`Bienvenido, ${data.usuario.nombres}. Selecciona un negocio para continuar.`);
+        navigate('/superadmin/programador/negocios', { replace: true });
+      } else {
+        message.success('Bienvenido al panel de SuperAdmin');
+        navigate('/superadmin/dashboard', { replace: true });
+      }
     } catch (error) {
       const errorMsg =
         error.response?.data?.error || 'Error al iniciar sesión';
