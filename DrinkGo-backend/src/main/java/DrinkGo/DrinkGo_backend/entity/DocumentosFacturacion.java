@@ -3,6 +3,8 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -148,6 +150,7 @@ public class DocumentosFacturacion {
         this.id = id;
     }
 
+    @JsonIgnore
     public Negocios getNegocio() {
         return negocio;
     }
@@ -156,12 +159,23 @@ public class DocumentosFacturacion {
         this.negocio = negocio;
     }
 
+    @JsonProperty("negocioId")
+    public Long getNegocioId() {
+        return negocio != null ? negocio.getId() : null;
+    }
+
+    @JsonIgnore
     public SeriesFacturacion getSerieFacturacion() {
         return serieFacturacion;
     }
 
     public void setSerieFacturacion(SeriesFacturacion serieFacturacion) {
         this.serieFacturacion = serieFacturacion;
+    }
+
+    @JsonProperty("serieFacturacionId")
+    public Long getSerieFacturacionId() {
+        return serieFacturacion != null ? serieFacturacion.getId() : null;
     }
 
     public TipoDocumento getTipoDocumento() {
@@ -180,6 +194,7 @@ public class DocumentosFacturacion {
         this.numeroDocumento = numeroDocumento;
     }
 
+    @JsonIgnore
     public Clientes getCliente() {
         return cliente;
     }
@@ -188,6 +203,26 @@ public class DocumentosFacturacion {
         this.cliente = cliente;
     }
 
+    @JsonProperty("clienteId")
+    public Long getClienteId() {
+        return cliente != null ? cliente.getId() : null;
+    }
+
+    @JsonProperty("clienteNombre")
+    public String getClienteNombre() {
+        if (cliente == null) return null;
+        if (cliente.getRazonSocial() != null && !cliente.getRazonSocial().isBlank())
+            return cliente.getRazonSocial();
+        return (cliente.getNombres() != null ? cliente.getNombres() : "")
+             + (cliente.getApellidos() != null ? " " + cliente.getApellidos() : "");
+    }
+
+    @JsonProperty("clienteNumeroDocumento")
+    public String getClienteNumeroDocumento() {
+        return cliente != null ? cliente.getNumeroDocumento() : null;
+    }
+
+    @JsonIgnore
     public Ventas getVenta() {
         return venta;
     }
@@ -196,12 +231,23 @@ public class DocumentosFacturacion {
         this.venta = venta;
     }
 
+    @JsonProperty("ventaId")
+    public Long getVentaId() {
+        return venta != null ? venta.getId() : null;
+    }
+
+    @JsonIgnore
     public Pedidos getPedido() {
         return pedido;
     }
 
     public void setPedido(Pedidos pedido) {
         this.pedido = pedido;
+    }
+
+    @JsonProperty("pedidoId")
+    public Long getPedidoId() {
+        return pedido != null ? pedido.getId() : null;
     }
 
     public LocalDate getFechaEmision() {
@@ -316,12 +362,18 @@ public class DocumentosFacturacion {
         this.codigoRespuestaSunat = codigoRespuestaSunat;
     }
 
+    @JsonIgnore
     public Usuarios getUsuario() {
         return usuario;
     }
 
     public void setUsuario(Usuarios usuario) {
         this.usuario = usuario;
+    }
+
+    @JsonProperty("usuarioId")
+    public Long getUsuarioId() {
+        return usuario != null ? usuario.getId() : null;
     }
 
     public Boolean getEstaActivo() {

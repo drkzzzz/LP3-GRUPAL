@@ -42,7 +42,6 @@ import { GastosPage } from '../ventas/pages/GastosPage';
 /* ─── Facturación sub-páginas ─── */
 import { ComprobantesTab } from '../facturacion/pages/ComprobantesTab';
 import { SeriesTab } from '../facturacion/pages/SeriesTab';
-import { MetodosPagoTab } from '../facturacion/pages/MetodosPagoTab';
 import { PseTab } from '../facturacion/pages/PseTab';
 
 /* ─── Configuración sub-páginas ─── */
@@ -118,7 +117,6 @@ export const AdminRoutes = () => {
           <Route index element={<Navigate to="comprobantes" replace />} />
           <Route path="comprobantes" element={<ComprobantesTab />} />
           <Route path="series" element={<SeriesTab />} />
-          <Route path="metodos-pago" element={<MetodosPagoTab />} />
           <Route path="pse" element={<PseTab />} />
         </Route>
         <Route path="reportes" element={<Reportes />} />

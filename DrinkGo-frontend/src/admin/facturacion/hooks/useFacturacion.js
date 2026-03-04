@@ -69,47 +69,6 @@ export const useCambiarEstadoComprobante = () => {
   });
 };
 
-/* ═══ MÉTODOS DE PAGO ═══ */
-
-export const useMetodosPago = (negocioId) => {
-  return useQuery({
-    queryKey: ['facturacion', 'metodos-pago', negocioId],
-    queryFn: () => facturacionService.getMetodosPago(negocioId),
-    enabled: !!negocioId,
-    staleTime: 1000 * 60 * 5,
-  });
-};
-
-export const useCrearMetodoPago = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: facturacionService.crearMetodoPago,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['facturacion', 'metodos-pago'] });
-    },
-  });
-};
-
-export const useActualizarMetodoPago = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }) => facturacionService.actualizarMetodoPago(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['facturacion', 'metodos-pago'] });
-    },
-  });
-};
-
-export const useEliminarMetodoPago = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: facturacionService.eliminarMetodoPago,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['facturacion', 'metodos-pago'] });
-    },
-  });
-};
-
 /* ═══ PSE – CONFIGURACIÓN ═══ */
 
 export const useConfiguracionPse = (negocioId) => {
@@ -133,7 +92,7 @@ export const useGuardarConfiguracionPse = () => {
 
 export const useProbarConexionPse = () => {
   return useMutation({
-    mutationFn: (negocioId) => facturacionService.probarConexionPse(negocioId),
+    mutationFn: ({ negocioId, apiToken }) => facturacionService.probarConexionPse({ negocioId, apiToken }),
   });
 };
 
@@ -161,6 +120,14 @@ export const useBandejaPse = (negocioId, estado) => {
     queryFn: () => facturacionService.getBandejaPse(negocioId, estado),
     enabled: !!negocioId,
     staleTime: 1000 * 60 * 2,
+    // Auto-polling cada 5 segundos mientras haya documentos en estado "enviado"
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (Array.isArray(data) && data.some((d) => d.estadoDocumento === 'enviado')) {
+        return 5000;
+      }
+      return false;
+    },
   });
 };
 

@@ -1,6 +1,5 @@
 package DrinkGo.DrinkGo_backend.controller;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,7 +14,6 @@ import DrinkGo.DrinkGo_backend.dto.facturacion.CrearSerieRequest;
 import DrinkGo.DrinkGo_backend.entity.DocumentosFacturacion;
 import DrinkGo.DrinkGo_backend.entity.MetodosPago;
 import DrinkGo.DrinkGo_backend.entity.Negocios;
-import DrinkGo.DrinkGo_backend.entity.Sedes;
 import DrinkGo.DrinkGo_backend.entity.SeriesFacturacion;
 import DrinkGo.DrinkGo_backend.entity.ConfiguracionPse;
 import DrinkGo.DrinkGo_backend.entity.HistorialPse;
@@ -27,6 +25,7 @@ import DrinkGo.DrinkGo_backend.repository.SeriesFacturacionRepository;
 import DrinkGo.DrinkGo_backend.repository.ConfiguracionPseRepository;
 import DrinkGo.DrinkGo_backend.repository.HistorialPseRepository;
 import DrinkGo.DrinkGo_backend.service.FacturacionService;
+import DrinkGo.DrinkGo_backend.service.PseAsyncService;
 
 /**
  * Controller for Facturación admin module.
@@ -45,6 +44,7 @@ public class AdminFacturacionController {
     @Autowired private ConfiguracionPseRepository configPseRepo;
     @Autowired private HistorialPseRepository historialPseRepo;
     @Autowired private FacturacionService facturacionService;
+    @Autowired private PseAsyncService pseAsyncService;
 
     // ═══════════════════════════════════════════════════════════════════
     //  SERIES DE FACTURACIÓN
@@ -161,7 +161,7 @@ public class AdminFacturacionController {
     @GetMapping("/comprobantes/{id}")
     public ResponseEntity<?> getComprobanteById(@PathVariable Long id) {
         try {
-            Optional<DocumentosFacturacion> opt = documentosRepo.findById(id);
+            Optional<DocumentosFacturacion> opt = documentosRepo.findByIdWithRelations(id);
             if (opt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "Comprobante no encontrado"));
@@ -298,7 +298,7 @@ public class AdminFacturacionController {
     @GetMapping("/pse/configuracion/{negocioId}")
     public ResponseEntity<?> getConfiguracionPse(@PathVariable Long negocioId) {
         try {
-            Optional<ConfiguracionPse> config = configPseRepo.findByNegocioId(negocioId);
+            Optional<ConfiguracionPse> config = configPseRepo.findFirstByNegocioId(negocioId);
             if (config.isEmpty()) {
                 // Retornar config default vacía
                 ConfiguracionPse defaultConfig = new ConfiguracionPse();
@@ -319,7 +319,7 @@ public class AdminFacturacionController {
     public ResponseEntity<?> guardarConfiguracionPse(
             @PathVariable Long negocioId, @RequestBody Map<String, Object> body) {
         try {
-            ConfiguracionPse config = configPseRepo.findByNegocioId(negocioId)
+            ConfiguracionPse config = configPseRepo.findFirstByNegocioId(negocioId)
                     .orElseGet(() -> {
                         ConfiguracionPse c = new ConfiguracionPse();
                         c.setNegocio(negociosRepo.getReferenceById(negocioId));
@@ -341,20 +341,54 @@ public class AdminFacturacionController {
     }
 
     @PostMapping("/pse/probar-conexion/{negocioId}")
-    public ResponseEntity<?> probarConexionPse(@PathVariable Long negocioId) {
+    public ResponseEntity<?> probarConexionPse(
+            @PathVariable Long negocioId,
+            @RequestBody(required = false) Map<String, Object> body) {
         try {
-            // Verificar que existe configuración con token
-            Optional<ConfiguracionPse> configOpt = configPseRepo.findByNegocioId(negocioId);
-            String proveedor = "SIMULADOR";
-            String entorno = "SANDBOX";
+            final String TOKEN_VALIDO = "9d4f7a2b8c1e6f3a5b9c2d7e4f1a8b6c3d9e2f7a1b4c8d6e3f5a9b2c7d4e1f";
+            String tokenEnviado = body != null ? (String) body.get("apiToken") : null;
 
-            if (configOpt.isPresent()) {
-                ConfiguracionPse cfg = configOpt.get();
-                proveedor = cfg.getProveedor() != null ? cfg.getProveedor() : "SIMULADOR";
-                entorno = cfg.getEntorno() != null ? cfg.getEntorno() : "SANDBOX";
+            if (tokenEnviado == null || tokenEnviado.isBlank()) {
+                return ResponseEntity.ok(Map.of(
+                        "success", false,
+                        "message", "Debe ingresar un API Token"
+                ));
             }
 
-            // Simular prueba de conexión al PSE
+            Optional<ConfiguracionPse> configOpt = configPseRepo.findFirstByNegocioId(negocioId);
+            String tokenEsperado;
+
+            if (configOpt.isPresent() && configOpt.get().getApiToken() != null && !configOpt.get().getApiToken().isBlank()) {
+                // Validar contra el token guardado en BD
+                tokenEsperado = configOpt.get().getApiToken();
+            } else {
+                // Primera vez: validar contra el token válido del simulador
+                tokenEsperado = TOKEN_VALIDO;
+            }
+
+            if (!tokenEnviado.equals(tokenEsperado)) {
+                return ResponseEntity.ok(Map.of(
+                        "success", false,
+                        "message", "Token inválido — Las credenciales no son correctas"
+                ));
+            }
+
+            // Token correcto: si no estaba guardado, guardarlo ahora
+            if (configOpt.isEmpty() || configOpt.get().getApiToken() == null || configOpt.get().getApiToken().isBlank()) {
+                ConfiguracionPse cfg = configOpt.orElseGet(() -> {
+                    ConfiguracionPse c = new ConfiguracionPse();
+                    c.setNegocio(negociosRepo.getReferenceById(negocioId));
+                    return c;
+                });
+                cfg.setApiToken(tokenEnviado);
+                if (cfg.getProveedor() == null) cfg.setProveedor("SIMULADOR");
+                if (cfg.getEntorno() == null) cfg.setEntorno("SANDBOX");
+                configPseRepo.save(cfg);
+            }
+
+            String proveedor = configOpt.map(ConfiguracionPse::getProveedor).orElse("SIMULADOR");
+            String entorno = configOpt.map(ConfiguracionPse::getEntorno).orElse("SANDBOX");
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Conexión exitosa con el PSE (" + proveedor + " - " + entorno + ")",
@@ -383,7 +417,7 @@ public class AdminFacturacionController {
 
             // Crear configuración si no existe y se activa
             if (nuevoEstado) {
-                configPseRepo.findByNegocioId(negocioId).orElseGet(() -> {
+                configPseRepo.findFirstByNegocioId(negocioId).orElseGet(() -> {
                     ConfiguracionPse config = new ConfiguracionPse();
                     config.setNegocio(negocio);
                     config.setProveedor("SIMULADOR");
@@ -412,15 +446,10 @@ public class AdminFacturacionController {
             if (estado != null && !estado.isEmpty()) {
                 DocumentosFacturacion.EstadoDocumento estadoEnum =
                         DocumentosFacturacion.EstadoDocumento.valueOf(estado);
-                docs = documentosRepo.findByNegocioIdAndEstadoDocumento(
-                        negocioId, estadoEnum);
+                docs = documentosRepo.findByNegocioIdAndEstadoDocumento(negocioId, estadoEnum);
             } else {
-                // Bandeja PSE: mostrar pendientes, enviados, rechazados, observados
-                docs = documentosRepo.findByNegocioIdOrderByCreadoEnDesc(negocioId);
-                docs = docs.stream()
-                        .filter(d -> d.getModoEmision() == DocumentosFacturacion.ModoEmision.PSE
-                                || d.getEstadoDocumento() == DocumentosFacturacion.EstadoDocumento.pendiente_envio)
-                        .toList();
+                docs = documentosRepo.findByNegocioIdAndModoEmisionOrderByCreadoEnDesc(
+                        negocioId, DocumentosFacturacion.ModoEmision.PSE);
             }
             return ResponseEntity.ok(docs);
         } catch (Exception e) {
@@ -432,8 +461,14 @@ public class AdminFacturacionController {
     @PostMapping("/pse/enviar/{documentoId}")
     public ResponseEntity<?> enviarDocumentoPse(@PathVariable Long documentoId) {
         try {
-            DocumentosFacturacion doc = facturacionService.reenviarComprobante(documentoId);
-            return ResponseEntity.ok(doc);
+            // 1. Cambiar estado a "enviado" de forma síncrona y retornar inmediatamente
+            DocumentosFacturacion doc = facturacionService.marcarComoEnviando(documentoId);
+            // 2. Procesar con el PSE en hilo async (30 s de simulación)
+            pseAsyncService.procesarDocumentoAsync(documentoId);
+            return ResponseEntity.ok(Map.of(
+                    "estado", doc.getEstadoDocumento().name(),
+                    "message", "Documento enviado a SUNAT. Procesando respuesta..."
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
@@ -449,13 +484,47 @@ public class AdminFacturacionController {
     @PostMapping("/pse/reenviar/{documentoId}")
     public ResponseEntity<?> reenviarDocumentoPse(@PathVariable Long documentoId) {
         try {
-            DocumentosFacturacion doc = facturacionService.reenviarComprobante(documentoId);
-            return ResponseEntity.ok(doc);
+            DocumentosFacturacion doc = facturacionService.marcarComoEnviando(documentoId);
+            pseAsyncService.procesarDocumentoAsync(documentoId);
+            return ResponseEntity.ok(Map.of(
+                    "estado", doc.getEstadoDocumento().name(),
+                    "message", "Documento reenviado a SUNAT. Procesando respuesta..."
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Resetea manualmente un documento atascado en estado {@code enviado} → {@code pendiente_envio}.
+     * Útil cuando el backend fue reiniciado mientras el async estaba corriendo.
+     */
+    @PostMapping("/pse/reset/{documentoId}")
+    public ResponseEntity<?> resetDocumentoPseAtascado(@PathVariable Long documentoId) {
+        try {
+            DocumentosFacturacion doc = documentosRepo.findById(documentoId)
+                    .orElseThrow(() -> new IllegalArgumentException("Documento no encontrado: " + documentoId));
+            if (doc.getEstadoDocumento() != DocumentosFacturacion.EstadoDocumento.enviado) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "El documento no está en estado 'enviado'. Estado actual: "
+                                + doc.getEstadoDocumento().name()));
+            }
+            doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.pendiente_envio);
+            doc.setRespuestaSunat("Reseteado manualmente — backend reiniciado durante el procesamiento");
+            documentosRepo.save(doc);
+            return ResponseEntity.ok(Map.of(
+                    "estado", "pendiente_envio",
+                    "message", "Documento reseteado a pendiente_envio. Ya puede volver a enviar."
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

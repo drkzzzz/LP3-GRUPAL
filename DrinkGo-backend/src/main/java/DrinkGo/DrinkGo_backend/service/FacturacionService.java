@@ -1,6 +1,5 @@
 package DrinkGo.DrinkGo_backend.service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,7 +11,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import DrinkGo.DrinkGo_backend.dto.facturacion.RespuestaPse;
-import DrinkGo.DrinkGo_backend.entity.ConfiguracionPse;
 import DrinkGo.DrinkGo_backend.entity.HistorialPse;
 import DrinkGo.DrinkGo_backend.entity.*;
 import DrinkGo.DrinkGo_backend.repository.*;
@@ -77,7 +75,7 @@ public class FacturacionService {
 
         // 2. Buscar serie predeterminada
         Optional<SeriesFacturacion> serieOpt = seriesRepo
-                .findByNegocioIdAndTipoDocumentoAndEsPredeterminada(
+                .findFirstByNegocioIdAndTipoDocumentoAndEsPredeterminada(
                         venta.getNegocio().getId(), tipoDoc, true);
 
         if (serieOpt.isEmpty()) {
@@ -120,48 +118,14 @@ public class FacturacionService {
 
         doc = documentosRepo.save(doc);
 
-        if (usarPse) {
-            // 6. Enviar a SUNAT vía PSE (proveedor resuelto por factory)
-            try {
-                Long negocioId = venta.getNegocio().getId();
-                PseProvider provider = pseProviderFactory.getProvider(negocioId);
-                RespuestaPse respuesta = provider.enviarDocumento(doc);
-
-                doc.setHashSunat(respuesta.getHashCdr());
-                doc.setRespuestaSunat(respuesta.getMensajeRespuesta());
-                doc.setXmlDocumento(respuesta.getXmlGenerado());
-                doc.setFechaEnvio(LocalDateTime.now());
-                doc.setIntentosEnvio(1);
-                doc.setCodigoRespuestaSunat(respuesta.getCodigoRespuesta());
-
-                if (respuesta.isAceptado()) {
-                    // Si SUNAT acepta pero con observaciones → estado "observado"
-                    if (respuesta.getObservaciones() != null && !respuesta.getObservaciones().isBlank()) {
-                        doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.observado);
-                    } else {
-                        doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.aceptado);
-                    }
-                } else {
-                    doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.rechazado);
-                }
-
-                documentosRepo.save(doc);
-
-                // Registrar en historial de comunicaciones PSE
-                String proveedorNombre = pseProviderFactory.getProveedorActual(negocioId);
-                registrarHistorial(doc, "ENVIO", respuesta, proveedorNombre, negocioId);
-            } catch (Exception ex) {
-                // Si falla el PSE, dejar en pendiente_envio
-                doc.setRespuestaSunat("Error PSE: " + ex.getMessage());
-                doc.setIntentosEnvio(1);
-                documentosRepo.save(doc);
-            }
-        } else {
+        if (!usarPse) {
             // Sin PSE: comprobante interno aceptado directamente
             doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.aceptado);
             doc.setRespuestaSunat("Emitido localmente (sin PSE)");
             documentosRepo.save(doc);
         }
+        // Con PSE: el documento queda en pendiente_envio.
+        // El usuario lo enviará manualmente desde la bandeja electrónica.
 
         return doc;
     }
@@ -183,6 +147,28 @@ public class FacturacionService {
                 documentosRepo.save(doc);
             }
         }
+    }
+
+    /**
+     * Marca un documento como {@code enviado} (en proceso de envío a SUNAT).
+     * Valida que el estado actual sea {@code pendiente_envio} o {@code rechazado}.
+     *
+     * @param documentoId ID del documento a marcar
+     * @return el documento actualizado
+     */
+    @Transactional
+    public DocumentosFacturacion marcarComoEnviando(Long documentoId) {
+        DocumentosFacturacion doc = documentosRepo.findById(documentoId)
+                .orElseThrow(() -> new IllegalArgumentException("Documento no encontrado"));
+
+        if (doc.getEstadoDocumento() != DocumentosFacturacion.EstadoDocumento.pendiente_envio
+                && doc.getEstadoDocumento() != DocumentosFacturacion.EstadoDocumento.rechazado) {
+            throw new IllegalStateException(
+                    "Solo se pueden enviar documentos en estado pendiente o rechazado");
+        }
+
+        doc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.enviado);
+        return documentosRepo.save(doc);
     }
 
     /**
@@ -251,7 +237,7 @@ public class FacturacionService {
             historial.setProveedor(proveedor);
 
             // Obtener entorno de la configuración
-            configPseRepo.findByNegocioId(negocioId)
+            configPseRepo.findFirstByNegocioId(negocioId)
                     .ifPresent(config -> historial.setEntorno(
                             config.getEntorno() != null ? config.getEntorno() : "SANDBOX"));
 
@@ -290,7 +276,7 @@ public class FacturacionService {
 
             // Buscar cliente existente con ese RUC en el mismo negocio
             Optional<Clientes> existente = clientesRepo
-                    .findByNegocioIdAndNumeroDocumento(negocioId, rucDoc);
+                    .findFirstByNegocioIdAndNumeroDocumento(negocioId, rucDoc);
             if (existente.isPresent()) {
                 Clientes c = existente.get();
                 // Actualizar nombre y dirección si vienen en la venta
@@ -323,16 +309,51 @@ public class FacturacionService {
             return clientesRepo.save(nuevo);
         }
 
-        // Para boletas sin cliente → "Consumidor Final"
+        // Para boletas sin cliente — verificar si viene DNI/número de documento
         Long negocioId = venta.getNegocio().getId();
+        String docNum = venta.getDocClienteNumero();
+        String docNombre = venta.getDocClienteNombre();
+
+        if (docNum != null && !docNum.isBlank() && !docNum.equals("00000000")) {
+            // Viene con DNI: buscar o crear cliente por ese documento
+            Optional<Clientes> existente = clientesRepo
+                    .findFirstByNegocioIdAndNumeroDocumento(negocioId, docNum);
+            if (existente.isPresent()) {
+                Clientes c = existente.get();
+                // Actualizar nombre si se proporcionó uno
+                if (docNombre != null && !docNombre.isBlank()) {
+                    String[] partes = docNombre.trim().split(" ", 2);
+                    c.setNombres(partes[0]);
+                    c.setApellidos(partes.length > 1 ? partes[1] : "");
+                    clientesRepo.save(c);
+                }
+                return c;
+            }
+            // No existe: crear con el DNI. Si no hay nombre, usar "Cliente General"
+            Clientes nuevo = new Clientes();
+            nuevo.setNegocio(venta.getNegocio());
+            nuevo.setTipoDocumento(Clientes.TipoDocumento.DNI);
+            nuevo.setNumeroDocumento(docNum);
+            if (docNombre != null && !docNombre.isBlank()) {
+                String[] partes = docNombre.trim().split(" ", 2);
+                nuevo.setNombres(partes[0]);
+                nuevo.setApellidos(partes.length > 1 ? partes[1] : "");
+            } else {
+                nuevo.setNombres("Cliente");
+                nuevo.setApellidos("General");
+            }
+            return clientesRepo.save(nuevo);
+        }
+
+        // Sin DNI → buscar o crear el cliente genérico "Consumidor Final"
         Optional<Clientes> genericoOpt = clientesRepo
-                .findByNegocioIdAndNumeroDocumento(negocioId, "00000000");
+                .findFirstByNegocioIdAndNumeroDocumento(negocioId, "00000000");
 
         if (genericoOpt.isPresent()) {
             return genericoOpt.get();
         }
 
-        // Crear cliente genérico "Consumidor Final"
+        // Crear cliente genérico
         Clientes consumidorFinal = new Clientes();
         consumidorFinal.setNegocio(venta.getNegocio());
         consumidorFinal.setTipoDocumento(Clientes.TipoDocumento.DNI);

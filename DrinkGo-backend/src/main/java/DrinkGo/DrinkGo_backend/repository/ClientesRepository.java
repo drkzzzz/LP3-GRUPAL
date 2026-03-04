@@ -9,7 +9,8 @@ import DrinkGo.DrinkGo_backend.entity.Clientes;
 
 public interface ClientesRepository extends JpaRepository<Clientes, Long> {
 
-    Optional<Clientes> findByNegocioIdAndNumeroDocumento(Long negocioId, String numeroDocumento);
+    // findFirstBy para evitar IncorrectResultSizeDataAccessException si hay duplicados
+    Optional<Clientes> findFirstByNegocioIdAndNumeroDocumento(Long negocioId, String numeroDocumento);
 
     List<Clientes> findByNegocioId(Long negocioId);
 }

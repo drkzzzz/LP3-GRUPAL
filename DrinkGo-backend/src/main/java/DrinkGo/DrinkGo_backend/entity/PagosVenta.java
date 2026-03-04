@@ -3,6 +3,8 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -13,7 +15,7 @@ import java.time.LocalDateTime;
 @Table(name = "pagos_venta")
 @SQLDelete(sql = "UPDATE pagos_venta SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "ventaId", "metodoPagoId", "monto", "numeroReferencia", "fechaPago", "estaActivo",
+@JsonPropertyOrder({ "id", "ventaId", "metodoPagoId", "metodoPagoNombre", "monto", "numeroReferencia", "fechaPago", "estaActivo",
         "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class PagosVenta {
 
@@ -73,6 +75,7 @@ public class PagosVenta {
         this.id = id;
     }
 
+    @JsonIgnore
     public Ventas getVenta() {
         return venta;
     }
@@ -81,12 +84,28 @@ public class PagosVenta {
         this.venta = venta;
     }
 
+    @JsonProperty("ventaId")
+    public Long getVentaId() {
+        return venta != null ? venta.getId() : null;
+    }
+
+    @JsonIgnore
     public MetodosPago getMetodoPago() {
         return metodoPago;
     }
 
     public void setMetodoPago(MetodosPago metodoPago) {
         this.metodoPago = metodoPago;
+    }
+
+    @JsonProperty("metodoPagoId")
+    public Long getMetodoPagoId() {
+        return metodoPago != null ? metodoPago.getId() : null;
+    }
+
+    @JsonProperty("metodoPagoNombre")
+    public String getMetodoPagoNombre() {
+        return metodoPago != null ? metodoPago.getNombre() : null;
     }
 
     public BigDecimal getMonto() {

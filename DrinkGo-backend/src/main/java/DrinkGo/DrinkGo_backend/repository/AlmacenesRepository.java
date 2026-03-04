@@ -8,5 +8,5 @@ import DrinkGo.DrinkGo_backend.entity.Almacenes;
 
 public interface AlmacenesRepository extends JpaRepository<Almacenes, Long> {
 
-    Optional<Almacenes> findByNegocioIdAndEsPredeterminado(Long negocioId, Boolean esPredeterminado);
+    Optional<Almacenes> findByNegocio_IdAndEsPredeterminado(Long negocioId, Boolean esPredeterminado);
 }

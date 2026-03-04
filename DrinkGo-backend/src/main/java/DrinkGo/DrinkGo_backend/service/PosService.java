@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,8 +52,6 @@ public class PosService {
     @Autowired private LotesInventarioRepository lotesRepo;
     @Autowired private MovimientosInventarioRepository movInventarioRepo;
     @Autowired private AlmacenesRepository almacenesRepo;
-    @Autowired private CombosRepository combosRepo;
-    @Autowired private DetalleCombosRepository detalleCombosRepo;
 
     @Autowired private FacturacionService facturacionService;
 
@@ -120,7 +117,7 @@ public class PosService {
 
         // ── 3. Resolver almacén predeterminado del negocio ──
         Almacenes almacenDefault = almacenesRepo
-                .findByNegocioIdAndEsPredeterminado(request.getNegocioId(), true)
+                .findByNegocio_IdAndEsPredeterminado(request.getNegocioId(), true)
                 .orElse(null);
 
         // ── 4. Validar stock de cada ítem ──
@@ -323,7 +320,7 @@ public class PosService {
     public SesionesCaja abrirCaja(AbrirCajaRequest request) {
         // Verificar que el usuario no tenga sesión abierta
         Optional<SesionesCaja> existente = sesionesRepo
-                .findByUsuarioIdAndEstadoSesion(request.getUsuarioId(), SesionesCaja.EstadoSesion.abierta);
+                .findFirstByUsuarioIdAndEstadoSesion(request.getUsuarioId(), SesionesCaja.EstadoSesion.abierta);
         if (existente.isPresent()) {
             throw new IllegalStateException("El usuario ya tiene una sesión de caja abierta");
         }
@@ -590,7 +587,7 @@ public class PosService {
             if (item.getProductoId() == null) continue;
 
             Optional<StockInventario> stockOpt = stockRepo
-                    .findByProductoIdAndAlmacenId(item.getProductoId(), almacenId);
+                    .findFirstByProductoIdAndAlmacenId(item.getProductoId(), almacenId);
 
             if (stockOpt.isEmpty()) {
                 // No hay registro de stock — permitir la venta (puede no tener inventario configurado)
@@ -680,7 +677,7 @@ public class PosService {
         if (detalles.isEmpty()) return;
 
         Almacenes almacenDefault = almacenesRepo
-                .findByNegocioIdAndEsPredeterminado(venta.getNegocio().getId(), true)
+                .findByNegocio_IdAndEsPredeterminado(venta.getNegocio().getId(), true)
                 .orElse(null);
         if (almacenDefault == null) return;
 

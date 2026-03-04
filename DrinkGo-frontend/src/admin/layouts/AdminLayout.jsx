@@ -80,7 +80,6 @@ const VENTAS_SUBITEMS = [
 const FACTURACION_SUBITEMS = [
   { to: '/admin/facturacion/comprobantes', label: 'Comprobantes', icon: FileText, permiso: 'm.facturacion.comprobantes' },
   { to: '/admin/facturacion/series', label: 'Series', icon: Hash, permiso: 'm.facturacion.series' },
-  { to: '/admin/facturacion/metodos-pago', label: 'Métodos de Pago', icon: CreditCard, permiso: 'm.facturacion.metodos' },
   { to: '/admin/facturacion/pse', label: 'PSE Electrónico', icon: Zap, permiso: 'm.facturacion.pse', requiresPse: true },
 ];
 

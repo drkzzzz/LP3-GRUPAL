@@ -58,33 +58,6 @@ export const facturacionService = {
     return data;
   },
 
-  /* ═══ MÉTODOS DE PAGO ═══ */
-
-  getMetodosPago: async (negocioId) => {
-    const { data } = await adminApi.get(`/admin/facturacion/metodos-pago/negocio/${negocioId}`);
-    return toArray(data);
-  },
-
-  getMetodoPagoById: async (id) => {
-    const { data } = await adminApi.get(`/admin/facturacion/metodos-pago/${id}`);
-    return data;
-  },
-
-  crearMetodoPago: async (metodoData) => {
-    const { data } = await adminApi.post('/admin/facturacion/metodos-pago', metodoData);
-    return data;
-  },
-
-  actualizarMetodoPago: async (id, metodoData) => {
-    const { data } = await adminApi.put(`/admin/facturacion/metodos-pago/${id}`, metodoData);
-    return data;
-  },
-
-  eliminarMetodoPago: async (id) => {
-    const { data } = await adminApi.delete(`/admin/facturacion/metodos-pago/${id}`);
-    return data;
-  },
-
   /* ═══ PSE (Proveedor de Servicios Electrónicos) ═══ */
 
   getConfiguracionPse: async (negocioId) => {
@@ -97,8 +70,9 @@ export const facturacionService = {
     return data;
   },
 
-  probarConexionPse: async (negocioId) => {
-    const { data } = await adminApi.post(`/admin/facturacion/pse/probar-conexion/${negocioId}`);
+  probarConexionPse: async ({ negocioId, apiToken }) => {
+    const { data } = await adminApi.post(`/admin/facturacion/pse/probar-conexion/${negocioId}`, { apiToken });
+    if (data.success === false) throw new Error(data.message || 'Token inválido');
     return data;
   },
 

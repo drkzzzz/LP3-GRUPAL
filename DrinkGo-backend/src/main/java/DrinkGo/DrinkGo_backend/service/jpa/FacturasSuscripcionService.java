@@ -50,7 +50,6 @@ public class FacturasSuscripcionService implements IFacturasSuscripcionService {
         Suscripciones suscripcion = repoSuscripciones.findById(suscripcionId)
                 .orElseThrow(() -> new RuntimeException("Suscripción no encontrada: " + suscripcionId));
 
-        Long negocioId = suscripcion.getNegocio().getId();
         LocalDate hoy = LocalDate.now();
 
         // Número de factura: DG-YYYY-MM-NNNN (secuencia global por mes, con reintento

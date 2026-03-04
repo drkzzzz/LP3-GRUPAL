@@ -1168,7 +1168,7 @@ CREATE TABLE documentos_facturacion (
     aceptado_sunat_en TIMESTAMP NULL,
 
     -- Control de Estados del Documento (Solicitado por Requerimientos)
-    estado ENUM('borrador','emitido','enviado','aceptado','anulado','error') NOT NULL DEFAULT 'borrador',
+    estado_documento ENUM('borrador','pendiente_envio','enviado','aceptado','observado','rechazado','anulado') NOT NULL DEFAULT 'pendiente_envio',
     
     fecha_emision DATE NOT NULL,
     fecha_vencimiento DATE NULL,

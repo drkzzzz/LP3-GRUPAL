@@ -257,9 +257,8 @@ public class InventarioTransaccionalService {
             "Transferencia a otro almacén: " + motivoMovimiento, referenciaDocumento);
 
         // 2. Obtener entidades para la entrada en destino
-        Negocios negocio = obtenerNegocio(negocioId);
         Productos producto = obtenerProducto(productoId);
-        Almacenes almacenDestino = obtenerAlmacen(almacenDestinoId);
+        obtenerAlmacen(almacenDestinoId); // validar que el almacén destino existe
 
         // Calcular CPP del origen para usar en el destino
         Almacenes almacenOrigen = obtenerAlmacen(almacenOrigenId);

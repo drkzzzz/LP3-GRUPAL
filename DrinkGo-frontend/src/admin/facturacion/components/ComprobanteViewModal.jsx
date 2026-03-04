@@ -109,13 +109,17 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
     .filter(Boolean)
     .join(', ');
 
-  /* Receptor (cliente) — from venta or doc */
+  /* Receptor (cliente) — prefer flat fields from entity, fallback to venta */
   const clienteNombre =
+    doc.clienteNombre?.trim() ||
     ventaData?.docClienteNombre ||
     doc.razonSocialReceptor ||
     doc.receptor ||
     'Cliente General';
-  const clienteDoc = ventaData?.docClienteNumero || '-';
+  const clienteDoc =
+    doc.clienteNumeroDocumento ||
+    ventaData?.docClienteNumero ||
+    '-';
 
   /* Fecha */
   const fecha = doc.fechaEmision || doc.creadoEn;
@@ -125,7 +129,7 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
   /* Pagos con nombre de método */
   const pagosResumen = pagos.map((p) => {
     const metodo = metodosPago.find((m) => m.id === (p.metodoPagoId || p.metodoPago?.id));
-    return { nombre: metodo?.nombre || p.metodoPago?.nombre || 'Otro', monto: p.monto };
+    return { nombre: metodo?.nombre || p.metodoPagoNombre || p.metodoPago?.nombre || 'Otro', monto: p.monto };
   });
 
   const metodoPagoTexto = pagosResumen.length === 0

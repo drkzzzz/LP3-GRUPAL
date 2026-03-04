@@ -240,6 +240,7 @@ public class PseSimuladorService implements PseProvider {
      * Simula la respuesta de SUNAT con lógica determinista:
      * <ul>
      *   <li>RUC "00000000000" → RECHAZADO (2010 - RUC receptor no válido)</li>
+     *   <li>Boleta con DNI "00000000" (DNI ficticio) → RECHAZADO (2034 - DNI receptor no existe en RENIEC)</li>
      *   <li>Serie no válida (no empieza con B ni F) → RECHAZADO (2022 - Serie no corresponde)</li>
      *   <li>Subtotal + impuestos != total (diferencia > 1) → RECHAZADO (2047 - Total no coincide)</li>
      *   <li>Tipo doc receptor inválido (factura con DNI corto) → RECHAZADO (2050 - Tipo doc receptor no válido)</li>
@@ -271,6 +272,15 @@ public class PseSimuladorService implements PseProvider {
             mensajeRespuesta = "El documento " + numDoc
                     + " ha sido rechazado. Motivo: El RUC del receptor no es válido "
                     + "(RUC 00000000000 no existe en el padrón de contribuyentes).";
+        }
+        // Regla 1b: Boleta con DNI "00000000" (DNI ficticio/vacío) → rechazo (código 2034)
+        else if (documento.getTipoDocumento() == DocumentosFacturacion.TipoDocumento.boleta
+                && "00000000".equals(rucReceptor)) {
+            aceptado = false;
+            codigoRespuesta = "2034";
+            mensajeRespuesta = "El documento " + numDoc
+                    + " ha sido rechazado. Motivo: El número de DNI del receptor no es válido "
+                    + "(00000000 no existe en el padrón de RENIEC)."; 
         }
         // Regla 2: Serie no corresponde al tipo de comprobante (código 2022)
         else if (numDoc != null && !numDoc.startsWith("B") && !numDoc.startsWith("F")

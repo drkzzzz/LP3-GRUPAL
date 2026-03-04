@@ -42,7 +42,7 @@ public class PseProviderFactory {
      * Retorna el nombre del proveedor PSE actual para un negocio.
      */
     public String getProveedorActual(Long negocioId) {
-        Optional<ConfiguracionPse> config = configPseRepo.findByNegocioId(negocioId);
+        Optional<ConfiguracionPse> config = configPseRepo.findFirstByNegocioId(negocioId);
         return config.map(ConfiguracionPse::getProveedor).orElse("SIMULADOR");
     }
 }

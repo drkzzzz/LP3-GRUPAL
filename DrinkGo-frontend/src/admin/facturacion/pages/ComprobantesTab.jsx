@@ -75,6 +75,7 @@ export const ComprobantesTab = () => {
         const q = search.toLowerCase();
         const matchSearch =
           c.numeroDocumento?.toLowerCase().includes(q) ||
+          c.clienteNombre?.toLowerCase().includes(q) ||
           c.receptor?.toLowerCase().includes(q) ||
           c.razonSocialReceptor?.toLowerCase().includes(q);
         if (!matchSearch) return false;
@@ -221,7 +222,7 @@ export const ComprobantesTab = () => {
                       <td className="py-3 px-3 text-gray-400">{page * pageSize + idx + 1}</td>
                       <td className="py-3 px-3 font-mono text-xs font-medium">{doc.numeroDocumento}</td>
                       <td className="py-3 px-3">{TIPO_DOC_LABELS[doc.tipoDocumento] || doc.tipoDocumento}</td>
-                      <td className="py-3 px-3 text-gray-700">{doc.razonSocialReceptor || doc.receptor || '-'}</td>
+                      <td className="py-3 px-3 text-gray-700">{doc.clienteNombre || doc.razonSocialReceptor || doc.receptor || '-'}</td>
                       <td className="py-3 px-3 text-right font-semibold">{formatCurrency(doc.total)}</td>
                       <td className="py-3 px-3 text-center">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${estado.badge}`}>

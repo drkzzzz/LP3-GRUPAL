@@ -7,7 +7,7 @@ import DrinkGo.DrinkGo_backend.entity.SesionesCaja;
 
 public interface SesionesCajaRepository extends JpaRepository<SesionesCaja, Long> {
 
-    Optional<SesionesCaja> findByUsuarioIdAndEstadoSesion(
+    Optional<SesionesCaja> findFirstByUsuarioIdAndEstadoSesion(
             Long usuarioId, SesionesCaja.EstadoSesion estadoSesion);
 
     List<SesionesCaja> findByCajaIdOrderByFechaAperturaDesc(Long cajaId);

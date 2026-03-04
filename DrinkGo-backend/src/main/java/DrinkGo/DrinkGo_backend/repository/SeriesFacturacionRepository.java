@@ -13,7 +13,7 @@ public interface SeriesFacturacionRepository extends JpaRepository<SeriesFactura
 
     List<SeriesFacturacion> findByNegocioIdAndEstaActivo(Long negocioId, Boolean estaActivo);
 
-    Optional<SeriesFacturacion> findByNegocioIdAndTipoDocumentoAndEsPredeterminada(
+    Optional<SeriesFacturacion> findFirstByNegocioIdAndTipoDocumentoAndEsPredeterminada(
             Long negocioId, SeriesFacturacion.TipoDocumento tipoDocumento, Boolean esPredeterminada);
 
     @Query(value = "SELECT * FROM series_facturacion WHERE id = :id FOR UPDATE", nativeQuery = true)

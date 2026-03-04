@@ -3,6 +3,8 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -13,7 +15,7 @@ import java.time.LocalDateTime;
 @Table(name = "detalle_ventas")
 @SQLDelete(sql = "UPDATE detalle_ventas SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "ventaId", "productoId", "comboId", "cantidad", "precioUnitario", "descuento", "subtotal",
+@JsonPropertyOrder({ "id", "ventaId", "productoId", "nombreProducto", "comboId", "cantidad", "precioUnitario", "descuento", "subtotal",
         "impuesto", "total", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class DetalleVentas {
 
@@ -83,6 +85,7 @@ public class DetalleVentas {
         this.id = id;
     }
 
+    @JsonIgnore
     public Ventas getVenta() {
         return venta;
     }
@@ -91,6 +94,12 @@ public class DetalleVentas {
         this.venta = venta;
     }
 
+    @JsonProperty("ventaId")
+    public Long getVentaId() {
+        return venta != null ? venta.getId() : null;
+    }
+
+    @JsonIgnore
     public Productos getProducto() {
         return producto;
     }
@@ -99,12 +108,28 @@ public class DetalleVentas {
         this.producto = producto;
     }
 
+    @JsonProperty("productoId")
+    public Long getProductoId() {
+        return producto != null ? producto.getId() : null;
+    }
+
+    @JsonProperty("nombreProducto")
+    public String getNombreProducto() {
+        return producto != null ? producto.getNombre() : null;
+    }
+
+    @JsonIgnore
     public Combos getCombo() {
         return combo;
     }
 
     public void setCombo(Combos combo) {
         this.combo = combo;
+    }
+
+    @JsonProperty("comboId")
+    public Long getComboId() {
+        return combo != null ? combo.getId() : null;
     }
 
     public BigDecimal getCantidad() {

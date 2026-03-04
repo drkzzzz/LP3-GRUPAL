@@ -1,4 +1,4 @@
-package DrinkGo.DrinkGo_backend.controller;
+                                                    package DrinkGo.DrinkGo_backend.controller;
 
 import java.util.List;
 import java.util.Map;
@@ -328,8 +328,9 @@ public class PosController {
     @GetMapping("/sesiones/activa/usuario/{usuarioId}")
     public ResponseEntity<?> getSesionActiva(@PathVariable Long usuarioId) {
         try {
+            // findFirstBy evita error si hay más de una sesión abierta para el mismo usuario
             Optional<SesionesCaja> sesion = sesionesRepo
-                    .findByUsuarioIdAndEstadoSesion(usuarioId, SesionesCaja.EstadoSesion.abierta);
+                    .findFirstByUsuarioIdAndEstadoSesion(usuarioId, SesionesCaja.EstadoSesion.abierta);
             if (sesion.isEmpty()) {
                 return ResponseEntity.ok(null);
             }

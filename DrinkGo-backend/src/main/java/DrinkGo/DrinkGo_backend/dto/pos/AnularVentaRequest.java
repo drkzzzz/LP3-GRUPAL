@@ -1,6 +1,5 @@
 package DrinkGo.DrinkGo_backend.dto.pos;
 
-import java.math.BigDecimal;
 
 /**
  * DTO para anular una venta.

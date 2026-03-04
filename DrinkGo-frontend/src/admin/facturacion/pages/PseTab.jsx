@@ -10,7 +10,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   Send, RefreshCw, CheckCircle, Clock, AlertCircle, XCircle,
-  Search, FileText, X, Eye, Zap, History, Shield, Wifi, WifiOff,
+  Search, FileText, X, Eye, EyeOff, Zap, History, Shield, Wifi, WifiOff,
   Save, Key, Building2, Power,
 } from 'lucide-react';
 import {
@@ -25,12 +25,12 @@ import {
 
 /* ─── Mapas de estado PSE ─── */
 const ESTADO_CONFIG = {
-  pendiente_envio: { label: 'Pendiente', badge: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-  enviado:         { label: 'Enviado',   badge: 'bg-blue-100 text-blue-700 border-blue-300' },
-  aceptado:        { label: 'Aceptado',  badge: 'bg-green-100 text-green-700 border-green-300' },
-  observado:       { label: 'Observado', badge: 'bg-orange-100 text-orange-700 border-orange-300' },
-  rechazado:       { label: 'Rechazado', badge: 'bg-red-100 text-red-700 border-red-300' },
-  anulado:         { label: 'Anulado',   badge: 'bg-gray-100 text-gray-600 border-gray-300' },
+  pendiente_envio: { label: 'Pendiente', badge: 'bg-yellow-100 text-yellow-700 border-yellow-300', spinner: false },
+  enviado:         { label: 'Procesando...', badge: 'bg-blue-100 text-blue-700 border-blue-300', spinner: true },
+  aceptado:        { label: 'Aceptado',  badge: 'bg-green-100 text-green-700 border-green-300', spinner: false },
+  observado:       { label: 'Observado', badge: 'bg-orange-100 text-orange-700 border-orange-300', spinner: false },
+  rechazado:       { label: 'Rechazado', badge: 'bg-red-100 text-red-700 border-red-300', spinner: false },
+  anulado:         { label: 'Anulado',   badge: 'bg-gray-100 text-gray-600 border-gray-300', spinner: false },
 };
 
 const TIPO_DOC_LABELS = {
@@ -108,6 +108,7 @@ export const PseTab = () => {
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [sending, setSending] = useState(false);
+  const [enviandoIds, setEnviandoIds] = useState(new Set());
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [testingConn, setTestingConn] = useState(false);
   const [connResult, setConnResult] = useState(null);
@@ -115,6 +116,7 @@ export const PseTab = () => {
   const [lastTestDate, setLastTestDate] = useState(null);
   const [connectionTested, setConnectionTested] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [showApiToken, setShowApiToken] = useState(false);
 
   /* ─── Formulario de configuración ─── */
   const [configForm, setConfigForm] = useState({
@@ -164,13 +166,11 @@ export const PseTab = () => {
   /* ─── Stats ─── */
   const stats = useMemo(() => {
     const total = documentos.length;
-    const localesSinEnviar = documentos.filter(
-      (d) => d.modoEmision === 'LOCAL' && d.estadoDocumento !== 'aceptado'
-    ).length;
     const pendientes = documentos.filter((d) => d.estadoDocumento === 'pendiente_envio').length;
     const aceptados = documentos.filter((d) => d.estadoDocumento === 'aceptado').length;
+    const observados = documentos.filter((d) => d.estadoDocumento === 'observado').length;
     const rechazados = documentos.filter((d) => d.estadoDocumento === 'rechazado').length;
-    return { total, localesSinEnviar, pendientes, aceptados, rechazados };
+    return { total, pendientes, aceptados, observados, rechazados };
   }, [documentos]);
 
   /* ─── Filtrado ─── */
@@ -229,11 +229,18 @@ export const PseTab = () => {
   };
 
   const handleEnviar = async (doc) => {
+    setEnviandoIds((prev) => new Set([...prev, doc.id]));
     try {
       if (doc.estadoDocumento === 'rechazado') await reenviarDoc.mutateAsync(doc.id);
       else await enviarDoc.mutateAsync(doc.id);
     } catch {
       /* error manejado por mutation */
+    } finally {
+      setEnviandoIds((prev) => {
+        const next = new Set(prev);
+        next.delete(doc.id);
+        return next;
+      });
     }
   };
 
@@ -260,14 +267,14 @@ export const PseTab = () => {
     setTestingConn(true);
     setConnResult(null);
     try {
-      await probarConexion.mutateAsync(negocioId);
+      await probarConexion.mutateAsync({ negocioId, apiToken: configForm.apiToken });
       setConnResult({ ok: true, msg: 'Conectado a PSE — Conexión verificada exitosamente' });
       setConnectionTested(true);
       setLastTestDate(new Date());
     } catch (err) {
       setConnResult({
         ok: false,
-        msg: err?.response?.data?.message || 'Error en la conexión con el PSE',
+        msg: err?.response?.data?.message || err?.message || 'Error en la conexión con el PSE',
       });
       setConnectionTested(false);
     } finally {
@@ -389,20 +396,11 @@ export const PseTab = () => {
               </div>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
-              <div className="p-2 bg-orange-50 rounded-lg">
-                <AlertCircle size={20} className="text-orange-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Locales sin enviar</p>
-                <p className="text-xl font-bold text-gray-900">{stats.localesSinEnviar}</p>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
               <div className="p-2 bg-yellow-50 rounded-lg">
                 <Clock size={20} className="text-yellow-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Pendientes envío</p>
+                <p className="text-xs text-gray-500">Pendientes de envío</p>
                 <p className="text-xl font-bold text-gray-900">{stats.pendientes}</p>
               </div>
             </div>
@@ -413,6 +411,15 @@ export const PseTab = () => {
               <div>
                 <p className="text-xs text-gray-500">Aceptados</p>
                 <p className="text-xl font-bold text-gray-900">{stats.aceptados}</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+              <div className="p-2 bg-amber-50 rounded-lg">
+                <AlertCircle size={20} className="text-amber-500" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Observados</p>
+                <p className="text-xl font-bold text-gray-900">{stats.observados}</p>
               </div>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
@@ -567,8 +574,9 @@ export const PseTab = () => {
                           </td>
                           <td className="py-3 px-3 text-center">
                             <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.badge}`}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.badge}`}
                             >
+                              {cfg.spinner && <RefreshCw size={10} className="animate-spin" />}
                               {cfg.label}
                             </span>
                           </td>
@@ -585,13 +593,16 @@ export const PseTab = () => {
                                 <button
                                   title={
                                     doc.estadoDocumento === 'rechazado'
-                                      ? 'Reenviar'
+                                      ? 'Reenviar a SUNAT'
                                       : 'Enviar a SUNAT'
                                   }
                                   onClick={() => handleEnviar(doc)}
-                                  className="text-green-500 hover:text-green-700"
+                                  disabled={enviandoIds.has(doc.id)}
+                                  className="text-green-500 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  {doc.estadoDocumento === 'rechazado' ? (
+                                  {enviandoIds.has(doc.id) ? (
+                                    <RefreshCw size={16} className="animate-spin" />
+                                  ) : doc.estadoDocumento === 'rechazado' ? (
                                     <RefreshCw size={16} />
                                   ) : (
                                     <Send size={16} />
@@ -690,13 +701,23 @@ export const PseTab = () => {
                   <label className="block text-sm font-medium text-gray-600 mb-1">
                     API Key / Token <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={configForm.apiToken}
-                    onChange={(e) => updateConfigField('apiToken', e.target.value)}
-                    placeholder="Ingrese su API Token"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showApiToken ? 'text' : 'password'}
+                      value={configForm.apiToken}
+                      onChange={(e) => updateConfigField('apiToken', e.target.value)}
+                      placeholder="Ingrese su API Token"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiToken((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                      tabIndex={-1}
+                    >
+                      {showApiToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-400 mt-1">
                     Proporcionado por {PROVEEDOR_OPTIONS.find((p) => p.value === configForm.proveedor)?.label || 'su proveedor'} al registrarte
                   </p>

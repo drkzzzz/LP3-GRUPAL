@@ -15,7 +15,7 @@ public interface StockInventarioRepository extends JpaRepository<StockInventario
 
     List<StockInventario> findByNegocioId(Long negocioId);
 
-    Optional<StockInventario> findByProductoIdAndAlmacenId(Long productoId, Long almacenId);
+    Optional<StockInventario> findFirstByProductoIdAndAlmacenId(Long productoId, Long almacenId);
 
     List<StockInventario> findByProductoId(Long productoId);
 
@@ -24,7 +24,7 @@ public interface StockInventarioRepository extends JpaRepository<StockInventario
             @Param("productoId") Long productoId,
             @Param("negocioId") Long negocioId);
 
-    @Query(value = "SELECT * FROM stock_inventario WHERE producto_id = :productoId AND almacen_id = :almacenId FOR UPDATE", nativeQuery = true)
+    @Query(value = "SELECT * FROM stock_inventario WHERE producto_id = :productoId AND almacen_id = :almacenId LIMIT 1 FOR UPDATE", nativeQuery = true)
     Optional<StockInventario> findByProductoIdAndAlmacenIdForUpdate(
             @Param("productoId") Long productoId,
             @Param("almacenId") Long almacenId);
@@ -32,7 +32,7 @@ public interface StockInventarioRepository extends JpaRepository<StockInventario
     /**
      * Busca el registro de stock para un producto específico en un almacén específico
      */
-    @Query("SELECT s FROM StockInventario s WHERE s.producto = :producto AND s.almacen = :almacen AND s.estaActivo = true")
+    @Query("SELECT s FROM StockInventario s WHERE s.producto = :producto AND s.almacen = :almacen AND s.estaActivo = true LIMIT 1")
     Optional<StockInventario> findByProductoAndAlmacen(@Param("producto") Productos producto, @Param("almacen") Almacenes almacen);
 
     /**

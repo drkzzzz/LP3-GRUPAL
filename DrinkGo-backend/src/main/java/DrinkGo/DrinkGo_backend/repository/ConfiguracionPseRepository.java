@@ -11,7 +11,7 @@ import DrinkGo.DrinkGo_backend.entity.ConfiguracionPse;
 @Repository
 public interface ConfiguracionPseRepository extends JpaRepository<ConfiguracionPse, Long> {
 
-    Optional<ConfiguracionPse> findByNegocioId(Long negocioId);
+    Optional<ConfiguracionPse> findFirstByNegocioId(Long negocioId);
 
     List<ConfiguracionPse> findAll();
 }
