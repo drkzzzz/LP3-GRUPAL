@@ -365,6 +365,25 @@ export const CombosTab = () => {
               </Badge>
             </div>
 
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">Precio regular</p>
+                <p className="font-medium line-through text-gray-400">{formatCurrency(selected.precioRegular)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Descuento</p>
+                <p className="font-medium text-green-600">{selected.porcentajeDescuento ?? 0}%</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-gray-500">Vigencia</p>
+                <p className="font-medium">
+                  {selected.fechaInicio ? formatDate(selected.fechaInicio) : '—'}
+                  {' — '}
+                  {selected.fechaFin ? formatDate(selected.fechaFin) : 'Sin fin'}
+                </p>
+              </div>
+            </div>
+
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">

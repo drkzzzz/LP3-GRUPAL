@@ -1,9 +1,10 @@
 /**
  * WizardNuevoNegocio — RF-PLT-001
- * Wizard de 3 pasos para registrar un nuevo negocio (tenant) en la plataforma.
+ * Wizard de 4 pasos para registrar un nuevo negocio (tenant) en la plataforma.
  * Paso 1: Datos del negocio
  * Paso 2: Seleccionar plan de suscripción
- * Paso 3: Confirmación y envío
+ * Paso 3: Sede principal (nombre + opciones de servicio)
+ * Paso 4: Confirmación y envío
  */
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -23,6 +24,9 @@ import {
   Percent,
   Search,
   AlertCircle,
+  MapPin,
+  Truck,
+  ShoppingBag,
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -89,7 +93,8 @@ const TIPOS_NEGOCIO = [
 const STEPS = [
   { number: 1, label: 'Datos del Negocio', icon: Building2 },
   { number: 2, label: 'Plan de Suscripción', icon: CreditCard },
-  { number: 3, label: 'Confirmación', icon: CheckCircle },
+  { number: 3, label: 'Sede Principal', icon: MapPin },
+  { number: 4, label: 'Confirmación', icon: CheckCircle },
 ];
 
 const StepIndicator = ({ current }) => (
@@ -522,8 +527,109 @@ const Step2Plan = ({ planes, selectedPlanId, onSelect, onBack, onNext }) => {
   );
 };
 
-/* ---------- Step 3: Confirmación ---------- */
-const Step3Confirm = ({ negocioData, planId, planes, onBack, onSubmit, isLoading }) => {
+/* ---------- Step 3: Sede Principal ---------- */
+const Step3Sede = ({ negocioData, onBack, onNext }) => {
+  const [nombreSede, setNombreSede] = useState(
+    negocioData?.nombreComercial?.trim() || negocioData?.razonSocial?.trim() || ''
+  );
+  const [deliveryHabilitado, setDeliveryHabilitado] = useState(false);
+  const [recojoHabilitado, setRecojoHabilitado] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    if (!nombreSede.trim()) {
+      setError('El nombre de la sede es obligatorio.');
+      return;
+    }
+    setError('');
+    onNext({ nombreSede: nombreSede.trim(), deliveryHabilitado, recojoHabilitado });
+  };
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-gray-600">
+        Define el nombre y las opciones de servicio para la sede principal de este negocio.
+        La dirección y datos de contacto se tomarán de los datos del negocio.
+      </p>
+
+      {/* Nombre de sede */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Nombre de la Sede <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={nombreSede}
+          onChange={(e) => { setNombreSede(e.target.value); setError(''); }}
+          placeholder="Ej: Sede Central, Local Miraflores"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      </div>
+
+      {/* Opciones de servicio */}
+      <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+        <h4 className="text-sm font-semibold text-gray-700 mb-2">Opciones de servicio</h4>
+
+        {/* esPrincipal — siempre activo, solo informativo */}
+        <label className="flex items-center gap-3 text-sm text-gray-500 cursor-not-allowed select-none">
+          <input type="checkbox" checked disabled className="rounded border-gray-300 text-blue-600" />
+          <Check size={14} className="text-blue-600" />
+          <span>
+            <span className="font-medium text-gray-700">Sede Principal</span>
+            <span className="text-xs text-gray-400 ml-1">(siempre activo para la primera sede)</span>
+          </span>
+        </label>
+
+        {/* Delivery */}
+        <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={deliveryHabilitado}
+            onChange={(e) => setDeliveryHabilitado(e.target.checked)}
+            className="rounded border-gray-300 text-blue-600"
+          />
+          <Truck size={14} className="text-gray-500" />
+          Habilitar Delivery
+        </label>
+
+        {/* Recojo en tienda */}
+        <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={recojoHabilitado}
+            onChange={(e) => setRecojoHabilitado(e.target.checked)}
+            className="rounded border-gray-300 text-blue-600"
+          />
+          <ShoppingBag size={14} className="text-gray-500" />
+          Habilitar Recojo en Tienda
+        </label>
+      </div>
+
+      <div className="flex justify-between pt-2">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <ChevronLeft size={16} />
+          Anterior
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Siguiente
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ---------- Step 4: Confirmación ---------- */
+const Step3Confirm = ({ negocioData, sedeData, planId, planes, onBack, onSubmit, isLoading }) => {
   const plan = planes.find((p) => p.id === planId);
 
   return (
@@ -589,29 +695,59 @@ const Step3Confirm = ({ negocioData, planId, planes, onBack, onSubmit, isLoading
           </dl>
         </div>
 
-        {/* Plan seleccionado */}
-        <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 space-y-2">
-          <h4 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
-            <CreditCard size={14} className="text-blue-600" />
-            Plan Seleccionado
-          </h4>
-          {plan ? (
-            <dl className="space-y-1 text-sm">
-              <div className="flex gap-2">
-                <dt className="text-gray-500 w-24 shrink-0">Nombre:</dt>
-                <dd className="text-blue-700 font-semibold">{plan.nombre}</dd>
-              </div>
-              <div className="flex gap-2">
-                <dt className="text-gray-500 w-24 shrink-0">Precio:</dt>
-                <dd className="text-blue-700 font-bold">{formatCurrency(plan.precio)}</dd>
-              </div>
-              <div className="flex gap-2">
-                <dt className="text-gray-500 w-24 shrink-0">Periodo:</dt>
-                <dd className="text-gray-900 capitalize">{plan.periodoFacturacion}</dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="text-sm text-gray-500">Sin plan (se puede asignar después)</p>
+        <div className="space-y-3">
+          {/* Plan seleccionado */}
+          <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 space-y-2">
+            <h4 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+              <CreditCard size={14} className="text-blue-600" />
+              Plan Seleccionado
+            </h4>
+            {plan ? (
+              <dl className="space-y-1 text-sm">
+                <div className="flex gap-2">
+                  <dt className="text-gray-500 w-24 shrink-0">Nombre:</dt>
+                  <dd className="text-blue-700 font-semibold">{plan.nombre}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="text-gray-500 w-24 shrink-0">Precio:</dt>
+                  <dd className="text-blue-700 font-bold">{formatCurrency(plan.precio)}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="text-gray-500 w-24 shrink-0">Periodo:</dt>
+                  <dd className="text-gray-900 capitalize">{plan.periodoFacturacion}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="text-sm text-gray-500">Sin plan (se puede asignar después)</p>
+            )}
+          </div>
+
+          {/* Sede principal */}
+          {sedeData && (
+            <div className="border border-green-200 bg-green-50 rounded-lg p-4 space-y-2">
+              <h4 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+                <MapPin size={14} className="text-green-600" />
+                Sede Principal
+              </h4>
+              <dl className="space-y-1 text-sm">
+                <div className="flex gap-2">
+                  <dt className="text-gray-500 w-24 shrink-0">Nombre:</dt>
+                  <dd className="text-gray-900 font-medium">{sedeData.nombreSede}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="text-gray-500 w-24 shrink-0">Delivery:</dt>
+                  <dd className={sedeData.deliveryHabilitado ? 'text-green-700 font-medium' : 'text-gray-400'}>
+                    {sedeData.deliveryHabilitado ? 'Habilitado' : 'No'}
+                  </dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="text-gray-500 w-24 shrink-0">Recojo:</dt>
+                  <dd className={sedeData.recojoHabilitado ? 'text-green-700 font-medium' : 'text-gray-400'}>
+                    {sedeData.recojoHabilitado ? 'Habilitado' : 'No'}
+                  </dd>
+                </div>
+              </dl>
+            </div>
           )}
         </div>
       </div>
@@ -650,11 +786,13 @@ export const WizardNuevoNegocio = ({
   const [step, setStep] = useState(1);
   const [negocioData, setNegocioData] = useState(null);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [sedeData, setSedeData] = useState(null);
 
   const handleReset = () => {
     setStep(1);
     setNegocioData(null);
     setSelectedPlanId(null);
+    setSedeData(null);
   };
 
   const handleClose = () => {
@@ -671,12 +809,22 @@ export const WizardNuevoNegocio = ({
     setStep(3);
   };
 
-  const handleStep3Submit = async () => {
-    await onSubmit({ negocioData, selectedPlanId });
+  const handleStep3Next = (data) => {
+    setSedeData(data);
+    setStep(4);
+  };
+
+  const handleStep4Submit = async () => {
+    await onSubmit({ negocioData, selectedPlanId, sedeData });
     handleReset();
   };
 
-  const titles = ['Registrar Nuevo Negocio', 'Seleccionar Plan', 'Confirmar Registro'];
+  const titles = [
+    'Registrar Nuevo Negocio',
+    'Seleccionar Plan',
+    'Sede Principal',
+    'Confirmar Registro',
+  ];
 
   return (
     <Modal
@@ -700,12 +848,21 @@ export const WizardNuevoNegocio = ({
       )}
 
       {step === 3 && (
+        <Step3Sede
+          negocioData={negocioData}
+          onBack={() => setStep(2)}
+          onNext={handleStep3Next}
+        />
+      )}
+
+      {step === 4 && (
         <Step3Confirm
           negocioData={negocioData}
+          sedeData={sedeData}
           planId={selectedPlanId}
           planes={planes}
-          onBack={() => setStep(2)}
-          onSubmit={handleStep3Submit}
+          onBack={() => setStep(3)}
+          onSubmit={handleStep4Submit}
           isLoading={isLoading}
         />
       )}

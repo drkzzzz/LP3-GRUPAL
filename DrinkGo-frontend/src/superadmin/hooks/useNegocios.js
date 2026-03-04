@@ -50,6 +50,7 @@ export const useNegocios = () => {
     mutationFn: negociosService.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['negocios'] });
+      queryClient.invalidateQueries({ queryKey: ['sedes'] });
       message.success('Negocio creado exitosamente');
     },
     onError: (err) => {

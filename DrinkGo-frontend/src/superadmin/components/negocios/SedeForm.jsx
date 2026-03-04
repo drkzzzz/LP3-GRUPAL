@@ -21,7 +21,7 @@ const schema = z.object({
   recojoHabilitado: z.boolean().optional(),
 });
 
-export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
+export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading, hasPrincipal }) => {
   const {
     register,
     handleSubmit,
@@ -120,6 +120,11 @@ export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
             <p className="text-xs text-gray-500">
               Marcar como sede principal del negocio
             </p>
+            {hasPrincipal && (
+              <p className="text-xs text-amber-600 mt-0.5">
+                ⚠️ Ya existe una sede principal. Desmarca la otra primero.
+              </p>
+            )}
           </div>
         </label>
         <label className="flex items-center gap-3 cursor-pointer">

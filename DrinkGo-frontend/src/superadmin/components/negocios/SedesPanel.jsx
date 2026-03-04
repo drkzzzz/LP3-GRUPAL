@@ -15,6 +15,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { SedeForm } from './SedeForm';
 import { formatPhone } from '@/shared/utils/formatters';
+import { message } from '@/shared/utils/notifications';
 
 export const SedesPanel = ({
   negocioId,
@@ -32,6 +33,10 @@ export const SedesPanel = ({
   const [deletingSede, setDeletingSede] = useState(null);
 
   const handleCreate = async (data) => {
+    if (data.esPrincipal && sedes.some((s) => s.esPrincipal)) {
+      message.error('Ya existe una sede principal. Primero desmarca la sede principal actual.');
+      return;
+    }
     await onCreateSede({
       ...data,
       negocio: { id: negocioId },
@@ -45,9 +50,14 @@ export const SedesPanel = ({
   };
 
   const handleUpdate = async (data) => {
+    if (data.esPrincipal && sedes.some((s) => s.esPrincipal && s.id !== editingSede.id)) {
+      message.error('Ya existe una sede principal. Primero desmarca la sede principal actual.');
+      return;
+    }
     await onUpdateSede({
       ...data,
       id: editingSede.id,
+      codigo: editingSede.codigo,
       negocio: { id: negocioId },
     });
     setIsFormOpen(false);
@@ -199,6 +209,11 @@ export const SedesPanel = ({
           onSubmit={editingSede ? handleUpdate : handleCreate}
           onCancel={closeForm}
           isLoading={isCreating || isUpdating}
+          hasPrincipal={
+            editingSede
+              ? sedes.some((s) => s.esPrincipal && s.id !== editingSede.id)
+              : sedes.some((s) => s.esPrincipal)
+          }
         />
       </Modal>
 

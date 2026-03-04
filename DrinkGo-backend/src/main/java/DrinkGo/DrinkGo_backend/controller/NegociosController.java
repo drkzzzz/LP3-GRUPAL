@@ -1,9 +1,12 @@
 package DrinkGo.DrinkGo_backend.controller;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,8 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import DrinkGo.DrinkGo_backend.entity.Negocios;
 import DrinkGo.DrinkGo_backend.entity.RegistrosAuditoria;
+import DrinkGo.DrinkGo_backend.entity.Sedes;
 import DrinkGo.DrinkGo_backend.service.INegociosService;
 import DrinkGo.DrinkGo_backend.service.IRegistrosAuditoriaService;
+import DrinkGo.DrinkGo_backend.service.ISedesService;
 
 @RestController
 @RequestMapping("/restful")
@@ -26,6 +31,8 @@ public class NegociosController {
     private INegociosService service;
     @Autowired
     private IRegistrosAuditoriaService auditoriaService;
+    @Autowired
+    private ISedesService sedesService;
 
     @GetMapping("/negocios")
     public List<Negocios> buscarTodos() {
@@ -33,8 +40,54 @@ public class NegociosController {
     }
 
     @PostMapping("/negocios")
-    public Negocios guardar(@RequestBody Negocios entity) {
+    public ResponseEntity<?> guardar(@RequestBody Negocios entity) {
+        // Validar RUC duplicado
+        if (entity.getRuc() != null && !entity.getRuc().isBlank()) {
+            if (service.buscarPorRuc(entity.getRuc()).isPresent()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message",
+                                "Ya existe un negocio registrado con el RUC " + entity.getRuc() + "."));
+            }
+        }
+        // Validar email duplicado
+        if (entity.getEmail() != null && !entity.getEmail().isBlank()) {
+            if (service.buscarPorEmail(entity.getEmail()).isPresent()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message",
+                                "Ya existe un negocio registrado con el email " + entity.getEmail() + "."));
+            }
+        }
+
         service.guardar(entity);
+
+        // Auto-crear sede principal con los datos del negocio
+        String nomSede = entity.getNombreSede();
+        if (nomSede == null || nomSede.isBlank()) {
+            nomSede = entity.getNombreComercial() != null && !entity.getNombreComercial().isBlank()
+                    ? entity.getNombreComercial()
+                    : entity.getRazonSocial();
+        }
+        try {
+            Sedes sedePrincipal = new Sedes();
+            sedePrincipal.setNombre(nomSede);
+            sedePrincipal.setDireccion(
+                    entity.getDireccion() != null && !entity.getDireccion().isBlank()
+                            ? entity.getDireccion()
+                            : "Por definir");
+            sedePrincipal.setCiudad(entity.getCiudad());
+            sedePrincipal.setDepartamento(entity.getDepartamento());
+            sedePrincipal.setTelefono(entity.getTelefono());
+            sedePrincipal.setEsPrincipal(true);
+            sedePrincipal.setEstaActivo(true);
+            sedePrincipal.setDeliveryHabilitado(Boolean.TRUE.equals(entity.getSedeDelivery()));
+            sedePrincipal.setRecojoHabilitado(Boolean.TRUE.equals(entity.getSedeRecojo()));
+            sedePrincipal.setNegocio(entity);
+            sedesService.guardar(sedePrincipal);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Negocio creado pero falló la sede: " + e.getMessage()));
+        }
+
         // Registrar creación
         try {
             auditoriaService.registrar(
@@ -47,7 +100,7 @@ public class NegociosController {
                     entity.getId());
         } catch (Exception ignored) {
         }
-        return entity;
+        return ResponseEntity.ok(entity);
     }
 
     @PutMapping("/negocios")

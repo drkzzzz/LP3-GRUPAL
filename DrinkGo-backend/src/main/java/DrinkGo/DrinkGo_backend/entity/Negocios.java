@@ -4,6 +4,7 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -76,7 +77,9 @@ public class Negocios {
     @Column(name = "porcentaje_igv", precision = 5, scale = 2)
     private BigDecimal porcentajeIgv = new BigDecimal("18.00");
 
-    /** Indica si el negocio tiene habilitado el PSE (facturación electrónica SUNAT). */
+    /**
+     * Indica si el negocio tiene habilitado el PSE (facturación electrónica SUNAT).
+     */
     @Column(name = "tiene_pse")
     private Boolean tienePse = false;
 
@@ -85,6 +88,19 @@ public class Negocios {
 
     @Column(name = "esta_activo")
     private Boolean estaActivo = true;
+
+    // ── Campos transientes para configuración inicial de la sede (no persisten) ──
+    @Transient
+    @JsonProperty(value = "nombreSede", access = JsonProperty.Access.WRITE_ONLY)
+    private String nombreSede;
+
+    @Transient
+    @JsonProperty(value = "sedeDelivery", access = JsonProperty.Access.WRITE_ONLY)
+    private Boolean sedeDelivery;
+
+    @Transient
+    @JsonProperty(value = "sedeRecojo", access = JsonProperty.Access.WRITE_ONLY)
+    private Boolean sedeRecojo;
 
     @Column(name = "creado_en", updatable = false)
     private LocalDateTime creadoEn;
@@ -316,6 +332,32 @@ public class Negocios {
 
     public void setEliminadoEn(LocalDateTime eliminadoEn) {
         this.eliminadoEn = eliminadoEn;
+    }
+
+    // ── Transient getters/setters (sede inicial) ──
+
+    public String getNombreSede() {
+        return nombreSede;
+    }
+
+    public void setNombreSede(String nombreSede) {
+        this.nombreSede = nombreSede;
+    }
+
+    public Boolean getSedeDelivery() {
+        return sedeDelivery;
+    }
+
+    public void setSedeDelivery(Boolean sedeDelivery) {
+        this.sedeDelivery = sedeDelivery;
+    }
+
+    public Boolean getSedeRecojo() {
+        return sedeRecojo;
+    }
+
+    public void setSedeRecojo(Boolean sedeRecojo) {
+        this.sedeRecojo = sedeRecojo;
     }
 
     @Override

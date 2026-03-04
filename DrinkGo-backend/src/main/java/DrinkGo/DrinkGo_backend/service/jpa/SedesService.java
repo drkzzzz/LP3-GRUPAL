@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import DrinkGo.DrinkGo_backend.entity.Sedes;
 import DrinkGo.DrinkGo_backend.entity.Suscripciones;
 import DrinkGo.DrinkGo_backend.repository.SedesRepository;
@@ -26,6 +27,7 @@ public class SedesService implements ISedesService {
         return repoSedes.findByNegocio_Id(negocioId);
     }
 
+    @Transactional
     public void guardar(Sedes sedes) {
         Long negocioId = sedes.getNegocio().getId();
 
@@ -44,6 +46,15 @@ public class SedesService implements ISedesService {
             }
         }
 
+        // Bloquear si ya existe otra sede principal
+        if (Boolean.TRUE.equals(sedes.getEsPrincipal())) {
+            long otherPrincipal = repoSedes.countOtherPrincipalByNegocioId(negocioId, 0L);
+            if (otherPrincipal > 0) {
+                throw new RuntimeException(
+                        "Ya existe una sede principal. Primero desmarca la sede principal actual.");
+            }
+        }
+
         // Auto-generar código de sede
         long total = repoSedes.countAllByNegocioId(negocioId);
         String codigo = String.format("SEDE-%03d", total + 1);
@@ -52,7 +63,17 @@ public class SedesService implements ISedesService {
         repoSedes.save(sedes);
     }
 
+    @Transactional
     public void modificar(Sedes sedes) {
+        // Si se intenta marcar como principal, verificar que no haya otra
+        if (Boolean.TRUE.equals(sedes.getEsPrincipal()) && sedes.getNegocio() != null) {
+            long otherPrincipal = repoSedes.countOtherPrincipalByNegocioId(
+                    sedes.getNegocio().getId(), sedes.getId());
+            if (otherPrincipal > 0) {
+                throw new RuntimeException(
+                        "Ya existe una sede principal. Primero desmarca la sede principal actual.");
+            }
+        }
         repoSedes.save(sedes);
     }
 

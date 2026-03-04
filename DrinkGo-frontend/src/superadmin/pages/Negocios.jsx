@@ -147,8 +147,17 @@ export const Negocios = () => {
   }, [filtered, page, pageSize]);
 
   /* ---------- handlers ---------- */
-  const handleCreate = async ({ negocioData, selectedPlanId }) => {
-    const newNegocio = await createNegocio(negocioData);
+  const handleCreate = async ({ negocioData, selectedPlanId, sedeData }) => {
+    // Merge sede fields so the backend auto-sede creation uses them
+    const payload = {
+      ...negocioData,
+      ...(sedeData && {
+        nombreSede: sedeData.nombreSede,
+        sedeDelivery: sedeData.deliveryHabilitado,
+        sedeRecojo: sedeData.recojoHabilitado,
+      }),
+    };
+    const newNegocio = await createNegocio(payload);
     if (selectedPlanId && newNegocio?.id) {
       await createSuscripcion({
         negocio: { id: newNegocio.id },

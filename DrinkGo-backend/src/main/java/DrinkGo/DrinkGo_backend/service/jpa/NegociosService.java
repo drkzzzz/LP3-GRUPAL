@@ -29,6 +29,14 @@ public class NegociosService implements INegociosService {
         return repoNegocios.findById(id);
     }
 
+    public Optional<Negocios> buscarPorRuc(String ruc) {
+        return repoNegocios.findByRuc(ruc);
+    }
+
+    public Optional<Negocios> buscarPorEmail(String email) {
+        return repoNegocios.findByEmail(email);
+    }
+
     public void eliminar(Long id) {
         repoNegocios.deleteById(id);
     }

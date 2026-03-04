@@ -40,14 +40,19 @@ public class SedesController {
             return ResponseEntity.ok(entity);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("message", e.getMessage()));
         }
     }
 
     @PutMapping("/sedes")
-    public Sedes modificar(@RequestBody Sedes entity) {
-        service.modificar(entity);
-        return entity;
+    public ResponseEntity<?> modificar(@RequestBody Sedes entity) {
+        try {
+            service.modificar(entity);
+            return ResponseEntity.ok(entity);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 
     @GetMapping("/sedes/{id}")

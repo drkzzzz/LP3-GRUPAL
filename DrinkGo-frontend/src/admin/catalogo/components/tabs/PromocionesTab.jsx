@@ -50,7 +50,7 @@ export const PromocionesTab = () => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = usePromociones();
+  } = usePromociones(negocioId);
 
   const { categorias } = useCategorias(negocioId);
   const { productos } = useProductos(negocioId);
@@ -59,8 +59,8 @@ export const PromocionesTab = () => {
   const isPromoActive = (promo) => {
     if (!promo.estaActivo) return false;
     const now = new Date();
-    if (promo.fechaInicio && new Date(promo.fechaInicio) > now) return false;
-    if (promo.fechaFin && new Date(promo.fechaFin) < now) return false;
+    if (promo.validoDesde && new Date(promo.validoDesde) > now) return false;
+    if (promo.validoHasta && new Date(promo.validoHasta) < now) return false;
     return true;
   };
 
@@ -177,8 +177,8 @@ export const PromocionesTab = () => {
       width: '160px',
       render: (_, row) => (
         <div className="text-xs text-gray-600">
-          <p>{row.fechaInicio ? formatDate(row.fechaInicio) : '—'}</p>
-          <p>{row.fechaFin ? formatDate(row.fechaFin) : 'Sin fin'}</p>
+          <p>{row.validoDesde ? formatDate(row.validoDesde) : '—'}</p>
+          <p>{row.validoHasta ? formatDate(row.validoHasta) : 'Sin fin'}</p>
         </div>
       ),
     },

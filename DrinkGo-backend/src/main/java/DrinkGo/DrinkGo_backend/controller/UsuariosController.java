@@ -215,6 +215,14 @@ public class UsuariosController {
         Map<String, Object> response = new HashMap<>();
         // Obtener la sede asignada al usuario (predeterminada o primera disponible)
         List<UsuariosSedes> usuarioSedes = usuariosSedesRepo.findByUsuarioId(usuario.getId());
+
+        // Bloquear login si el usuario no tiene sede asignada
+        if (usuarioSedes.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error",
+                            "Tu cuenta no tiene una sede asignada. Contacta al administrador del negocio."));
+        }
+
         Map<String, Object> sedeData = null;
         if (!usuarioSedes.isEmpty()) {
             UsuariosSedes us = usuarioSedes.stream()

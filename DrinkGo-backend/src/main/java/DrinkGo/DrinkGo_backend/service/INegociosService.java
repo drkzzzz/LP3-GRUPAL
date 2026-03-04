@@ -13,5 +13,9 @@ public interface INegociosService {
 
     Optional<Negocios> buscarId(Long id);
 
+    Optional<Negocios> buscarPorRuc(String ruc);
+
+    Optional<Negocios> buscarPorEmail(String email);
+
     void eliminar(Long id);
 }
