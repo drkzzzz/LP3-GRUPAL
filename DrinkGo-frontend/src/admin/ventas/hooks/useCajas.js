@@ -13,9 +13,10 @@ import { useCartStore } from '../stores/cartStore';
 /* ═══ CAJAS REGISTRADORAS ═══ */
 
 export const useCajas = () => {
-  const { negocio, sede } = useAdminAuthStore();
+  const { negocio, sede, getAlcance, cajaAsignada } = useAdminAuthStore();
   const negocioId = negocio?.id;
   const sedeId = sede?.id;
+  const alcanceCajas = getAlcance('m.ventas.cajas');
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -24,11 +25,16 @@ export const useCajas = () => {
     enabled: !!negocioId,
     staleTime: 1000 * 60 * 5,
     select: (data) => {
-      // Filtrar client-side por sede activa
+      let filtered = data;
+      // Filtrar por sede activa
       if (sedeId) {
-        return data.filter((c) => c.sede?.id === sedeId);
+        filtered = filtered.filter((c) => c.sede?.id === sedeId);
       }
-      return data;
+      // Si alcance es caja_asignada, mostrar solo la caja del usuario
+      if (alcanceCajas === 'caja_asignada' && cajaAsignada) {
+        filtered = filtered.filter((c) => c.id === cajaAsignada.id);
+      }
+      return filtered;
     },
   });
 
@@ -76,6 +82,10 @@ export const useCajas = () => {
     isCreating: crearMutation.isPending,
     isUpdating: actualizarMutation.isPending,
     isToggling: toggleHabilitadaMutation.isPending,
+    /** 'completo' | 'caja_asignada' - indica el alcance del usuario */
+    alcanceCajas,
+    /** Caja asignada al usuario (si existe) */
+    cajaAsignada,
   };
 };
 

@@ -96,6 +96,14 @@ const RolForm = ({ initialData, negocioId, onSubmit, onCancel, isLoading }) => {
 };
 
 /* ─── Modal de permisos por rol ─── */
+/** Submódulos que soportan alcance "caja_asignada" */
+const PERMISOS_CON_ALCANCE = new Set([
+  'ventas.cajas',
+  'ventas.movimientos',
+  'ventas.historial',
+  'facturacion.comprobantes',
+]);
+
 const PermisosModal = ({ rol, onClose }) => {
   const queryClient = useQueryClient();
   const [openModulos, setOpenModulos] = useState(new Set());
@@ -114,13 +122,16 @@ const PermisosModal = ({ rol, onClose }) => {
     staleTime: 0,
   });
 
-  /* Map: permisoId → rolPermisosId (para revocar) */
+  /* Map: permisoId → { rpId, alcance } (para revocar y ver alcance) */
   const asignadosAEsteRol = useMemo(
     () =>
       new Map(
         rolesPermisos
           .filter((rp) => rp.rol?.id === rol.id || rp.rolId === rol.id)
-          .map((rp) => [rp.permiso?.id ?? rp.permisoId, rp.id]),
+          .map((rp) => [
+            rp.permiso?.id ?? rp.permisoId,
+            { rpId: rp.id, alcance: rp.alcance || 'completo' },
+          ]),
       ),
     [rolesPermisos, rol.id],
   );
@@ -137,13 +148,35 @@ const PermisosModal = ({ rol, onClose }) => {
     onError: () => message.error('Error al revocar permiso'),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: rolesPermisosService.update,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles-permisos'] }),
+    onError: () => message.error('Error al actualizar alcance'),
+  });
+
   const handleToggle = async (permiso) => {
-    const asignadoId = asignadosAEsteRol.get(permiso.id);
-    if (asignadoId) {
-      await revokeMutation.mutateAsync(asignadoId);
+    const asignado = asignadosAEsteRol.get(permiso.id);
+    if (asignado) {
+      await revokeMutation.mutateAsync(asignado.rpId);
     } else {
-      await assignMutation.mutateAsync({ rol: { id: rol.id }, permiso: { id: permiso.id } });
+      await assignMutation.mutateAsync({
+        rol: { id: rol.id },
+        permiso: { id: permiso.id },
+        alcance: 'completo',
+      });
     }
+  };
+
+  /** Cambiar alcance de un permiso ya asignado */
+  const handleAlcanceChange = async (permiso, nuevoAlcance) => {
+    const asignado = asignadosAEsteRol.get(permiso.id);
+    if (!asignado) return;
+    await updateMutation.mutateAsync({
+      id: asignado.rpId,
+      rol: { id: rol.id },
+      permiso: { id: permiso.id },
+      alcance: nuevoAlcance,
+    });
   };
 
   const toggleModulo = (codigo) => {
@@ -189,31 +222,50 @@ const PermisosModal = ({ rol, onClose }) => {
   }, [todosPermisos]);
 
   const loading = loadingPermisos || loadingAsignados;
-  const mutating = assignMutation.isPending || revokeMutation.isPending;
+  const mutating = assignMutation.isPending || revokeMutation.isPending || updateMutation.isPending;
 
   const PermisoRow = ({ permiso, indent = false }) => {
-    const activo = asignadosAEsteRol.has(permiso.id);
+    const asignado = asignadosAEsteRol.get(permiso.id);
+    const activo = !!asignado;
+    const moduloCodigo = permiso.modulo?.codigo ?? '';
+    const soportaAlcance = PERMISOS_CON_ALCANCE.has(moduloCodigo);
+    const alcanceActual = asignado?.alcance || 'completo';
+
     return (
-      <label
+      <div
         className={[
-          'flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all select-none',
+          'flex items-center gap-3 p-2.5 rounded-lg border transition-all select-none',
           indent ? 'ml-5' : '',
           activo ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white hover:bg-gray-50',
           mutating ? 'opacity-60 pointer-events-none' : '',
         ].join(' ')}
       >
-        <input
-          type="checkbox"
-          checked={activo}
-          onChange={() => handleToggle(permiso)}
-          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-        />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-800">{permiso.nombre}</p>
-          {permiso.descripcion && (
-            <p className="text-xs text-gray-500 truncate">{permiso.descripcion}</p>
-          )}
-        </div>
+        <label className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={activo}
+            onChange={() => handleToggle(permiso)}
+            className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-800">{permiso.nombre}</p>
+            {permiso.descripcion && (
+              <p className="text-xs text-gray-500 truncate">{permiso.descripcion}</p>
+            )}
+          </div>
+        </label>
+        {/* Selector de alcance para permisos que lo soportan */}
+        {activo && soportaAlcance && (
+          <select
+            value={alcanceActual}
+            onChange={(e) => handleAlcanceChange(permiso, e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="completo">Completo</option>
+            <option value="caja_asignada">Solo su caja</option>
+          </select>
+        )}
         {permiso.tipoAccion && (
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
             ACCION_COLORS[permiso.tipoAccion] || 'bg-gray-100 text-gray-600'
@@ -222,7 +274,7 @@ const PermisosModal = ({ rol, onClose }) => {
           </span>
         )}
         {activo && <Check size={14} className="text-green-600 shrink-0" />}
-      </label>
+      </div>
     );
   };
 

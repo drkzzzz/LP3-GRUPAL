@@ -135,10 +135,19 @@ export const rolesPermisosService = {
 
   /**
    * Asigna un permiso a un rol.
-   * @param {{ rol: { id }, permiso: { id } }} payload
+   * @param {{ rol: { id }, permiso: { id }, alcance?: string }} payload
    */
   assign: async (payload) => {
     const { data } = await adminApi.post('/roles-permisos', payload);
+    return data;
+  },
+
+  /**
+   * Actualiza un rol-permiso existente (ej: cambiar alcance).
+   * @param {{ id, rol: { id }, permiso: { id }, alcance: string }} payload
+   */
+  update: async (payload) => {
+    const { data } = await adminApi.put('/roles-permisos', payload);
     return data;
   },
 

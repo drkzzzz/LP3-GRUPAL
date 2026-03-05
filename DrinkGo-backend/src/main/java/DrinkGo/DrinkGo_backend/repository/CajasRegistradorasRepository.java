@@ -8,5 +8,10 @@ public interface CajasRegistradorasRepository extends JpaRepository<CajasRegistr
 
     List<CajasRegistradoras> findByNegocioId(Long negocioId);
 
+    List<CajasRegistradoras> findBySedeId(Long sedeId);
+
+    /** Cajas asignadas a un usuario específico */
+    List<CajasRegistradoras> findByUsuarioAsignadoId(Long usuarioId);
+
     boolean existsByCodigo(String codigo);
 }

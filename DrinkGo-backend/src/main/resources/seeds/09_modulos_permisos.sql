@@ -143,8 +143,11 @@ FROM modulos_sistema;
 --    (es_rol_sistema = 1 Y nombre = 'Administrador')
 -- ============================================================
 
-INSERT IGNORE INTO roles_permisos (rol_id, permiso_id)
-SELECT r.id, p.id
+-- Asegurar que la columna alcance tenga valor por defecto en registros existentes
+UPDATE roles_permisos SET alcance = 'completo' WHERE alcance IS NULL;
+
+INSERT IGNORE INTO roles_permisos (rol_id, permiso_id, alcance)
+SELECT r.id, p.id, 'completo'
 FROM roles r
 CROSS JOIN permisos_sistema p
 WHERE r.nombre = 'Administrador' AND r.es_rol_sistema = 1;

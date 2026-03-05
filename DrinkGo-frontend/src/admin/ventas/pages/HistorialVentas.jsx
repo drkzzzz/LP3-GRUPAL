@@ -4,7 +4,7 @@
  * Historial de ventas del negocio con filtro, detalle y anulación.
  */
 import { useState, useMemo } from 'react';
-import { Eye, Ban, Search, Receipt, Banknote, XCircle } from 'lucide-react';
+import { Eye, Ban, Search, Receipt, Banknote, XCircle, Monitor } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
 import { Badge } from '@/admin/components/ui/Badge';
@@ -27,9 +27,10 @@ const ESTADO_MAP = {
 };
 
 export const HistorialVentas = () => {
-  const { user } = useAdminAuthStore();
-  const { ventas, isLoading, refetch } = useVentas();
+  const { user, cajaAsignada, getAlcance } = useAdminAuthStore();
+  const { ventas, isLoading, refetch, alcanceHistorial } = useVentas();
   const { anularVenta, isAnulando } = useAnularVenta();
+  const esSoloCaja = alcanceHistorial === 'caja_asignada';
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 400);
@@ -159,6 +160,16 @@ export const HistorialVentas = () => {
           Consulta y gestión de todas las ventas realizadas
         </p>
       </div>
+
+      {/* Banner alcance restringido */}
+      {esSoloCaja && cajaAsignada && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <Monitor size={16} className="text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-700">
+            Mostrando solo las ventas del día de tu caja: <strong>{cajaAsignada.nombreCaja}</strong>
+          </p>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -5,12 +5,14 @@
  * NO persiste en localStorage (se limpia al recargar).
  */
 import { create } from 'zustand';
+import { invalidarCacheProductos, buscarProductos } from '../services/productosAdapter';
 
 export const useCartStore = create((set, get) => ({
   /* ═══ ESTADO ═══ */
   items: [],               // [{ producto, cantidad, descuento }]
   descuentoGlobal: 0,      // monto fijo de descuento global
   razonDescuento: '',
+  stockDesactualizado: false, // true cuando se detectó error de stock
 
   /* ═══ ACCIONES ═══ */
 
@@ -63,8 +65,36 @@ export const useCartStore = create((set, get) => ({
   },
 
   clearCart: () => {
-    set({ items: [], descuentoGlobal: 0, razonDescuento: '' });
+    set({ items: [], descuentoGlobal: 0, razonDescuento: '', stockDesactualizado: false });
   },
+
+  /**
+   * Re-obtiene el stock real del backend y actualiza cada ítem del carrito.
+   * Si la cantidad seleccionada supera el stock nuevo, se marca stockDesactualizado.
+   */
+  refreshStock: async () => {
+    invalidarCacheProductos();
+    const productosActualizados = await buscarProductos('');
+    const { items } = get();
+    let hayProblema = false;
+
+    const nuevosItems = items.map((item) => {
+      const fresh = productosActualizados.find((p) => p.id === item.producto.id);
+      if (!fresh) return item;
+      const nuevoStock = fresh.stock ?? 0;
+      if (item.cantidad > nuevoStock) hayProblema = true;
+      return {
+        ...item,
+        producto: { ...item.producto, stock: nuevoStock },
+      };
+    });
+
+    set({ items: nuevosItems, stockDesactualizado: hayProblema });
+    return hayProblema;
+  },
+
+  /** Limpia la bandera de stock desactualizado */
+  clearStockWarning: () => set({ stockDesactualizado: false }),
 
   /* ═══ SELECTORES COMPUTADOS ═══ */
 

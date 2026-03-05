@@ -8,6 +8,9 @@ import DrinkGo.DrinkGo_backend.entity.Suscripciones;
 import DrinkGo.DrinkGo_backend.entity.Usuarios;
 import DrinkGo.DrinkGo_backend.entity.UsuariosRoles;
 import DrinkGo.DrinkGo_backend.entity.UsuariosSedes;
+import DrinkGo.DrinkGo_backend.entity.CajasRegistradoras;
+import DrinkGo.DrinkGo_backend.entity.RolesPermisos;
+import DrinkGo.DrinkGo_backend.repository.CajasRegistradorasRepository;
 import DrinkGo.DrinkGo_backend.repository.SuscripcionesRepository;
 import DrinkGo.DrinkGo_backend.repository.UsuariosRolesRepository;
 import DrinkGo.DrinkGo_backend.repository.UsuariosSedesRepository;
@@ -54,6 +57,9 @@ public class UsuariosController {
 
     @Autowired
     private UsuariosSedesRepository usuariosSedesRepo;
+
+    @Autowired
+    private CajasRegistradorasRepository cajasRepo;
 
     @GetMapping("/usuarios/{id}/permisos")
     public List<String> obtenerPermisos(@PathVariable Long id) {
@@ -283,29 +289,49 @@ public class UsuariosController {
             }
         }
 
-        // 2. Permisos del rol del usuario
-        List<String> rolePermisos = usuariosRolesRepo.findCodigosPermisoByUsuarioId(usuario.getId());
+        // 2. Permisos del rol del usuario CON alcance
+        List<Object[]> rolePermisosConAlcance = usuariosRolesRepo
+                .findPermisosConAlcanceByUsuarioId(usuario.getId());
 
-        // 3. Calcular permisos finales
-        List<String> permisosFinales;
-        if (codigosHabilitados == null) {
-            // Sin restricción de plan → todos los permisos del rol
-            // Sin rol tampoco → devolver todos los módulos base
-            permisosFinales = rolePermisos.isEmpty()
-                    ? new ArrayList<>(List.of("m.dashboard", "m.configuracion", "m.usuarios",
-                            "m.catalogo", "m.inventario", "m.compras",
-                            "m.ventas", "m.facturacion", "m.reportes"))
-                    : rolePermisos;
-        } else if (rolePermisos.isEmpty()) {
-            // Plan con módulos pero sin rol asignado → todos los módulos habilitados
-            permisosFinales = new ArrayList<>(codigosHabilitados);
+        // 3. Calcular permisos finales con alcance
+        List<Map<String, String>> permisosFinales = new ArrayList<>();
+
+        if (rolePermisosConAlcance.isEmpty()) {
+            // Sin rol asignado → todos los módulos base con alcance completo
+            List<String> modulosBase;
+            if (codigosHabilitados == null) {
+                modulosBase = List.of("m.dashboard", "m.configuracion", "m.usuarios",
+                        "m.catalogo", "m.inventario", "m.compras",
+                        "m.ventas", "m.facturacion", "m.reportes");
+            } else {
+                modulosBase = new ArrayList<>(codigosHabilitados);
+            }
+            for (String codigo : modulosBase) {
+                permisosFinales.add(Map.of("codigo", codigo, "alcance", "completo"));
+            }
         } else {
-            // Rol + plan → intersección
-            permisosFinales = rolePermisos.stream()
-                    .filter(codigosHabilitados::contains)
-                    .collect(Collectors.toList());
+            for (Object[] row : rolePermisosConAlcance) {
+                String codigo = (String) row[0];
+                String alcance = row[1] != null ? row[1].toString() : "completo";
+                // Filtrar por plan si aplica
+                if (codigosHabilitados != null && !codigosHabilitados.contains(codigo)) {
+                    continue;
+                }
+                permisosFinales.add(Map.of("codigo", codigo, "alcance", alcance));
+            }
         }
         response.put("permisos", permisosFinales);
+
+        // 4. Caja asignada al usuario (si existe)
+        List<CajasRegistradoras> cajasAsignadas = cajasRepo.findByUsuarioAsignadoId(usuario.getId());
+        if (!cajasAsignadas.isEmpty()) {
+            CajasRegistradoras caja = cajasAsignadas.get(0); // primera caja asignada
+            Map<String, Object> cajaData = new HashMap<>();
+            cajaData.put("id", caja.getId());
+            cajaData.put("nombreCaja", caja.getNombreCaja());
+            cajaData.put("codigo", caja.getCodigo());
+            response.put("cajaAsignada", cajaData);
+        }
 
         if (suscripcionData != null) {
             response.put("suscripcion", suscripcionData);

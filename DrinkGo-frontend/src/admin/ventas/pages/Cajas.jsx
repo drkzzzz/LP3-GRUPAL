@@ -18,6 +18,7 @@ import { Table } from '@/admin/components/ui/Table';
 import { Modal } from '@/admin/components/ui/Modal';
 import { Input } from '@/admin/components/ui/Input';
 import { StatCard } from '@/admin/components/ui/StatCard';
+import { useUsuarios } from '@/admin/usuarios/hooks/useUsuarios';
 import { ModalCerrarCaja } from '../components/ModalCerrarCaja';
 import {
   useCajas,
@@ -31,8 +32,12 @@ import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
 export const Cajas = () => {
   const navigate = useNavigate();
-  const { user, negocio } = useAdminAuthStore();
-  const { cajas, isLoading, crear, actualizar, toggleHabilitada, isCreating, isUpdating, isToggling } = useCajas();
+  const { user, negocio, sede } = useAdminAuthStore();
+  const { cajas, isLoading, crear, actualizar, toggleHabilitada, isCreating, isUpdating, isToggling, alcanceCajas, cajaAsignada } = useCajas();
+  const { usuarios: todosUsuarios, isLoading: loadingUsuarios } = useUsuarios(negocio?.id);
+
+  /* Usuarios activos (para dropdown de asignar cajero) */
+  const usuariosActivos = todosUsuarios.filter((u) => u.estaActivo !== false);
   const { sesion, hasSesion, isLoading: loadingSesion, refetch: refetchSesion } = useSesionActiva();
   const { sesiones, isLoading: loadingSesiones } = useSesiones();
   const { abrirCaja, cerrarCaja, isAbriendo, isCerrando } = useSesionActions();
@@ -45,6 +50,7 @@ export const Cajas = () => {
   const [formData, setFormData] = useState({
     nombreCaja: '',
     codigo: '',
+    usuarioAsignadoId: '',
   });
 
   /* Apertura de caja */
@@ -58,7 +64,7 @@ export const Cajas = () => {
   /* ─── CRUD Cajas ─── */
   const openCrear = () => {
     setEditCaja(null);
-    setFormData({ nombreCaja: '', codigo: '' });
+    setFormData({ nombreCaja: '', codigo: '', usuarioAsignadoId: '' });
     setShowCrearModal(true);
   };
 
@@ -67,6 +73,7 @@ export const Cajas = () => {
     setFormData({
       nombreCaja: caja.nombreCaja || '',
       codigo: caja.codigo || '',
+      usuarioAsignadoId: caja.usuarioAsignado?.id?.toString() || '',
     });
     setShowCrearModal(true);
   };
@@ -74,8 +81,12 @@ export const Cajas = () => {
   const handleSave = async () => {
     const payload = {
       negocioId: negocio?.id,
+      sedeId: sede?.id,
       nombreCaja: formData.nombreCaja,
       codigo: formData.codigo,
+      usuarioAsignadoId: formData.usuarioAsignadoId
+        ? parseInt(formData.usuarioAsignadoId)
+        : null,
     };
 
     if (editCaja) {
@@ -119,10 +130,26 @@ export const Cajas = () => {
   const goToPOS = () => navigate('/admin/ventas/pos');
 
   /* ─── Columnas tabla cajas ─── */
+  const esSoloCaja = alcanceCajas === 'caja_asignada';
+
   const cajasColumns = [
     { key: 'index', title: '#', width: '60px', render: (_, __, i) => i + 1 },
     { key: 'codigo', title: 'Código', dataIndex: 'codigo' },
     { key: 'nombre', title: 'Nombre', dataIndex: 'nombreCaja' },
+    {
+      key: 'cajero',
+      title: 'Cajero Asignado',
+      render: (_, row) => {
+        const u = row.usuarioAsignado;
+        if (!u) return <span className="text-gray-400 text-xs">Sin asignar</span>;
+        return (
+          <div className="flex items-center gap-1.5">
+            <User size={14} className="text-gray-400" />
+            <span className="text-sm">{u.nombres || ''} {u.apellidos || ''}</span>
+          </div>
+        );
+      },
+    },
     {
       key: 'estado',
       title: 'Estado',
@@ -139,7 +166,8 @@ export const Cajas = () => {
         );
       },
     },
-    {
+    // Ocultar acciones para cajeros con alcance caja_asignada
+    ...(!esSoloCaja ? [{
       key: 'actions',
       title: 'Acciones',
       width: '120px',
@@ -168,7 +196,7 @@ export const Cajas = () => {
           </div>
         );
       },
-    },
+    }] : []),
   ];
 
   /* Cajas disponibles para aperturar (habilitadas y sin sesión abierta) */
@@ -185,6 +213,16 @@ export const Cajas = () => {
           Apertura de cajas, gestión de turnos y sesiones
         </p>
       </div>
+
+      {/* Banner alcance restringido */}
+      {esSoloCaja && cajaAsignada && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <Monitor size={16} className="text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-700">
+            Tienes acceso únicamente a tu caja asignada: <strong>{cajaAsignada.nombreCaja}</strong> ({cajaAsignada.codigo})
+          </p>
+        </div>
+      )}
 
       {/* ═══ BANNER SESIÓN ACTIVA / APERTURAR ═══ */}
       {!loadingSesion && (
@@ -332,10 +370,12 @@ export const Cajas = () => {
       <Card>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Cajas</h2>
-          <Button onClick={openCrear} size="sm">
-            <Plus size={16} className="mr-1" />
-            Nueva Caja
-          </Button>
+          {!esSoloCaja && (
+            <Button onClick={openCrear} size="sm">
+              <Plus size={16} className="mr-1" />
+              Nueva Caja
+            </Button>
+          )}
         </div>
         <Table columns={cajasColumns} data={cajasActivas} loading={isLoading} />
       </Card>
@@ -364,6 +404,30 @@ export const Cajas = () => {
             onChange={(e) => updateForm('codigo', e.target.value)}
             placeholder="Ej: CAJA-001"
           />
+
+          {/* Dropdown asignar cajero */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cajero Asignado
+            </label>
+            <select
+              value={formData.usuarioAsignadoId}
+              onChange={(e) => updateForm('usuarioAsignadoId', e.target.value)}
+              className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={loadingUsuarios}
+            >
+              <option value="">Sin asignar</option>
+              {usuariosActivos.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nombres || ''} {u.apellidos || ''} — {u.email || ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Opcional. Solo necesario si desea restringir esta caja a un cajero específico.
+            </p>
+          </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button
               variant="outline"

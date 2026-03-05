@@ -236,6 +236,20 @@ public class DocumentosFacturacion {
         return venta != null ? venta.getId() : null;
     }
 
+    /**
+     * Expone el ID de la caja registradora asociada a la venta
+     * (venta → sesionCaja → caja → id).
+     * Permite al frontend filtrar comprobantes por caja del cajero.
+     */
+    @JsonProperty("ventaCajaId")
+    public Long getVentaCajaId() {
+        if (venta == null) return null;
+        SesionesCaja sc = venta.getSesionCaja();
+        if (sc == null) return null;
+        CajasRegistradoras c = sc.getCaja();
+        return c != null ? c.getId() : null;
+    }
+
     @JsonIgnore
     public Pedidos getPedido() {
         return pedido;

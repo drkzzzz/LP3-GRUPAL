@@ -13,4 +13,7 @@ public interface SesionesCajaRepository extends JpaRepository<SesionesCaja, Long
     List<SesionesCaja> findByCajaIdOrderByFechaAperturaDesc(Long cajaId);
 
     List<SesionesCaja> findByCajaNegocioIdOrderByFechaAperturaDesc(Long negocioId);
+
+    Optional<SesionesCaja> findFirstByCajaIdAndEstadoSesion(
+            Long cajaId, SesionesCaja.EstadoSesion estadoSesion);
 }

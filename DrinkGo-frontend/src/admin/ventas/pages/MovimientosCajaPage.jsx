@@ -28,6 +28,7 @@ import {
   Search,
   Calendar,
   User,
+  Monitor,
 } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
@@ -210,7 +211,8 @@ export const MovimientosCajaPage = () => {
   const navigate = useNavigate();
 
   /* --- Datos base --- */
-  const { cajas, isLoading: loadingCajas } = useCajas();
+  const { cajas, isLoading: loadingCajas, alcanceCajas, cajaAsignada } = useCajas();
+  const esSoloCaja = alcanceCajas === 'caja_asignada';
   const { sesion, hasSesion, isLoading: loadingSesion } = useSesionActiva();
   const { resumen } = useResumenTurno(sesion?.id);
   const { movimientos, isLoading: loadingMov, registrar, isRegistrando } = useMovimientos(sesion?.id);
@@ -421,11 +423,23 @@ export const MovimientosCajaPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Movimientos de Caja</h1>
           <p className="text-gray-600 mt-1">Control de ingresos y egresos del turno</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setShowCategoriasModal(true)}>
-          <Settings size={16} className="mr-1" />
-          Categorias de Gasto
-        </Button>
+        {!esSoloCaja && (
+          <Button variant="outline" size="sm" onClick={() => setShowCategoriasModal(true)}>
+            <Settings size={16} className="mr-1" />
+            Categorias de Gasto
+          </Button>
+        )}
       </div>
+
+      {/* Banner alcance restringido */}
+      {esSoloCaja && cajaAsignada && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <Monitor size={16} className="text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-700">
+            Mostrando solo los movimientos de tu caja: <strong>{cajaAsignada.nombreCaja}</strong>
+          </p>
+        </div>
+      )}
 
       {/* Selector de caja */}
       <Card className="!p-4">
@@ -444,7 +458,8 @@ export const MovimientosCajaPage = () => {
               setFiltroFechaDesdeHist('');
               setFiltroFechaHastaHist('');
             }}
-            className="flex-1 max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            disabled={esSoloCaja}
+            className="flex-1 max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             {cajas.map((c) => (
               <option key={c.id} value={c.id}>
