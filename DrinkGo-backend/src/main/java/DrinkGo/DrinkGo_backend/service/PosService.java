@@ -321,7 +321,16 @@ public class PosService {
             throw new IllegalStateException("El usuario ya tiene una sesión de caja abierta");
         }
 
-        CajasRegistradoras caja = cajasRepo.getReferenceById(request.getCajaId());
+        CajasRegistradoras caja = cajasRepo.findById(request.getCajaId())
+                .orElseThrow(() -> new IllegalArgumentException("Caja no encontrada"));
+
+        // Verificar que la caja tiene un usuario asignado y es el correcto
+        // (solo aplica si la caja tiene un usuario asignado — cajas sin asignar pueden ser abiertas por cualquiera)
+        if (caja.getUsuarioAsignado() != null
+                && !caja.getUsuarioAsignado().getId().equals(request.getUsuarioId())) {
+            throw new IllegalStateException(
+                    "No puedes abrir esta caja. Está asignada a otro usuario.");
+        }
 
         Usuarios usuario = usuariosRepo.getReferenceById(request.getUsuarioId());
 

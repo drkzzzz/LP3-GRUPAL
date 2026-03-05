@@ -13,6 +13,7 @@ import { Modal } from '@/admin/components/ui/Modal';
 import { StatCard } from '@/admin/components/ui/StatCard';
 import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { useVentas, useVentaDetalle, useAnularVenta } from '../hooks/useVentas';
+import { SinCajaAsignada } from '../components/SinCajaAsignada';
 import { formatCurrency, formatDateTime } from '@/shared/utils/formatters';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
@@ -45,6 +46,11 @@ export const HistorialVentas = () => {
 
   /* Anulación */
   const [anularTarget, setAnularTarget] = useState(null);
+
+  /* Si es cajero con alcance caja_asignada pero sin caja asignada -> bloquear */
+  if (esSoloCaja && !cajaAsignada) {
+    return <SinCajaAsignada titulo="Historial de Ventas" />;
+  }
 
   /* Filtrar ventas */
   const filtered = useMemo(() => {

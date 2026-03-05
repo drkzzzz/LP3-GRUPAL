@@ -21,11 +21,14 @@ import { useSesionActiva, useResumenTurno, useMovimientos, useCategoriasGasto } 
 import { useCrearVenta, useMetodosPago } from '../hooks/useVentas';
 import { useSeries } from '@/admin/facturacion/hooks/useFacturacion';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
+import { SinCajaAsignada } from '../components/SinCajaAsignada';
 import { formatCurrency, formatDateTime } from '@/shared/utils/formatters';
 
 export const POS = () => {
   const navigate = useNavigate();
-  const { user, negocio } = useAdminAuthStore();
+  const { user, negocio, getAlcance, cajaAsignada } = useAdminAuthStore();
+  const esSoloCaja = getAlcance('m.ventas.pos') === 'caja_asignada';
+
   const { sesion, hasSesion, isLoading: loadingSesion } = useSesionActiva();
   const { resumen } = useResumenTurno(sesion?.id);
   const { registrar: registrarMovimiento, isRegistrando } = useMovimientos(sesion?.id);
@@ -53,6 +56,11 @@ export const POS = () => {
 
   /* ─── Estado del comprobante ─── */
   const [receiptData, setReceiptData] = useState(null);
+
+  /* Si es cajero con alcance caja_asignada pero sin caja asignada -> bloquear */
+  if (esSoloCaja && !cajaAsignada) {
+    return <SinCajaAsignada titulo="Punto de Venta" />;
+  }
 
   /* ─── Registrar movimiento ─── */
   const handleMovimiento = async (data) => {

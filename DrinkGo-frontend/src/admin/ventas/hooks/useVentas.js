@@ -13,9 +13,10 @@ import { useAdminAuthStore } from '@/stores/adminAuthStore';
 /* ═══ LISTAR VENTAS POR NEGOCIO ═══ */
 
 export const useVentas = () => {
-  const { negocio, sede, getAlcance, cajaAsignada } = useAdminAuthStore();
+  const { negocio, sede, user, getAlcance, cajaAsignada } = useAdminAuthStore();
   const negocioId = negocio?.id;
   const sedeId = sede?.id;
+  const userId = user?.id;
   const alcanceHistorial = getAlcance('m.ventas.historial');
 
   const query = useQuery({
@@ -28,13 +29,14 @@ export const useVentas = () => {
       if (sedeId) {
         filtered = filtered.filter((v) => v.sede?.id === sedeId);
       }
-      // Si alcance es caja_asignada, mostrar solo ventas de la caja del usuario + del día
+      // Si alcance es caja_asignada, mostrar solo ventas propias del cajero + del día
       if (alcanceHistorial === 'caja_asignada' && cajaAsignada) {
         const hoy = new Date().toISOString().slice(0, 10);
         filtered = filtered.filter(
           (v) =>
             v.sesionCaja?.caja?.id === cajaAsignada.id &&
-            v.creadoEn?.slice(0, 10) === hoy,
+            v.usuario?.id === userId &&
+            (v.fechaVenta || v.creadoEn)?.slice(0, 10) === hoy,
         );
       }
       return filtered;

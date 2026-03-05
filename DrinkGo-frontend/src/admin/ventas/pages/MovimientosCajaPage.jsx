@@ -46,6 +46,8 @@ import {
   useCategoriasGasto,
 } from '../hooks/useCajas';
 import { formatCurrency, formatDateTime } from '@/shared/utils/formatters';
+import { useAdminAuthStore } from '@/stores/adminAuthStore';
+import { SinCajaAsignada } from '../components/SinCajaAsignada';
 
 /* -------------------------------------------------- */
 /*  Constantes                                        */
@@ -209,10 +211,12 @@ const SesionFullView = ({ sesionData, columns, isActive = false }) => {
 
 export const MovimientosCajaPage = () => {
   const navigate = useNavigate();
+  const { user } = useAdminAuthStore();
 
   /* --- Datos base --- */
   const { cajas, isLoading: loadingCajas, alcanceCajas, cajaAsignada } = useCajas();
   const esSoloCaja = alcanceCajas === 'caja_asignada';
+
   const { sesion, hasSesion, isLoading: loadingSesion } = useSesionActiva();
   const { resumen } = useResumenTurno(sesion?.id);
   const { movimientos, isLoading: loadingMov, registrar, isRegistrando } = useMovimientos(sesion?.id);
@@ -231,11 +235,16 @@ export const MovimientosCajaPage = () => {
     !isViewingActiveCaja ? effectiveCajaId : null
   );
 
-  // Filtrar solo sesiones cerradas (no la activa)
+  // Filtrar sesiones: excluir la activa, y si es cajero solo mostrar sus propias sesiones
   const sesionesHistoricas = useMemo(() => {
     if (isViewingActiveCaja) return [];
-    return sesionesCaja.filter((s) => s.estadoSesion !== 'abierta' || s.id !== sesion?.id);
-  }, [sesionesCaja, isViewingActiveCaja, sesion?.id]);
+    let filtered = sesionesCaja.filter((s) => s.estadoSesion !== 'abierta' || s.id !== sesion?.id);
+    // Si alcance es caja_asignada, solo mostrar las sesiones del propio usuario
+    if (esSoloCaja && user?.id) {
+      filtered = filtered.filter((s) => s.usuario?.id === user.id);
+    }
+    return filtered;
+  }, [sesionesCaja, isViewingActiveCaja, sesion?.id, esSoloCaja, user?.id]);
 
   /* --- Sesion historica seleccionada (vista completa) --- */
   const [selectedSesionId, setSelectedSesionId] = useState(null);
@@ -256,6 +265,11 @@ export const MovimientosCajaPage = () => {
   const [filtroFechaHastaHist, setFiltroFechaHastaHist] = useState('');
   const [paginaHist, setPaginaHist] = useState(1);
   const PAGE_SIZE_HIST = 8;
+
+  /* Si es cajero con alcance caja_asignada pero sin caja asignada -> bloquear */
+  if (esSoloCaja && !cajaAsignada) {
+    return <SinCajaAsignada titulo="Movimientos de Caja" />;
+  }
 
   /* --- Filtrado de sesiones historicas --- */
   const sesionesHistoricasFiltradas = useMemo(() => {

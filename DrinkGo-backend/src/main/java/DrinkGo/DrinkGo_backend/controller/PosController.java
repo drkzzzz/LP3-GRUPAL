@@ -307,6 +307,13 @@ public class PosController {
             // Asignar usuario a la caja si se envía usuarioAsignadoId
             if (body.containsKey("usuarioAsignadoId") && body.get("usuarioAsignadoId") != null) {
                 Long uId = Long.valueOf(body.get("usuarioAsignadoId").toString());
+                // Verificar que el usuario no esté asignado a otra caja
+                List<CajasRegistradoras> cajasDelUsuario = cajasRepo.findByUsuarioAsignadoId(uId);
+                if (!cajasDelUsuario.isEmpty()) {
+                    String nombreCajaExistente = cajasDelUsuario.get(0).getNombreCaja();
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("error", "Este usuario ya está asignado a la caja '" + nombreCajaExistente + "'. Un usuario solo puede estar asignado a una caja."));
+                }
                 caja.setUsuarioAsignado(usuariosRepo.findById(uId).orElse(null));
             }
 
@@ -336,6 +343,17 @@ public class PosController {
                 Object val = body.get("usuarioAsignadoId");
                 if (val != null) {
                     Long uId = Long.valueOf(val.toString());
+                    // Verificar que el usuario no esté asignado a otra caja (distinta de la actual)
+                    List<CajasRegistradoras> cajasDelUsuario = cajasRepo.findByUsuarioAsignadoId(uId);
+                    boolean asignadoAOtraCaja = cajasDelUsuario.stream()
+                            .anyMatch(c -> !c.getId().equals(cajaId));
+                    if (asignadoAOtraCaja) {
+                        String nombreCajaExistente = cajasDelUsuario.stream()
+                                .filter(c -> !c.getId().equals(cajaId))
+                                .findFirst().map(CajasRegistradoras::getNombreCaja).orElse("");
+                        return ResponseEntity.badRequest()
+                                .body(Map.of("error", "Este usuario ya está asignado a la caja '" + nombreCajaExistente + "'. Un usuario solo puede estar asignado a una caja."));
+                    }
                     caja.setUsuarioAsignado(usuariosRepo.findById(uId).orElse(null));
                 } else {
                     caja.setUsuarioAsignado(null);
