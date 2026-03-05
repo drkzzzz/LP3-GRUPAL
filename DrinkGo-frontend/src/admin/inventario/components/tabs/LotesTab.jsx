@@ -17,6 +17,7 @@ import {
   CalendarClock,
   Layers,
   Settings,
+  PackageX,
 } from 'lucide-react';
 import { useLotesInventario } from '../../hooks/useLotesInventario';
 import { useAlmacenes } from '../../hooks/useAlmacenes';
@@ -53,10 +54,11 @@ export const LotesTab = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isAjusteOpen, setIsAjusteOpen] = useState(false);
+  const [isRetiroOpen, setIsRetiroOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
   /* ─── Data hooks ─── */
-  const { lotes, isLoading, createLote, deleteLote, isCreating, isDeleting } = useLotesInventario(negocioId);
+  const { lotes, isLoading, createLote, updateLote, deleteLote, isCreating, isDeleting } = useLotesInventario(negocioId);
   const { almacenes } = useAlmacenes(negocioId);
   const { productos } = useProductosInventario(negocioId);
   const { stock, createStock, updateStock } = useStockInventario(negocioId);
@@ -197,6 +199,68 @@ export const LotesTab = () => {
     setIsAjusteOpen(true);
   };
 
+  const handleRetirarClick = (lote) => {
+    setSelected(lote);
+    setIsRetiroOpen(true);
+  };
+
+  const handleRetirar = async () => {
+    if (!selected || !selected.producto || !selected.almacen) return;
+
+    try {
+      const cantidadActual = Number(selected.cantidadActual || 0);
+
+      // 1. Actualizar el lote a cantidadActual = 0 (retiro por vencimiento)
+      await updateLote({
+        ...selected,
+        cantidadActual: 0,
+        negocio: { id: negocioId },
+        producto: { id: selected.producto.id },
+        almacen: { id: selected.almacen.id },
+        creadoPor: selected.creadoPor ? { id: selected.creadoPor.id } : undefined,
+      });
+
+      // 2. Descontar del stock consolidado
+      const stockExistente = stock.find(
+        (s) => s.producto?.id === selected.producto.id && s.almacen?.id === selected.almacen.id
+      );
+
+      if (stockExistente) {
+        const nuevaCantidad = Math.max(0, Number(stockExistente.cantidadActual || 0) - cantidadActual);
+        await updateStock({
+          id: stockExistente.id,
+          negocio: { id: negocioId },
+          producto: { id: selected.producto.id },
+          almacen: { id: selected.almacen.id },
+          cantidadActual: nuevaCantidad,
+          cantidadDisponible: nuevaCantidad,
+          cantidadReservada: Number(stockExistente.cantidadReservada || 0),
+          costoPromedio: Number(stockExistente.costoPromedio || 0),
+        });
+      }
+
+      // 3. Crear movimiento de inventario tipo merma por vencimiento
+      await createMovimiento({
+        negocio: { id: negocioId },
+        producto: { id: selected.producto.id },
+        almacenOrigen: { id: selected.almacen.id },
+        almacenDestino: null,
+        lote: { id: selected.id },
+        tipoMovimiento: 'ajuste_negativo',
+        cantidad: cantidadActual,
+        motivoAjuste: 'vencimiento',
+        accionTomada: 'descarte',
+        observaciones: `Retiro de producto vencido - Lote: ${selected.numeroLote}. Fecha vencimiento: ${selected.fechaVencimiento || 'N/A'}`,
+        usuario: user?.id ? { id: user.id } : undefined,
+      });
+
+      setIsRetiroOpen(false);
+      setSelected(null);
+    } catch (error) {
+      console.error('Error al retirar producto vencido:', error);
+    }
+  };
+
   const handleAjusteSubmit = async (data) => {
     try {
       // 1. Crear el movimiento de ajuste
@@ -314,33 +378,48 @@ export const LotesTab = () => {
     {
       key: 'actions',
       title: 'Acciones',
-      width: '100px',
+      width: '150px',
       align: 'center',
-      render: (_, row) => (
-        <div className="flex justify-center gap-1">
-          <button
-            title="Ajustar inventario"
-            onClick={() => handleAjustarClick(row)}
-            className="p-1.5 rounded hover:bg-purple-50 text-purple-500 hover:text-purple-700 transition-colors"
-          >
-            <Settings size={16} />
-          </button>
-          <button
-            title="Ver detalles"
-            onClick={() => handleView(row)}
-            className="p-1.5 rounded hover:bg-blue-50 text-blue-500 hover:text-blue-700 transition-colors"
-          >
-            <Eye size={16} />
-          </button>
-          <button
-            title="Eliminar"
-            onClick={() => handleDeleteClick(row)}
-            className="p-1.5 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      ),
+      render: (_, row) => {
+        const dias = diasParaVencer(row.fechaVencimiento);
+        const estaVencido = dias !== null && dias < 0 && Number(row.cantidadActual || 0) > 0;
+        
+        return (
+          <div className="flex justify-center gap-1">
+            {/* Bot\u00f3n Retirar (solo para lotes vencidos con stock) */}
+            {estaVencido && (
+              <button
+                title="Retirar producto vencido"
+                onClick={() => handleRetirarClick(row)}
+                className="p-1.5 rounded hover:bg-orange-50 text-orange-500 hover:text-orange-700 transition-colors"
+              >
+                <PackageX size={16} />
+              </button>
+            )}
+            <button
+              title="Ajustar inventario"
+              onClick={() => handleAjustarClick(row)}
+              className="p-1.5 rounded hover:bg-purple-50 text-purple-500 hover:text-purple-700 transition-colors"
+            >
+              <Settings size={16} />
+            </button>
+            <button
+              title="Ver detalles"
+              onClick={() => handleView(row)}
+              className="p-1.5 rounded hover:bg-blue-50 text-blue-500 hover:text-blue-700 transition-colors"
+            >
+              <Eye size={16} />
+            </button>
+            <button
+              title="Eliminar"
+              onClick={() => handleDeleteClick(row)}
+              className="p-1.5 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -505,6 +584,38 @@ export const LotesTab = () => {
           />
         )}
       </Modal>
+
+      {/* ─── Confirmar retiro de producto vencido ─── */}
+      <ConfirmDialog
+        isOpen={isRetiroOpen}
+        onClose={() => { setIsRetiroOpen(false); setSelected(null); }}
+        onConfirm={handleRetirar}
+        title="Retirar Producto Vencido"
+        message={
+          <>
+            <p className="mb-2">
+              <strong>¿Está seguro de retirar este producto vencido?</strong>
+            </p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm space-y-1">
+              <p><strong>Producto:</strong> {selected?.producto?.nombre}</p>
+              <p><strong>Lote:</strong> {selected?.numeroLote}</p>
+              <p><strong>Cantidad a retirar:</strong> {Number(selected?.cantidadActual || 0).toLocaleString()} unidades</p>
+              <p><strong>Vencimiento:</strong> {selected?.fechaVencimiento ? formatDate(selected.fechaVencimiento) : 'N/A'}</p>
+            </div>
+            <p className="mt-3 text-gray-600 text-xs">
+              Esta acción:
+            </p>
+            <ul className="list-disc list-inside text-xs text-gray-600 space-y-0.5 mt-1">
+              <li>Marcará el lote con cantidad 0</li>
+              <li>Descontará del stock consolidado</li>
+              <li>Creará un movimiento de merma por vencimiento</li>
+              <li>No se puede deshacer</li>
+            </ul>
+          </>
+        }
+        confirmText="Retirar Producto"
+        isLoading={false}
+      />
 
       {/* ─── Confirmar eliminar ─── */}
       <ConfirmDialog

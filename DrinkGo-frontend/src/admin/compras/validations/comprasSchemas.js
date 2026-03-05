@@ -82,6 +82,7 @@ export const ordenCompraSchema = z.object({
   proveedorId: z.string().min(1, 'El proveedor es obligatorio'),
   sedeId: z.string().min(1, 'La sede es obligatoria'),
   almacenId: z.string().min(1, 'El almacén es obligatorio'),
+  incluirIgv: z.boolean().optional().default(true),
   notas: z.string().optional().default(''),
   items: z
     .array(

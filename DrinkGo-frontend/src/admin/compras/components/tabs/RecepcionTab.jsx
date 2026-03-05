@@ -116,16 +116,27 @@ export const RecepcionTab = () => {
     return getDetallesForOrden(selectedOrden.id);
   }, [selectedOrden, detalles, getDetallesForOrden]);
 
+  /* ─── Calcular total desde detalles si el total de la orden es 0 ─── */
+  const totalCalculado = useMemo(() => {
+    if (!selectedOrden) return 0;
+    // Si el total de la orden es mayor a 0, usarlo
+    if (selectedOrden.total > 0) return selectedOrden.total;
+    // Sino, calcular desde los detalles
+    return ordenDetalles.reduce((sum, d) => sum + (Number(d.total) || 0), 0);
+  }, [selectedOrden, ordenDetalles]);
+
   /* ─── Handlers ─── */
   const openRecepcion = (orden) => {
     setSelectedOrden(orden);
     const items = getDetallesForOrden(orden.id);
     const initialCantidades = {};
     items.forEach((d) => {
+      // Conservar los datos si ya existen en el estado, sino inicializar vacíos
+      const existingData = cantidades[d.id];
       initialCantidades[d.id] = {
-        cantidadRecibida: d.cantidadRecibida ?? 0,
-        numeroLote: '',
-        fechaVencimiento: '',
+        cantidadRecibida: existingData?.cantidadRecibida ?? d.cantidadRecibida ?? 0,
+        numeroLote: existingData?.numeroLote ?? '',
+        fechaVencimiento: existingData?.fechaVencimiento ?? '',
       };
     });
     setCantidades(initialCantidades);
@@ -499,7 +510,10 @@ export const RecepcionTab = () => {
               <div className="h-3 w-px bg-gray-300"></div>
               <div className="flex items-center gap-1.5 ml-auto">
                 <span className="text-gray-500 font-medium">Total:</span>
-                <span className="text-gray-900 font-bold">{formatCurrency(selectedOrden.total)}</span>
+                <span className="text-gray-900 font-bold">{formatCurrency(totalCalculado)}</span>
+                {selectedOrden.total === 0 && totalCalculado > 0 && (
+                  <span className="text-orange-600 text-[10px] italic">(calculado)</span>
+                )}
               </div>
             </div>
 

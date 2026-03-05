@@ -52,12 +52,39 @@ export const AlertasTab = () => {
     return Math.ceil((new Date(fecha) - new Date()) / (1000 * 60 * 60 * 24));
   };
 
-  /* ─── Datos calculados ─── */
+  /* ─── Consolidar stock por producto (sumar todos los almacenes) ─── */
+  const stockConsolidado = useMemo(() => {
+    const map = new Map();
+    for (const s of stock) {
+      const key = s.producto?.id ?? '';
+      if (!map.has(key)) {
+        map.set(key, {
+          ...s,
+          cantidadActual: Number(s.cantidadActual || 0),
+          cantidadDisponible: Number(s.cantidadDisponible || 0),
+          cantidadReservada: Number(s.cantidadReservada || 0),
+          _costoTotal: Number(s.cantidadActual || 0) * Number(s.costoPromedio || 0),
+        });
+      } else {
+        const existing = map.get(key);
+        const addCant = Number(s.cantidadActual || 0);
+        const newCant = existing.cantidadActual + addCant;
+        existing._costoTotal += addCant * Number(s.costoPromedio || 0);
+        existing.cantidadActual = newCant;
+        existing.cantidadDisponible += Number(s.cantidadDisponible || 0);
+        existing.cantidadReservada += Number(s.cantidadReservada || 0);
+        existing.costoPromedio = newCant > 0 ? existing._costoTotal / newCant : 0;
+      }
+    }
+    return Array.from(map.values());
+  }, [stock]);
+
+  /* ─── Datos calculados (ahora usa stock consolidado) ─── */
   const alertData = useMemo(() => {
-    const stockBajo = stock.filter(
+    const stockBajo = stockConsolidado.filter(
       (s) => Number(s.cantidadActual) <= STOCK_MINIMO && Number(s.cantidadActual) > STOCK_CRITICO,
     );
-    const stockCritico = stock.filter(
+    const stockCritico = stockConsolidado.filter(
       (s) => Number(s.cantidadActual) <= STOCK_CRITICO,
     );
     const porVencer = lotes.filter((l) => {
@@ -71,7 +98,7 @@ export const AlertasTab = () => {
     }).sort((a, b) => new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento));
 
     return { stock_bajo: stockBajo, stock_critico: stockCritico, por_vencer: porVencer, vencidos };
-  }, [stock, lotes]);
+  }, [stockConsolidado, lotes]);
 
   const currentData = alertData[activeAlert] || [];
 
