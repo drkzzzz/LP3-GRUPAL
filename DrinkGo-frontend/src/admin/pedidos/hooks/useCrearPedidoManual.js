@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createPedido } from '@/admin/pedidos/services/pedidosApi';
 import { message } from '@/shared/utils/notifications';
+import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
 /**
  * Hook para crear pedido manual completo
@@ -11,6 +12,7 @@ import { message } from '@/shared/utils/notifications';
  */
 export function useCrearPedidoManual() {
   const queryClient = useQueryClient();
+  const { negocio, sede } = useAdminAuthStore();
   
   return useMutation({
     mutationFn: async (pedidoData) => {
@@ -65,8 +67,8 @@ export function useCrearPedidoManual() {
       
       // Preparar payload para el backend
       const payload = {
-        negocio: { id: 1 }, // TODO: Obtener del contexto de usuario
-        sede: { id: 1 }, // TODO: Obtener de la sede seleccionada o usuario
+        negocio: { id: negocio?.id || 1 }, // ✅ Obtener del store
+        sede: { id: sede?.id || 1 }, // ✅ Obtener del store
         cliente: { id: pedidoData.clienteId }, // ✅ Objeto con ID (NO clienteId)
         tipoPedido: pedidoData.tipoPedido,
         origenPedido: pedidoData.origenPedido || 'telefono',
@@ -87,13 +89,14 @@ export function useCrearPedidoManual() {
         total: pedidoData.total,
         moneda: 'PEN',
         
+        // Campo para el método de pago (si existe en la entidad)
+        metodoPago: pedidoData.metodoPago || 'Efectivo',
+        
         // Estado inicial
         estadoPedido: 'pendiente',
         
-        // Observaciones (incluye método de pago)
-        observaciones: pedidoData.observaciones 
-          ? `Método de pago: ${pedidoData.metodoPago || 'Efectivo'}. ${pedidoData.observaciones}`
-          : `Método de pago: ${pedidoData.metodoPago || 'Efectivo'}`,
+        // Observaciones puras
+        observaciones: pedidoData.observaciones || null,
         
         // Usuario que registra (TODO: obtener del contexto)
         usuario: null, // Cambiar a objeto cuando tengamos auth
@@ -131,9 +134,15 @@ export function useCrearPedidoManual() {
       return response;
     },
     onSuccess: (data) => {
-      // Invalidar cache de pedidos
-      queryClient.invalidateQueries({ queryKey: ['pedidos'] });
-      queryClient.invalidateQueries({ queryKey: ['detalle-pedidos'] });
+      // ✅ Invalidación agresiva y forzada
+      queryClient.invalidateQueries({ 
+        queryKey: ['pedidos'],
+        exact: true,
+        refetchType: 'all' 
+      });
+      
+      // Forzar recarga inmediata desde el servidor
+      queryClient.refetchQueries({ queryKey: ['pedidos'] });
       
       message.success(`✅ Pedido ${data.numeroPedido || 'creado'} registrado correctamente`);
       return data;

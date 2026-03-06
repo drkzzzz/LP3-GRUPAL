@@ -71,18 +71,23 @@ export function ListaPedidosTab() {
     }
 
     // Búsqueda con debounce
-    if (debouncedSearch.trim()) {
       const termino = debouncedSearch.toLowerCase();
-      resultado = resultado.filter(
-        (p) =>
-          p.numeroPedido?.toLowerCase().includes(termino) ||
-          p.cliente?.nombre?.toLowerCase().includes(termino) ||
-          p.cliente?.apellido?.toLowerCase().includes(termino)
-      );
-    }
+      resultado = resultado.filter((p) => {
+        const numeroMatch = (p.numeroPedido || p.id?.toString())?.toLowerCase().includes(termino);
+        
+        // Búsqueda en objeto cliente
+        const nombreMatch = (p.cliente?.nombres || p.clienteNombre || '')?.toLowerCase().includes(termino);
+        const apellidoMatch = (p.cliente?.apellidos || p.clienteApellido || '')?.toLowerCase().includes(termino);
+        const telefonoMatch = (p.cliente?.telefono || p.clienteTelefono || '')?.toLowerCase().includes(termino);
 
-    // Ordenar por fecha más reciente primero
-    resultado.sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
+        return numeroMatch || nombreMatch || apellidoMatch || telefonoMatch;
+      });
+
+      resultado.sort((a, b) => {
+      const fechaA = new Date(a.creado_en || a.creadoEn || a.fechaPedido || 0);
+      const fechaB = new Date(b.creado_en || b.creadoEn || b.fechaPedido || 0);
+      return fechaB - fechaA;
+    });
 
     return resultado;
   }, [pedidos, filtroEstado, filtroTipo, debouncedSearch]);
@@ -204,14 +209,20 @@ export function ListaPedidosTab() {
       key: 'cliente',
       title: 'Cliente',
       width: '180px',
-      render: (_, row) => (
-        <div>
-          <div className="font-medium">
-            {row.cliente?.nombre} {row.cliente?.apellido}
+      render: (_, row) => {
+        const nombres = row.cliente?.nombres || row.clienteNombre || 'Sin';
+        const apellidos = row.cliente?.apellidos || row.clienteApellido || 'Nombre';
+        const telefono = row.cliente?.telefono || row.clienteTelefono || 'Sin teléfono';
+        
+        return (
+          <div>
+            <div className="font-medium">
+              {nombres} {apellidos}
+            </div>
+            <div className="text-xs text-gray-500">{telefono}</div>
           </div>
-          <div className="text-xs text-gray-500">{row.cliente?.telefono}</div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'tipo',

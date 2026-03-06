@@ -33,10 +33,12 @@ public class PedidosController {
         System.out.println("  - Total: " + entity.getTotal());
         System.out.println("  - Distrito: " + entity.getDistrito());
         System.out.println("  - Zona delivery ID: " + (entity.getZonaDelivery() != null ? entity.getZonaDelivery().getId() : "NULL"));
+        System.out.println("  - Negocio ID: " + (entity.getNegocio() != null ? entity.getNegocio().getId() : "NULL"));
+        System.out.println("  - Sede ID: " + (entity.getSede() != null ? entity.getSede().getId() : "NULL"));
         
         service.guardar(entity);
         
-        System.out.println("✅ Pedido guardado con ID: " + entity.getId());
+        System.out.println("✅ Pedido guardado con ID: " + entity.getId() + " - Número: " + entity.getNumeroPedido());
         return entity;
     }
 

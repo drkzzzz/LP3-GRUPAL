@@ -21,42 +21,54 @@ public class PedidosService implements IPedidosService {
     @Transactional(readOnly = true)
     public List<Pedidos> buscarTodos() {
         List<Pedidos> pedidos = repoPedidos.findAll();
-        // ✅ CRITICAL: Inicializar TODAS las relaciones LAZY para el flujo de pedidos
+        // Inicializar relaciones LAZY con protección contra entidades eliminadas
         for (Pedidos pedido : pedidos) {
-            // Cliente (OBLIGATORIO - debe aparecer siempre)
-            if (pedido.getCliente() != null) {
-                pedido.getCliente().getNombres();
-                pedido.getCliente().getApellidos();
-                pedido.getCliente().getTelefono();
+            try {
+                // Cliente
+                if (pedido.getCliente() != null) {
+                    pedido.getCliente().getNombres();
+                    pedido.getCliente().getApellidos();
+                    pedido.getCliente().getTelefono();
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Cliente no encontrado para pedido " + pedido.getId());
             }
-            // Negocio y Sede
-            if (pedido.getNegocio() != null) {
-                pedido.getNegocio().getRazonSocial();
+            try {
+                // Zona delivery (si aplica)
+                if (pedido.getZonaDelivery() != null) {
+                    pedido.getZonaDelivery().getNombre();
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Zona delivery no encontrada para pedido " + pedido.getId());
             }
-            if (pedido.getSede() != null) {
-                pedido.getSede().getNombre();
+            try {
+                // Usuario que procesó (si hay)
+                if (pedido.getUsuario() != null) {
+                    pedido.getUsuario().getNombres();
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Usuario no encontrado para pedido " + pedido.getId());
             }
-            // Zona delivery (si aplica)
-            if (pedido.getZonaDelivery() != null) {
-                pedido.getZonaDelivery().getNombre();
+            try {
+                // Venta asociada (si ya se generó)
+                if (pedido.getVenta() != null) {
+                    pedido.getVenta().getNumeroVenta();
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Venta no encontrada para pedido " + pedido.getId());
             }
-            // Usuario que procesó (si hay)
-            if (pedido.getUsuario() != null) {
-                pedido.getUsuario().getNombres();
-            }
-            // Venta asociada (si ya se generó)
-            if (pedido.getVenta() != null) {
-                pedido.getVenta().getNumeroVenta();
-            }
-            // ✅ DETALLES (productos del pedido)
-            if (pedido.getDetalles() != null && !pedido.getDetalles().isEmpty()) {
-                for (DetallePedidos detalle : pedido.getDetalles()) {
-                    // Inicializar producto de cada detalle
-                    if (detalle.getProducto() != null) {
-                        detalle.getProducto().getNombre();
-                        detalle.getProducto().getSku();
+            try {
+                // DETALLES (productos del pedido)
+                if (pedido.getDetalles() != null && !pedido.getDetalles().isEmpty()) {
+                    for (DetallePedidos detalle : pedido.getDetalles()) {
+                        if (detalle.getProducto() != null) {
+                            detalle.getProducto().getNombre();
+                            detalle.getProducto().getSku();
+                        }
                     }
                 }
+            } catch (Exception e) {
+                System.err.println("⚠️ Error cargando detalles para pedido " + pedido.getId());
             }
         }
         return pedidos;

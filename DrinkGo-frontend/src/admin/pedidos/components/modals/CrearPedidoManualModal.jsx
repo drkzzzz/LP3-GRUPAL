@@ -9,9 +9,14 @@ import { SelectorProductos } from '../forms/SelectorProductos';
 import { SelectorZonaDelivery } from '../forms/SelectorZonaDelivery';
 import { ResumenTotales } from '../forms/ResumenTotales';
 import { useCrearPedidoManual } from '../../hooks/useCrearPedidoManual';
+import { useMetodosPago } from '@/admin/configuracion/hooks/useMetodosPago';
+import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { message } from '@/shared/utils/notifications';
 
 export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
+  const { negocio } = useAdminAuthStore();
+  const negocioId = negocio?.id;
+  
   // Estados del formulario
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
   const [items, setItems] = useState([]);
@@ -31,8 +36,16 @@ export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
   
   // Observaciones y método de pago
   const [observaciones, setObservaciones] = useState('');
-  const [metodoPago, setMetodoPago] = useState('Efectivo');
+  const { metodosPago, isLoading: cargandoMetodos } = useMetodosPago(negocioId);
+  const [metodoPago, setMetodoPago] = useState('');
   const [incluirIGV, setIncluirIGV] = useState(true);
+
+  // Efecto para seleccionar el primer método de pago por defecto
+  useEffect(() => {
+    if (metodosPago.length > 0 && !metodoPago) {
+      setMetodoPago(metodosPago[0].nombre);
+    }
+  }, [metodosPago, metodoPago]);
   
   // Hook de creación
   const { mutateAsync: crearPedido, isPending: creandoPedido } = useCrearPedidoManual();
@@ -116,6 +129,11 @@ export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
       
       const pedidoCreado = await crearPedido(pedidoData);
       
+      // Callback y cerrar antes de limpiar para evitar parpadeos
+      if (onPedidoCreado) {
+        onPedidoCreado(pedidoCreado);
+      }
+      
       // Limpiar formulario
       setClienteSeleccionado(null);
       setItems([]);
@@ -125,10 +143,6 @@ export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
       setObservaciones('');
       setMetodoPago('Efectivo');
       
-      // Callback y cerrar
-      if (onPedidoCreado) {
-        onPedidoCreado(pedidoCreado);
-      }
       onClose();
     } catch (error) {
       console.error('Error al crear pedido:', error);
@@ -277,11 +291,23 @@ export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
                       value={metodoPago}
                       onChange={(e) => setMetodoPago(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      disabled={cargandoMetodos}
                     >
-                      <option value="Efectivo">Efectivo</option>
-                      <option value="Transferencia">Transferencia</option>
-                      <option value="Yape/Plin">Yape/Plin</option>
-                      <option value="Tarjeta">Tarjeta</option>
+                      {cargandoMetodos ? (
+                        <option>Cargando métodos...</option>
+                      ) : metodosPago.length > 0 ? (
+                        metodosPago.map((m) => (
+                          <option key={m.id} value={m.nombre}>
+                            {m.nombre}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Efectivo">Efectivo</option>
+                          <option value="Transferencia">Transferencia</option>
+                          <option value="Yape/Plin">Yape/Plin</option>
+                        </>
+                      )}
                     </select>
                   </div>
                   

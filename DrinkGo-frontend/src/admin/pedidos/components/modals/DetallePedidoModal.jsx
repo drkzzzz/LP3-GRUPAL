@@ -3,7 +3,7 @@
  * Muestra información completa, timeline de estados, productos y seguimiento
  */
 import { useMemo } from 'react';
-import { X, Package, User, MapPin, Clock, Truck, Phone, ShoppingCart, CheckCircle2 } from 'lucide-react';
+import { X, Package, User, MapPin, Clock, Truck, Phone, ShoppingCart, CheckCircle2, CreditCard, MessageSquare } from 'lucide-react';
 import {
   ESTADOS_PEDIDO,
   getConfigEstado,
@@ -165,6 +165,33 @@ export const DetallePedidoModal = ({ pedido, detalles = [], onClose, onAvanzarEs
               </p>
             </div>
 
+            {/* Método de Pago */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CreditCard size={18} className="text-gray-500" />
+                <h3 className="font-semibold text-gray-700">Método de Pago</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-sm font-semibold uppercase tracking-wider">
+                  {pedido.metodoPago || 'No especificado'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 mt-2 italic">
+                Verificado en caja
+              </p>
+            </div>
+
+            {/* Notas / Observaciones */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <MessageSquare size={18} className="text-gray-500" />
+                <h3 className="font-semibold text-gray-700">Notas del Pedido</h3>
+              </div>
+              <p className="text-sm text-gray-600 line-clamp-2">
+                {pedido.observaciones || 'Sin observaciones adicionales.'}
+              </p>
+            </div>
+
             {/* Dirección */}
             {pedido.direccionEntrega && (
               <div className="bg-white border border-gray-200 rounded-lg p-4 md:col-span-2">
@@ -252,24 +279,11 @@ export const DetallePedidoModal = ({ pedido, detalles = [], onClose, onAvanzarEs
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold pt-2 border-t border-green-300">
-                <span className="text-gray-800">Total:</span>
+                <span className="text-gray-800">Total a Pagar:</span>
                 <span className="text-green-700">S/ {pedido.total?.toFixed(2)}</span>
               </div>
             </div>
           </div>
-
-          {/* Observaciones (incluye método de pago) */}
-          {pedido.observaciones && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <Package size={18} className="text-blue-500" />
-                Información Adicional
-              </h3>
-              <p className="text-sm text-gray-700 whitespace-pre-line">
-                {pedido.observaciones}
-              </p>
-            </div>
-          )}
 
           {/* Estado Actual */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">

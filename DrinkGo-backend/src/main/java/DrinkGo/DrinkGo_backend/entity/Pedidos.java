@@ -1,10 +1,14 @@
 package DrinkGo.DrinkGo_backend.entity;
 
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -29,10 +33,12 @@ public class Pedidos {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "negocio_id", nullable = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Negocios negocio;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sede_id", nullable = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Sedes sede;
 
     @Column(name = "numero_pedido", nullable = false, unique = true)
@@ -40,6 +46,7 @@ public class Pedidos {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cliente_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Clientes cliente;
 
     @Enumerated(EnumType.STRING)
@@ -73,6 +80,7 @@ public class Pedidos {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "zona_delivery_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ZonasDelivery zonaDelivery;
 
     @Column(precision = 10, scale = 2, nullable = false)
@@ -94,15 +102,20 @@ public class Pedidos {
     @Column(name = "estado_pedido", nullable = false)
     private EstadoPedido estadoPedido = EstadoPedido.pendiente;
 
+    @Column(name = "metodo_pago", length = 50)
+    private String metodoPago;
+
     @Column(columnDefinition = "TEXT")
     private String observaciones;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Usuarios usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venta_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Ventas venta;
 
     @Column(name = "esta_activo")
@@ -321,6 +334,14 @@ public class Pedidos {
 
     public void setEstadoPedido(EstadoPedido estadoPedido) {
         this.estadoPedido = estadoPedido;
+    }
+
+    public String getMetodoPago() {
+        return metodoPago;
+    }
+
+    public void setMetodoPago(String metodoPago) {
+        this.metodoPago = metodoPago;
     }
 
     public String getObservaciones() {

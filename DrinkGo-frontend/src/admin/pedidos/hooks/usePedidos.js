@@ -18,7 +18,8 @@ export const usePedidos = () => {
   return useQuery({
     queryKey: ['pedidos'],
     queryFn: getPedidos,
-    staleTime: 1000 * 30, // 30 segundos
+    staleTime: 0, // 🔄 Cambiado a 0 para que siempre pida datos frescos
+    refetchOnWindowFocus: true, // Recargar al volver a la pestaña
   });
 };
 
