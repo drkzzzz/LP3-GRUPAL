@@ -20,6 +20,7 @@ import { Input } from '@/admin/components/ui/Input';
 import { StatCard } from '@/admin/components/ui/StatCard';
 import { useUsuarios } from '@/admin/usuarios/hooks/useUsuarios';
 import { ModalCerrarCaja } from '../components/ModalCerrarCaja';
+import { SinCajaAsignada } from '../components/SinCajaAsignada';
 import {
   useCajas,
   useSesionActiva,
@@ -34,10 +35,10 @@ export const Cajas = () => {
   const navigate = useNavigate();
   const { user, negocio, sede } = useAdminAuthStore();
   const { cajas, isLoading, crear, actualizar, toggleHabilitada, isCreating, isUpdating, isToggling, alcanceCajas, cajaAsignada } = useCajas();
-  const { usuarios: todosUsuarios, isLoading: loadingUsuarios } = useUsuarios(negocio?.id);
 
-  /* Usuarios activos (para dropdown de asignar cajero) */
-  const usuariosActivos = todosUsuarios.filter((u) => u.estaActivo !== false);
+  const esSoloCaja = alcanceCajas === 'caja_asignada';
+
+  const { usuarios: todosUsuarios, isLoading: loadingUsuarios } = useUsuarios(negocio?.id);
   const { sesion, hasSesion, isLoading: loadingSesion, refetch: refetchSesion } = useSesionActiva();
   const { sesiones, isLoading: loadingSesiones } = useSesiones();
   const { abrirCaja, cerrarCaja, isAbriendo, isCerrando } = useSesionActions();
@@ -56,6 +57,25 @@ export const Cajas = () => {
   /* Apertura de caja */
   const [abrirCajaId, setAbrirCajaId] = useState('');
   const [montoApertura, setMontoApertura] = useState('100.00');
+
+  /* Si es cajero con alcance caja_asignada pero sin caja asignada -> bloquear */
+  if (esSoloCaja && !cajaAsignada) {
+    return <SinCajaAsignada titulo="Cajas Registradoras" />;
+  }
+
+  /* Usuarios activos (para dropdown de asignar cajero) */
+  /* Solo mostrar usuarios que NO están asignados a otra caja (excepto la caja que se está editando) */
+  const usuariosDisponibles = todosUsuarios.filter((u) => {
+    if (u.estaActivo === false) return false;
+    const cajaAsignadaDelUsuario = cajas.find(
+      (c) => c.estaActivo !== false && c.usuarioAsignado?.id === u.id,
+    );
+    // Si no está asignado a ninguna caja, está disponible
+    if (!cajaAsignadaDelUsuario) return true;
+    // Si estamos editando una caja y este usuario ya está asignado a ESA caja, permitir
+    if (editCaja && cajaAsignadaDelUsuario.id === editCaja.id) return true;
+    return false;
+  });
 
   const cajasActivas = cajas.filter((c) => c.estaActivo !== false);
   const cajasHabilitadas = cajasActivas.filter((c) => c.estaHabilitada !== false);
@@ -102,7 +122,12 @@ export const Cajas = () => {
 
   /* ─── Apertura de caja ─── */
   const handleOpenAbrirModal = () => {
-    setAbrirCajaId('');
+    // Si es cajero con caja asignada, preseleccionar su caja automáticamente
+    if (esSoloCaja && cajaAsignada) {
+      setAbrirCajaId(String(cajaAsignada.id));
+    } else {
+      setAbrirCajaId('');
+    }
     setMontoApertura('100.00');
     setShowAbrirModal(true);
   };
@@ -130,7 +155,6 @@ export const Cajas = () => {
   const goToPOS = () => navigate('/admin/ventas/pos');
 
   /* ─── Columnas tabla cajas ─── */
-  const esSoloCaja = alcanceCajas === 'caja_asignada';
 
   const cajasColumns = [
     { key: 'index', title: '#', width: '60px', render: (_, __, i) => i + 1 },
@@ -417,7 +441,7 @@ export const Cajas = () => {
               disabled={loadingUsuarios}
             >
               <option value="">Sin asignar</option>
-              {usuariosActivos.map((u) => (
+              {usuariosDisponibles.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.nombres || ''} {u.apellidos || ''} — {u.email || ''}
                 </option>
@@ -474,7 +498,15 @@ export const Cajas = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Caja Registradora <span className="text-red-500">*</span>
             </label>
-            {cajasDisponibles.length === 0 ? (
+            {esSoloCaja && cajaAsignada ? (
+              /* Cajero con caja asignada: mostrar solo su caja (sin dropdown) */
+              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                <p className="text-sm font-medium text-green-800">
+                  {cajaAsignada.nombreCaja} ({cajaAsignada.codigo})
+                </p>
+                <p className="text-xs text-green-600 mt-0.5">Tu caja asignada</p>
+              </div>
+            ) : cajasDisponibles.length === 0 ? (
               <p className="text-sm text-red-500">
                 No hay cajas disponibles. Todas están en uso o no se han creado.
               </p>

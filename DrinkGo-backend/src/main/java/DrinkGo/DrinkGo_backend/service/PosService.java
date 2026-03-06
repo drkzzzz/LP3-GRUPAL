@@ -321,7 +321,17 @@ public class PosService {
             throw new IllegalStateException("El usuario ya tiene una sesión de caja abierta");
         }
 
-        CajasRegistradoras caja = cajasRepo.getReferenceById(request.getCajaId());
+        CajasRegistradoras caja = cajasRepo.findById(request.getCajaId())
+                .orElseThrow(() -> new IllegalArgumentException("Caja no encontrada"));
+
+        // Verificar que la caja no tenga ya una sesión activa abierta por otro usuario
+        Optional<SesionesCaja> sesionActivaCaja = sesionesRepo
+                .findFirstByCajaIdAndEstadoSesion(request.getCajaId(), SesionesCaja.EstadoSesion.abierta);
+        if (sesionActivaCaja.isPresent()
+                && !sesionActivaCaja.get().getUsuario().getId().equals(request.getUsuarioId())) {
+            throw new IllegalStateException(
+                    "Esta caja ya está siendo usada por otro usuario.");
+        }
 
         Usuarios usuario = usuariosRepo.getReferenceById(request.getUsuarioId());
 
@@ -470,10 +480,12 @@ public class PosService {
             BigDecimal monto = mov.getMonto() != null ? mov.getMonto() : BigDecimal.ZERO;
             switch (mov.getTipoMovimiento()) {
                 case ingreso_otro:
+                case ingreso_manual:
                     totalIngresosManuales = totalIngresosManuales.add(monto);
                     break;
                 case egreso_gasto:
                 case egreso_otro:
+                case egreso_manual:
                     totalEgresosManuales = totalEgresosManuales.add(monto);
                     break;
                 default:
@@ -539,15 +551,23 @@ public class PosService {
             try {
                 tipoMov = MovimientosCaja.TipoMovimiento.valueOf(tipoStr);
             } catch (IllegalArgumentException ignored) {
-                // Fallback: "ingreso" → ingreso_otro, anything else → egreso_otro
+                // Fallback: "ingreso" → ingreso_manual, anything else → egreso_manual
                 tipoMov = tipoStr.toLowerCase().startsWith("ingreso")
-                        ? MovimientosCaja.TipoMovimiento.ingreso_otro
-                        : MovimientosCaja.TipoMovimiento.egreso_otro;
+                        ? MovimientosCaja.TipoMovimiento.ingreso_manual
+                        : MovimientosCaja.TipoMovimiento.egreso_manual;
             }
         } else {
-            tipoMov = MovimientosCaja.TipoMovimiento.egreso_otro;
+            tipoMov = MovimientosCaja.TipoMovimiento.egreso_manual;
         }
         movimiento.setTipoMovimiento(tipoMov);
+
+        // Si es egreso manual, marcar estadoEgreso como activo
+        if (tipoMov == MovimientosCaja.TipoMovimiento.egreso_manual
+                || tipoMov == MovimientosCaja.TipoMovimiento.egreso_otro
+                || tipoMov == MovimientosCaja.TipoMovimiento.egreso_gasto) {
+            movimiento.setEstadoEgreso(MovimientosCaja.EstadoEgreso.activo);
+            movimiento.setMontoDevuelto(BigDecimal.ZERO);
+        }
 
         // Si es egreso_gasto y se proporcionó una categoría, vincularla
         if (request.getCategoriaGastoId() != null) {
@@ -556,6 +576,64 @@ public class PosService {
         }
 
         return movimientosRepo.save(movimiento);
+    }
+
+    /**
+     * Devolver (total o parcial) un egreso de caja.
+     * Crea un ingreso_manual vinculado al egreso original.
+     */
+    @Transactional
+    public MovimientosCaja devolverEgreso(Long movimientoId, BigDecimal montoDevolucion, String motivo) {
+        MovimientosCaja egreso = movimientosRepo.findById(movimientoId)
+                .orElseThrow(() -> new IllegalArgumentException("Movimiento no encontrado"));
+
+        // Validar que sea un egreso
+        if (!egreso.getTipoMovimiento().name().startsWith("egreso")) {
+            throw new IllegalStateException("Solo se pueden devolver egresos");
+        }
+
+        // Validar que no esté completamente devuelto
+        if (egreso.getEstadoEgreso() == MovimientosCaja.EstadoEgreso.devuelto) {
+            throw new IllegalStateException("Este egreso ya fue devuelto completamente");
+        }
+
+        // Validar monto
+        BigDecimal yaDevuelto = egreso.getMontoDevuelto() != null ? egreso.getMontoDevuelto() : BigDecimal.ZERO;
+        BigDecimal maxDevolucion = egreso.getMonto().subtract(yaDevuelto);
+        if (montoDevolucion.compareTo(maxDevolucion) > 0) {
+            throw new IllegalStateException(
+                    "El monto de devolución (S/ " + montoDevolucion
+                            + ") excede el máximo permitido (S/ " + maxDevolucion + ")");
+        }
+
+        // Verificar que la sesión de caja esté abierta
+        SesionesCaja sesion = egreso.getSesionCaja();
+        if (sesion.getEstadoSesion() != SesionesCaja.EstadoSesion.abierta) {
+            throw new IllegalStateException("La sesión de caja no está abierta. No se puede registrar la devolución.");
+        }
+
+        // Crear movimiento de ingreso (devolución)
+        MovimientosCaja devolucion = new MovimientosCaja();
+        devolucion.setSesionCaja(sesion);
+        devolucion.setTipoMovimiento(MovimientosCaja.TipoMovimiento.ingreso_manual);
+        devolucion.setMonto(montoDevolucion);
+        devolucion.setDescripcion("Devolución: " + (motivo != null ? motivo : egreso.getDescripcion()));
+        devolucion.setEgresoRelacionado(egreso);
+        devolucion.setFechaMovimiento(LocalDateTime.now());
+        movimientosRepo.save(devolucion);
+
+        // Actualizar egreso original
+        BigDecimal nuevoDevuelto = yaDevuelto.add(montoDevolucion);
+        egreso.setMontoDevuelto(nuevoDevuelto);
+
+        if (nuevoDevuelto.compareTo(egreso.getMonto()) >= 0) {
+            egreso.setEstadoEgreso(MovimientosCaja.EstadoEgreso.devuelto);
+        } else {
+            egreso.setEstadoEgreso(MovimientosCaja.EstadoEgreso.parcial);
+        }
+        movimientosRepo.save(egreso);
+
+        return devolucion;
     }
 
     // ═══════════════════════════════════════════════════════════════════

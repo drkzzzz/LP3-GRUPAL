@@ -46,6 +46,17 @@ public class MovimientosCaja {
     @JoinColumn(name = "categoria_gasto_id")
     private CategoriasGasto categoriaGasto;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "egreso_relacionado_id")
+    private MovimientosCaja egresoRelacionado;
+
+    @Column(name = "monto_devuelto", precision = 10, scale = 2)
+    private BigDecimal montoDevuelto;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_egreso")
+    private EstadoEgreso estadoEgreso;
+
     @Column(name = "fecha_movimiento", nullable = false)
     private LocalDateTime fechaMovimiento;
 
@@ -62,7 +73,11 @@ public class MovimientosCaja {
     private LocalDateTime eliminadoEn;
 
     public enum TipoMovimiento {
-        ingreso_venta, ingreso_otro, egreso_gasto, egreso_otro, apertura, cierre
+        ingreso_venta, ingreso_otro, ingreso_manual, egreso_gasto, egreso_otro, egreso_manual, apertura, cierre
+    }
+
+    public enum EstadoEgreso {
+        activo, devuelto, parcial
     }
 
     @PrePersist
@@ -142,6 +157,30 @@ public class MovimientosCaja {
 
     public void setCategoriaGasto(CategoriasGasto categoriaGasto) {
         this.categoriaGasto = categoriaGasto;
+    }
+
+    public MovimientosCaja getEgresoRelacionado() {
+        return egresoRelacionado;
+    }
+
+    public void setEgresoRelacionado(MovimientosCaja egresoRelacionado) {
+        this.egresoRelacionado = egresoRelacionado;
+    }
+
+    public BigDecimal getMontoDevuelto() {
+        return montoDevuelto;
+    }
+
+    public void setMontoDevuelto(BigDecimal montoDevuelto) {
+        this.montoDevuelto = montoDevuelto;
+    }
+
+    public EstadoEgreso getEstadoEgreso() {
+        return estadoEgreso;
+    }
+
+    public void setEstadoEgreso(EstadoEgreso estadoEgreso) {
+        this.estadoEgreso = estadoEgreso;
     }
 
     public LocalDateTime getFechaMovimiento() {

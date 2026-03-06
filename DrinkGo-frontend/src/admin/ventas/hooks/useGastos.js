@@ -19,15 +19,6 @@ export const useGastos = () => {
   });
 
   const {
-    data: categorias = [],
-    isLoading: isLoadingCategorias,
-  } = useQuery({
-    queryKey: ['categorias-gasto', negocioId],
-    queryFn: () => gastosService.getCategoriasByNegocio(negocioId),
-    enabled: !!negocioId,
-  });
-
-  const {
     data: facturasServicio = [],
     isLoading: isLoadingFacturas,
   } = useQuery({
@@ -95,11 +86,9 @@ export const useGastos = () => {
     negocioId,
     /* datos */
     gastos,
-    categorias,
     facturasServicio,
     /* estados de carga */
     isLoadingGastos,
-    isLoadingCategorias,
     isLoadingFacturas,
     /* acciones gastos */
     crearGasto: crearGasto.mutateAsync,

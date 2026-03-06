@@ -1,19 +1,18 @@
 /**
  * MovimientoCajaModal.jsx
  * ───────────────────────
- * Modal para registrar ingresos/egresos manuales en la sesión.
- * Si es egreso, permite seleccionar una categoría de gasto predefinida.
+ * Modal simplificado para registrar ingresos/egresos manuales en la sesión.
+ * Solo 2 opciones: Ingreso y Egreso.
  */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Modal } from '@/admin/components/ui/Modal';
 import { Button } from '@/admin/components/ui/Button';
 import { Input } from '@/admin/components/ui/Input';
 import { Select } from '@/admin/components/ui/Select';
 
 const TIPO_MOVIMIENTO_OPTIONS = [
-  { value: 'ingreso_otro', label: 'Ingreso manual' },
-  { value: 'egreso_gasto', label: 'Egreso / Gasto' },
-  { value: 'egreso_otro', label: 'Egreso otro' },
+  { value: 'ingreso_manual', label: 'Ingreso' },
+  { value: 'egreso_manual', label: 'Egreso' },
 ];
 
 export const MovimientoCajaModal = ({
@@ -22,19 +21,12 @@ export const MovimientoCajaModal = ({
   onConfirm,
   sesionCajaId,
   isLoading = false,
-  categorias = [],
 }) => {
-  const [tipoMovimiento, setTipoMovimiento] = useState('ingreso_otro');
+  const [tipoMovimiento, setTipoMovimiento] = useState('ingreso_manual');
   const [monto, setMonto] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [categoriaGastoId, setCategoriaGastoId] = useState('');
 
   const isEgreso = tipoMovimiento.startsWith('egreso');
-  const isEgresoGasto = tipoMovimiento === 'egreso_gasto';
-
-  useEffect(() => {
-    if (!isEgresoGasto) setCategoriaGastoId('');
-  }, [tipoMovimiento, isEgresoGasto]);
 
   const handleConfirm = () => {
     if (!monto || parseFloat(monto) <= 0 || !descripcion.trim()) return;
@@ -44,17 +36,13 @@ export const MovimientoCajaModal = ({
       monto: parseFloat(monto),
       concepto: descripcion.trim(),
     };
-    if (isEgresoGasto && categoriaGastoId) {
-      payload.categoriaGastoId = parseInt(categoriaGastoId);
-    }
     onConfirm(payload);
   };
 
   const handleClose = () => {
-    setTipoMovimiento('ingreso_otro');
+    setTipoMovimiento('ingreso_manual');
     setMonto('');
     setDescripcion('');
-    setCategoriaGastoId('');
     onClose();
   };
 
@@ -69,25 +57,6 @@ export const MovimientoCajaModal = ({
           onChange={(e) => setTipoMovimiento(e.target.value)}
         />
 
-        {isEgresoGasto && categorias.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categoría de Gasto
-            </label>
-            <select
-              value={categoriaGastoId}
-              onChange={(e) => setCategoriaGastoId(e.target.value)}
-              className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                         focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Sin categoría</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
         <Input
           label={`Monto (S/) ${isEgreso ? '- Egreso' : '+ Ingreso'}`}
           required
@@ -101,13 +70,13 @@ export const MovimientoCajaModal = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            {isEgresoGasto ? 'Justificación' : 'Descripción'} <span className="text-red-500">*</span>
+            Descripción <span className="text-red-500">*</span>
           </label>
           <textarea
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             rows={2}
-            placeholder={isEgresoGasto ? 'Detalle del gasto...' : 'Motivo del movimiento...'}
+            placeholder="Motivo del movimiento..."
             className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           />

@@ -15,7 +15,6 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
-  Settings,
   AlertCircle,
   LogIn,
   Filter,
@@ -29,23 +28,26 @@ import {
   Calendar,
   User,
   Monitor,
+  Undo2,
 } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
 import { Badge } from '@/admin/components/ui/Badge';
 import { Table } from '@/admin/components/ui/Table';
 import { StatCard } from '@/admin/components/ui/StatCard';
+import { Modal } from '@/admin/components/ui/Modal';
+import { Input } from '@/admin/components/ui/Input';
 import { MovimientoCajaModal } from '../components/MovimientoCajaModal';
-import { CategoriasGastoModal } from '../components/CategoriasGastoModal';
 import {
   useCajas,
   useSesionActiva,
   useResumenTurno,
   useMovimientos,
   useSesionesByCaja,
-  useCategoriasGasto,
 } from '../hooks/useCajas';
 import { formatCurrency, formatDateTime } from '@/shared/utils/formatters';
+import { useAdminAuthStore } from '@/stores/adminAuthStore';
+import { SinCajaAsignada } from '../components/SinCajaAsignada';
 
 /* -------------------------------------------------- */
 /*  Constantes                                        */
@@ -54,8 +56,10 @@ import { formatCurrency, formatDateTime } from '@/shared/utils/formatters';
 const TIPO_CONFIG = {
   ingreso_venta: { label: 'Venta', variant: 'success', sign: '+' },
   ingreso_otro: { label: 'Ingreso manual', variant: 'info', sign: '+' },
+  ingreso_manual: { label: 'Ingreso', variant: 'info', sign: '+' },
   egreso_gasto: { label: 'Gasto', variant: 'error', sign: '-' },
   egreso_otro: { label: 'Egreso otro', variant: 'warning', sign: '-' },
+  egreso_manual: { label: 'Egreso', variant: 'error', sign: '-' },
   apertura: { label: 'Apertura', variant: 'info', sign: '' },
   cierre: { label: 'Cierre', variant: 'info', sign: '' },
 };
@@ -65,9 +69,8 @@ const FILTRO_OPTIONS = [
   { value: 'ingresos', label: 'Solo Ingresos' },
   { value: 'egresos', label: 'Solo Egresos' },
   { value: 'ingreso_venta', label: 'Ventas' },
-  { value: 'ingreso_otro', label: 'Ingresos manuales' },
-  { value: 'egreso_gasto', label: 'Gastos' },
-  { value: 'egreso_otro', label: 'Egresos otros' },
+  { value: 'manuales_ingreso', label: 'Ingresos manuales' },
+  { value: 'manuales_egreso', label: 'Egresos manuales' },
 ];
 
 const ESTADO_SESION = {
@@ -89,6 +92,8 @@ const SesionFullView = ({ sesionData, columns, isActive = false }) => {
     if (filtroTipo === 'todos') return movimientos;
     if (filtroTipo === 'ingresos') return movimientos.filter((m) => m.tipoMovimiento?.startsWith('ingreso'));
     if (filtroTipo === 'egresos') return movimientos.filter((m) => m.tipoMovimiento?.startsWith('egreso'));
+    if (filtroTipo === 'manuales_ingreso') return movimientos.filter((m) => m.tipoMovimiento === 'ingreso_otro' || m.tipoMovimiento === 'ingreso_manual');
+    if (filtroTipo === 'manuales_egreso') return movimientos.filter((m) => m.tipoMovimiento === 'egreso_otro' || m.tipoMovimiento === 'egreso_manual' || m.tipoMovimiento === 'egreso_gasto');
     return movimientos.filter((m) => m.tipoMovimiento === filtroTipo);
   }, [movimientos, filtroTipo]);
 
@@ -209,14 +214,15 @@ const SesionFullView = ({ sesionData, columns, isActive = false }) => {
 
 export const MovimientosCajaPage = () => {
   const navigate = useNavigate();
+  const { user } = useAdminAuthStore();
 
   /* --- Datos base --- */
   const { cajas, isLoading: loadingCajas, alcanceCajas, cajaAsignada } = useCajas();
   const esSoloCaja = alcanceCajas === 'caja_asignada';
+
   const { sesion, hasSesion, isLoading: loadingSesion } = useSesionActiva();
   const { resumen } = useResumenTurno(sesion?.id);
-  const { movimientos, isLoading: loadingMov, registrar, isRegistrando } = useMovimientos(sesion?.id);
-  const { categorias } = useCategoriasGasto();
+  const { movimientos, isLoading: loadingMov, registrar, isRegistrando, devolverEgreso, isDevolviendo } = useMovimientos(sesion?.id);
 
   /* --- Selector de caja --- */
   const activeCajaId = sesion?.caja?.id;
@@ -231,11 +237,16 @@ export const MovimientosCajaPage = () => {
     !isViewingActiveCaja ? effectiveCajaId : null
   );
 
-  // Filtrar solo sesiones cerradas (no la activa)
+  // Filtrar sesiones: excluir la activa, y si es cajero solo mostrar sus propias sesiones
   const sesionesHistoricas = useMemo(() => {
     if (isViewingActiveCaja) return [];
-    return sesionesCaja.filter((s) => s.estadoSesion !== 'abierta' || s.id !== sesion?.id);
-  }, [sesionesCaja, isViewingActiveCaja, sesion?.id]);
+    let filtered = sesionesCaja.filter((s) => s.estadoSesion !== 'abierta' || s.id !== sesion?.id);
+    // Si alcance es caja_asignada, solo mostrar las sesiones del propio usuario
+    if (esSoloCaja && user?.id) {
+      filtered = filtered.filter((s) => s.usuario?.id === user.id);
+    }
+    return filtered;
+  }, [sesionesCaja, isViewingActiveCaja, sesion?.id, esSoloCaja, user?.id]);
 
   /* --- Sesion historica seleccionada (vista completa) --- */
   const [selectedSesionId, setSelectedSesionId] = useState(null);
@@ -246,8 +257,10 @@ export const MovimientosCajaPage = () => {
 
   /* --- UI --- */
   const [showRegistrarModal, setShowRegistrarModal] = useState(false);
-  const [showCategoriasModal, setShowCategoriasModal] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState('todos');
+  const [devolverTarget, setDevolverTarget] = useState(null);
+  const [devolverMonto, setDevolverMonto] = useState('');
+  const [devolverMotivo, setDevolverMotivo] = useState('');
 
   /* --- Filtros historial de sesiones --- */
   const [filtroEstadoHist, setFiltroEstadoHist] = useState('todos');
@@ -256,6 +269,11 @@ export const MovimientosCajaPage = () => {
   const [filtroFechaHastaHist, setFiltroFechaHastaHist] = useState('');
   const [paginaHist, setPaginaHist] = useState(1);
   const PAGE_SIZE_HIST = 8;
+
+  /* Si es cajero con alcance caja_asignada pero sin caja asignada -> bloquear */
+  if (esSoloCaja && !cajaAsignada) {
+    return <SinCajaAsignada titulo="Movimientos de Caja" />;
+  }
 
   /* --- Filtrado de sesiones historicas --- */
   const sesionesHistoricasFiltradas = useMemo(() => {
@@ -294,6 +312,8 @@ export const MovimientosCajaPage = () => {
     if (filtroTipo === 'todos') return movimientos;
     if (filtroTipo === 'ingresos') return movimientos.filter((m) => m.tipoMovimiento?.startsWith('ingreso'));
     if (filtroTipo === 'egresos') return movimientos.filter((m) => m.tipoMovimiento?.startsWith('egreso'));
+    if (filtroTipo === 'manuales_ingreso') return movimientos.filter((m) => m.tipoMovimiento === 'ingreso_otro' || m.tipoMovimiento === 'ingreso_manual');
+    if (filtroTipo === 'manuales_egreso') return movimientos.filter((m) => m.tipoMovimiento === 'egreso_otro' || m.tipoMovimiento === 'egreso_manual' || m.tipoMovimiento === 'egreso_gasto');
     return movimientos.filter((m) => m.tipoMovimiento === filtroTipo);
   }, [movimientos, filtroTipo]);
 
@@ -313,6 +333,18 @@ export const MovimientosCajaPage = () => {
     await registrar(data);
     setShowRegistrarModal(false);
   };
+
+  const handleDevolver = async () => {
+    if (!devolverTarget || !devolverMonto) return;
+    try {
+      await devolverEgreso({ movimientoId: devolverTarget.id, monto: parseFloat(devolverMonto), motivo: devolverMotivo });
+      setDevolverTarget(null);
+    } catch (err) {
+      console.error('Error devolviendo egreso:', err);
+    }
+  };
+
+  const maxDevolucion = devolverTarget ? (devolverTarget.monto - (devolverTarget.montoDevuelto || 0)) : 0;
 
   /* --- Columnas de la tabla (reutilizable) --- */
   const columns = [
@@ -357,12 +389,44 @@ export const MovimientosCajaPage = () => {
         const neg = c.sign === '-';
         const pos = c.sign === '+';
         return (
-          <span className={`font-semibold ${neg ? 'text-red-600' : pos ? 'text-green-600' : 'text-gray-700'}`}>
-            {c.sign}{formatCurrency(row.monto)}
-          </span>
+          <div className="flex items-center justify-end gap-2">
+            <span className={`font-semibold ${neg ? 'text-red-600' : pos ? 'text-green-600' : 'text-gray-700'}`}>
+              {c.sign}{formatCurrency(row.monto)}
+            </span>
+            {row.estadoEgreso === 'parcial' && (
+              <Badge variant="warning" className="text-[10px]">Parcial</Badge>
+            )}
+            {row.estadoEgreso === 'devuelto' && (
+              <Badge variant="info" className="text-[10px]">Devuelto</Badge>
+            )}
+          </div>
         );
       },
     },
+    ...(isViewingActiveCaja ? [{
+      key: 'acciones',
+      title: '',
+      width: '80px',
+      align: 'center',
+      render: (_, row) => {
+        const esEgreso = row.tipoMovimiento?.startsWith('egreso');
+        if (!esEgreso || row.estadoEgreso === 'devuelto') return null;
+        return (
+          <button
+            onClick={() => {
+              setDevolverTarget(row);
+              setDevolverMonto('');
+              setDevolverMotivo('');
+            }}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-md transition-colors"
+            title="Devolver egreso"
+          >
+            <Undo2 size={12} />
+            Devolver
+          </button>
+        );
+      },
+    }] : []),
   ];
 
   /* --- Nombre de la caja seleccionada --- */
@@ -423,12 +487,7 @@ export const MovimientosCajaPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Movimientos de Caja</h1>
           <p className="text-gray-600 mt-1">Control de ingresos y egresos del turno</p>
         </div>
-        {!esSoloCaja && (
-          <Button variant="outline" size="sm" onClick={() => setShowCategoriasModal(true)}>
-            <Settings size={16} className="mr-1" />
-            Categorias de Gasto
-          </Button>
-        )}
+
       </div>
 
       {/* Banner alcance restringido */}
@@ -791,11 +850,68 @@ export const MovimientosCajaPage = () => {
           onConfirm={handleRegistrar}
           sesionCajaId={sesion?.id}
           isLoading={isRegistrando}
-          categorias={categorias}
         />
       )}
 
-      <CategoriasGastoModal isOpen={showCategoriasModal} onClose={() => setShowCategoriasModal(false)} />
+      {/* Modal Devolver Egreso */}
+      <Modal
+        isOpen={!!devolverTarget}
+        onClose={() => setDevolverTarget(null)}
+        title="Devolver Egreso"
+        size="sm"
+      >
+        {devolverTarget && (
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+              <p><span className="text-gray-500">Tipo:</span> {TIPO_CONFIG[devolverTarget.tipoMovimiento]?.label || devolverTarget.tipoMovimiento}</p>
+              <p><span className="text-gray-500">Monto original:</span> <strong className="text-red-600">{formatCurrency(devolverTarget.monto)}</strong></p>
+              {devolverTarget.montoDevuelto > 0 && (
+                <p><span className="text-gray-500">Ya devuelto:</span> {formatCurrency(devolverTarget.montoDevuelto)}</p>
+              )}
+              <p><span className="text-gray-500">Máximo a devolver:</span> {formatCurrency(maxDevolucion)}</p>
+              {devolverTarget.descripcion && (
+                <p><span className="text-gray-500">Descripción:</span> {devolverTarget.descripcion}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto a devolver *</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                max={maxDevolucion}
+                value={devolverMonto}
+                onChange={(e) => setDevolverMonto(e.target.value)}
+                placeholder={`Máx ${formatCurrency(maxDevolucion)}`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
+              <textarea
+                value={devolverMotivo}
+                onChange={(e) => setDevolverMotivo(e.target.value)}
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Motivo de la devolución (opcional)"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setDevolverTarget(null)}>Cancelar</Button>
+              <Button
+                size="sm"
+                onClick={handleDevolver}
+                disabled={!devolverMonto || parseFloat(devolverMonto) <= 0 || parseFloat(devolverMonto) > maxDevolucion || isDevolviendo}
+              >
+                {isDevolviendo ? 'Devolviendo...' : 'Confirmar Devolución'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
     </div>
   );
 };

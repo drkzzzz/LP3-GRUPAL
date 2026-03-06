@@ -9,9 +9,9 @@ public interface IGastosService {
 
     List<Gastos> buscarPorNegocio(Long negocioId);
 
-    void guardar(Gastos gastos);
+    Gastos guardar(Gastos gastos);
 
-    void modificar(Gastos gastos);
+    Gastos modificar(Gastos gastos);
 
     Optional<Gastos> buscarId(Long id);
 

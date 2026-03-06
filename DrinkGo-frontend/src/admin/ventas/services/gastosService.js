@@ -30,17 +30,6 @@ export const gastosService = {
     return data;
   },
 
-  /* ─── Categorías de gasto del negocio ─── */
-  getCategoriasByNegocio: async (negocioId) => {
-    const { data } = await api.get(`/categorias-gasto/negocio/${negocioId}`);
-    return Array.isArray(data) ? data.filter(Boolean) : [];
-  },
-
-  createCategoria: async (categoria) => {
-    const { data } = await api.post('/categorias-gasto', categoria);
-    return data;
-  },
-
   /* ─── Facturas de suscripción del negocio (cobros del sistema) ─── */
   getFacturasByNegocio: async (negocioId) => {
     const { data } = await api.get(`/facturas-suscripcion/por-negocio/${negocioId}`);

@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   TrendingDown,
-  FileText,
   Plus,
   CreditCard,
   CheckCircle,
@@ -9,11 +8,12 @@ import {
   Trash2,
   Loader2,
   RefreshCw,
-  CalendarClock,
   Receipt,
   DollarSign,
-  AlertCircle,
   RotateCcw,
+  Clock,
+  CalendarClock,
+  History,
 } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
@@ -30,13 +30,12 @@ import { useAdminAuthStore } from '@/stores/adminAuthStore';
 /*  Helpers                                    */
 /* ─────────────────────────────────────────── */
 
-const ESTADO_FACTURA_BADGE = {
-  pendiente: 'warning',
-  pagada: 'success',
-  vencida: 'error',
-  cancelada: 'error',
-  anulada: 'error',
-  fallida: 'error',
+const METODO_PAGO_LABEL = {
+  efectivo: 'Efectivo',
+  transferencia_bancaria: 'Transferencia',
+  tarjeta_credito: 'Tarjeta de crédito',
+  cheque: 'Cheque',
+  otro: 'Otro',
 };
 
 const ESTADO_GASTO_BADGE = {
@@ -45,15 +44,6 @@ const ESTADO_GASTO_BADGE = {
   pagado: 'success',
   rechazado: 'error',
   anulado: 'error',
-};
-
-const ESTADO_FACTURA_LABEL = {
-  pendiente: 'Pendiente',
-  pagada: 'Pagada',
-  vencida: 'Vencida',
-  cancelada: 'Cancelada',
-  anulada: 'Anulada',
-  fallida: 'Fallida',
 };
 
 const ESTADO_GASTO_LABEL = {
@@ -87,6 +77,12 @@ const PERIODOS = [
   { value: 'trimestral', label: 'Trimestral' },
   { value: 'anual', label: 'Anual' },
 ];
+
+/** Fecha local en formato YYYY-MM-DD (sin desfase UTC) */
+const hoyLocal = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 /* ─────────────────────────────────────────── */
 /*  Modal: Registrar Pago                      */
@@ -164,18 +160,17 @@ const PagoModal = ({ isOpen, onClose, titulo, monto, onConfirm, isLoading }) => 
 /*  Modal: Crear / Editar Gasto                */
 /* ─────────────────────────────────────────── */
 
-const GastoFormModal = ({ isOpen, onClose, initialData, categorias, negocioId, onSave, isLoading }) => {
+const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoading }) => {
   const isEdit = !!initialData?.id;
 
   const [form, setForm] = useState(() => ({
     descripcion: initialData?.descripcion || '',
-    categoriaId: initialData?.categoria?.id || '',
     monto: initialData?.monto || '',
-    fechaGasto: initialData?.fechaGasto || new Date().toISOString().split('T')[0],
+    fechaGasto: initialData?.fechaGasto || hoyLocal(),
+    horaGasto: initialData?.horaGasto || '',
     esRecurrente: initialData?.esRecurrente || false,
     periodoRecurrencia: initialData?.periodoRecurrencia || 'mensual',
     metodoPago: initialData?.metodoPago || 'efectivo',
-    notas: initialData?.notas || '',
   }));
 
   const set = (field) => (e) => {
@@ -189,15 +184,14 @@ const GastoFormModal = ({ isOpen, onClose, initialData, categorias, negocioId, o
       ...(isEdit ? { id: initialData.id } : {}),
       negocio: { id: negocioId },
       descripcion: form.descripcion,
-      categoria: { id: Number(form.categoriaId) },
       monto: parseFloat(form.monto),
       montoImpuesto: 0,
       total: parseFloat(form.monto),
       fechaGasto: form.fechaGasto,
+      horaGasto: form.horaGasto || null,
       esRecurrente: form.esRecurrente,
       periodoRecurrencia: form.esRecurrente ? form.periodoRecurrencia : null,
       metodoPago: form.metodoPago,
-      notas: form.notas || null,
       moneda: 'PEN',
     };
     onSave(payload);
@@ -206,13 +200,12 @@ const GastoFormModal = ({ isOpen, onClose, initialData, categorias, negocioId, o
   const handleClose = () => {
     setForm({
       descripcion: '',
-      categoriaId: '',
       monto: '',
-      fechaGasto: new Date().toISOString().split('T')[0],
+      fechaGasto: hoyLocal(),
+      horaGasto: '',
       esRecurrente: false,
       periodoRecurrencia: 'mensual',
       metodoPago: 'efectivo',
-      notas: '',
     });
     onClose();
   };
@@ -221,7 +214,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, categorias, negocioId, o
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={isEdit ? 'Editar Gasto' : 'Registrar Gasto Externo'}
+      title={isEdit ? 'Editar Gasto' : 'Programar Gasto'}
       size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -238,45 +231,27 @@ const GastoFormModal = ({ isOpen, onClose, initialData, categorias, negocioId, o
           />
         </div>
 
-        {/* Fila: Categoría + Monto */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categoría <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={form.categoriaId}
-              onChange={set('categoriaId')}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="">Seleccionar...</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Monto (S/) <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.monto}
-              onChange={set('monto')}
-              placeholder="0.00"
-              required
-            />
-          </div>
+        {/* Monto */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Monto (S/) <span className="text-red-500">*</span>
+          </label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.monto}
+            onChange={set('monto')}
+            placeholder="0.00"
+            required
+          />
         </div>
 
-        {/* Fila: Fecha + Método pago */}
+        {/* Fila: Fecha + Hora */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha del gasto <span className="text-red-500">*</span>
+              Fecha del cobro <span className="text-red-500">*</span>
             </label>
             <Input
               type="date"
@@ -287,22 +262,34 @@ const GastoFormModal = ({ isOpen, onClose, initialData, categorias, negocioId, o
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Método de pago
+              Hora del cobro
             </label>
-            <select
-              value={form.metodoPago}
-              onChange={set('metodoPago')}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {METODOS_PAGO.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
+            <Input
+              type="time"
+              value={form.horaGasto}
+              onChange={set('horaGasto')}
+            />
           </div>
         </div>
 
+        {/* Método de pago */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Método de pago
+          </label>
+          <select
+            value={form.metodoPago}
+            onChange={set('metodoPago')}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            {METODOS_PAGO.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Recurrencia */}
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -313,28 +300,37 @@ const GastoFormModal = ({ isOpen, onClose, initialData, categorias, negocioId, o
             Gasto recurrente
           </label>
           {form.esRecurrente && (
-            <select
-              value={form.periodoRecurrencia}
-              onChange={set('periodoRecurrencia')}
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              {PERIODOS.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
-            </select>
+            <>
+              <div className="flex items-center gap-3 pl-6">
+                <label className="text-sm text-gray-600 whitespace-nowrap">Periodo <span className="text-red-500">*</span></label>
+                <select
+                  value={form.periodoRecurrencia}
+                  onChange={set('periodoRecurrencia')}
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  {PERIODOS.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-xs text-indigo-700 flex items-start gap-2">
+                <RefreshCw size={13} className="mt-0.5 shrink-0" />
+                <span>
+                  Este gasto se cobrará automáticamente cada periodo
+                  ({PERIODO_LABEL[form.periodoRecurrencia]?.toLowerCase()}) a partir del {form.fechaGasto || '—'}{form.horaGasto ? ` a las ${form.horaGasto}` : ''}.
+                </span>
+              </div>
+            </>
           )}
-        </div>
-
-        {/* Notas */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-          <textarea
-            value={form.notas}
-            onChange={set('notas')}
-            rows={2}
-            placeholder="Observaciones opcionales..."
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+          {!form.esRecurrente && form.fechaGasto && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700 flex items-start gap-2">
+              <CalendarClock size={13} className="mt-0.5 shrink-0" />
+              <span>
+                Este gasto se cobrará el <strong>{form.fechaGasto}</strong>{form.horaGasto ? <> a las <strong>{form.horaGasto}</strong></> : ''} de forma automática.
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
@@ -347,7 +343,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, categorias, negocioId, o
             ) : isEdit ? (
               <><Pencil size={14} className="mr-2" />Actualizar</>
             ) : (
-              <><Plus size={14} className="mr-2" />Registrar Gasto</>
+              <><Plus size={14} className="mr-2" />Programar Gasto</>
             )}
           </Button>
         </div>
@@ -357,78 +353,59 @@ const GastoFormModal = ({ isOpen, onClose, initialData, categorias, negocioId, o
 };
 
 /* ─────────────────────────────────────────── */
-/*  Tab 1: Facturas del Sistema                */
+/*  Tab 1: Historial de Pagos                  */
 /* ─────────────────────────────────────────── */
 
-const FacturasSistemaTab = ({
-  facturas,
-  isLoading,
-  onPagar,
-  isPagando,
-}) => {
-  const [pagarTarget, setPagarTarget] = useState(null);
-
-  const pendientes = facturas.filter((f) => f.estado === 'pendiente');
-  const totalPendiente = pendientes.reduce((sum, f) => sum + Number(f.total || 0), 0);
+const HistorialPagosTab = ({ gastos, isLoading }) => {
+  const totalPagado = gastos.reduce((sum, g) => sum + Number(g.total || g.monto || 0), 0);
 
   const columns = [
-    { key: 'numero', title: 'N° Factura', render: (_, f) => (
-      <span className="font-mono text-xs font-semibold text-blue-700">{f.numeroFactura}</span>
+    { key: 'numero', title: 'N° Gasto', render: (_, g) => (
+      <span className="font-mono text-xs font-semibold text-gray-700">{g.numeroGasto || '—'}</span>
     )},
-    { key: 'periodo', title: 'Período', render: (_, f) => (
-      <span className="text-xs text-gray-600">
-        {formatDate(f.inicioPeriodo)} – {formatDate(f.finPeriodo)}
+    { key: 'descripcion', title: 'Descripción', render: (_, g) => (
+      <div>
+        <p className="text-sm font-medium text-gray-900 truncate max-w-[220px]">{g.descripcion}</p>
+        {g.referenciaPago && (
+          <span className="text-xs text-gray-400">Ref: {g.referenciaPago}</span>
+        )}
+      </div>
+    )},
+    { key: 'total', title: 'Total', render: (_, g) => (
+      <span className="font-semibold text-gray-900">{formatCurrency(g.total || g.monto)}</span>
+    )},
+    { key: 'metodo', title: 'Método de pago', render: (_, g) => (
+      <span className="text-sm text-gray-700">
+        {METODO_PAGO_LABEL[g.metodoPago] || g.metodoPago || '—'}
       </span>
     )},
-    { key: 'total', title: 'Total', render: (_, f) => (
-      <span className="font-semibold text-gray-900">{formatCurrency(f.total)}</span>
+    { key: 'fecha', title: 'Fecha de creación', render: (_, g) => (
+      <div className="text-xs text-gray-600">
+        <span>{formatDate(g.fechaGasto)}</span>
+        {g.horaGasto && (
+          <span className="flex items-center gap-0.5 text-gray-500 mt-0.5">
+            <Clock size={10} />
+            {g.horaGasto.slice(0, 5)}
+          </span>
+        )}
+      </div>
     )},
-    { key: 'vencimiento', title: 'Vencimiento', render: (_, f) => {
-      const isVencida = f.estado === 'pendiente' && new Date(f.fechaVencimiento) < new Date();
-      return (
-        <span className={`text-xs ${isVencida ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
-          {formatDate(f.fechaVencimiento)}
-          {isVencida && <span className="ml-1">(Vencida)</span>}
-        </span>
-      );
-    }},
-    { key: 'estado', title: 'Estado', render: (_, f) => (
-      <Badge variant={ESTADO_FACTURA_BADGE[f.estado] || 'info'}>
-        {ESTADO_FACTURA_LABEL[f.estado] || f.estado}
-      </Badge>
+    { key: 'estado', title: 'Estado', render: () => (
+      <Badge variant="success">Pagado</Badge>
     )},
-    { key: 'pagadoEn', title: 'Pagado el', render: (_, f) => (
-      <span className="text-xs text-gray-500">
-        {f.pagadoEn ? formatDate(f.pagadoEn) : '—'}
-      </span>
-    )},
-    { key: 'acciones', title: '', render: (_, f) => {
-      const puedesPagar = f.estado === 'pendiente' || f.estado === 'vencida';
-      return puedesPagar ? (
-        <Button
-          size="sm"
-          onClick={() => setPagarTarget(f)}
-          disabled={isPagando}
-        >
-          <CreditCard size={13} className="mr-1" />
-          Pagar
-        </Button>
-      ) : null;
-    }},
   ];
 
   return (
     <div className="space-y-4">
-      {/* Summary card */}
-      {pendientes.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle size={18} className="text-amber-600 mt-0.5 shrink-0" />
+      {gastos.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+          <CheckCircle size={18} className="text-green-600 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-amber-800">
-              {pendientes.length} factura{pendientes.length > 1 ? 's' : ''} pendiente{pendientes.length > 1 ? 's' : ''} de pago
+            <p className="text-sm font-semibold text-green-800">
+              {gastos.length} gasto{gastos.length > 1 ? 's' : ''} pagado{gastos.length > 1 ? 's' : ''}
             </p>
-            <p className="text-sm text-amber-700">
-              Total a pagar: <strong>{formatCurrency(totalPendiente)}</strong>
+            <p className="text-sm text-green-700">
+              Total pagado: <strong>{formatCurrency(totalPagado)}</strong>
             </p>
           </div>
         </div>
@@ -437,24 +414,11 @@ const FacturasSistemaTab = ({
       <Card>
         <Table
           columns={columns}
-          data={facturas}
+          data={gastos}
           loading={isLoading}
-          emptyText="No hay facturas del sistema para este negocio"
+          emptyText="Aún no hay pagos realizados"
         />
       </Card>
-
-      {/* Modal pago */}
-      <PagoModal
-        isOpen={!!pagarTarget}
-        onClose={() => setPagarTarget(null)}
-        titulo="Pagar Factura del Sistema"
-        monto={pagarTarget?.total}
-        isLoading={isPagando}
-        onConfirm={async ({ metodoPago, referencia }) => {
-          await onPagar({ id: pagarTarget.id, metodoPago, referencia });
-          setPagarTarget(null);
-        }}
-      />
     </div>
   );
 };
@@ -465,7 +429,6 @@ const FacturasSistemaTab = ({
 
 const GastosExternosTab = ({
   gastos,
-  categorias,
   negocioId,
   isLoading,
   onCrear,
@@ -508,25 +471,37 @@ const GastosExternosTab = ({
     )},
     { key: 'descripcion', title: 'Descripción', render: (_, g) => (
       <div>
-        <p className="text-sm font-medium text-gray-900 truncate max-w-[180px]">{g.descripcion}</p>
+        <p className="text-sm font-medium text-gray-900 truncate max-w-[220px]">{g.descripcion}</p>
         {g.esRecurrente && (
           <span className="inline-flex items-center gap-1 text-xs text-indigo-600 mt-0.5">
             <RotateCcw size={10} />
             {PERIODO_LABEL[g.periodoRecurrencia] || g.periodoRecurrencia}
+            {g.proximaEjecucion && (
+              <span className="text-gray-400 ml-1">· Próx: {formatDate(g.proximaEjecucion)}</span>
+            )}
+          </span>
+        )}
+        {!g.esRecurrente && g.estado === 'pendiente' && (
+          <span className="inline-flex items-center gap-1 text-xs text-blue-600 mt-0.5">
+            <CalendarClock size={10} />
+            Programado: {formatDate(g.fechaGasto)}{g.horaGasto ? ` a las ${g.horaGasto.slice(0,5)}` : ''}
           </span>
         )}
       </div>
     )},
-    { key: 'categoria', title: 'Categoría', render: (_, g) => (
-      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
-        {g.categoria?.nombre || '—'}
-      </span>
-    )},
     { key: 'total', title: 'Total', render: (_, g) => (
       <span className="font-semibold text-gray-900">{formatCurrency(g.total || g.monto)}</span>
     )},
-    { key: 'fecha', title: 'Fecha', render: (_, g) => (
-      <span className="text-xs text-gray-600">{formatDate(g.fechaGasto)}</span>
+    { key: 'fecha', title: 'Fecha de creación', render: (_, g) => (
+      <div className="text-xs text-gray-600">
+        <span>{formatDate(g.fechaGasto)}</span>
+        {g.horaGasto && (
+          <span className="flex items-center gap-0.5 text-gray-500 mt-0.5">
+            <Clock size={10} />
+            {g.horaGasto.slice(0, 5)}
+          </span>
+        )}
+      </div>
     )},
     { key: 'estado', title: 'Estado', render: (_, g) => (
       <Badge variant={ESTADO_GASTO_BADGE[g.estado] || 'info'}>
@@ -563,12 +538,43 @@ const GastosExternosTab = ({
     )},
   ];
 
+  const recurrentes = gastos.filter((g) => g.esRecurrente);
+  const costoMensualTab = useMemo(() => {
+    return recurrentes.reduce((sum, g) => {
+      const monto = Number(g.monto || 0);
+      switch (g.periodoRecurrencia) {
+        case 'semanal': return sum + monto * 4.33;
+        case 'quincenal': return sum + monto * 2;
+        case 'mensual': return sum + monto;
+        case 'trimestral': return sum + monto / 3;
+        case 'anual': return sum + monto / 12;
+        default: return sum + monto;
+      }
+    }, 0);
+  }, [recurrentes]);
+
   return (
     <div className="space-y-4">
+      {/* Info recurrentes */}
+      {recurrentes.length > 0 && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-start gap-3">
+          <RotateCcw size={18} className="text-indigo-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-indigo-800">
+              {recurrentes.length} gasto{recurrentes.length > 1 ? 's' : ''} recurrente{recurrentes.length > 1 ? 's' : ''} activo{recurrentes.length > 1 ? 's' : ''}
+            </p>
+            <p className="text-sm text-indigo-700">
+              Costo mensual estimado: <strong>{formatCurrency(costoMensualTab)}</strong>.
+              Estos gastos se cobran automáticamente en cada periodo.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-end">
         <Button onClick={handleOpenCreate}>
           <Plus size={15} className="mr-1.5" />
-          Registrar Gasto
+          Programar Gasto
         </Button>
       </div>
 
@@ -577,7 +583,7 @@ const GastosExternosTab = ({
           columns={columns}
           data={gastos}
           loading={isLoading}
-          emptyText="No hay gastos externos registrados"
+          emptyText="No hay gastos programados"
         />
       </Card>
 
@@ -586,7 +592,6 @@ const GastosExternosTab = ({
         isOpen={formOpen}
         onClose={() => { setFormOpen(false); setEditTarget(null); }}
         initialData={editTarget}
-        categorias={categorias}
         negocioId={negocioId}
         onSave={handleSave}
         isLoading={isCreating || isUpdating}
@@ -626,42 +631,51 @@ const GastosExternosTab = ({
 /* ─────────────────────────────────────────── */
 
 const TABS = [
-  { id: 'facturas', label: 'Facturas del Sistema', icon: FileText },
-  { id: 'externos', label: 'Gastos Externos', icon: Receipt },
+  { id: 'historial', label: 'Historial de Pagos', icon: History },
+  { id: 'programados', label: 'Gastos Programados', icon: CalendarClock },
 ];
 
 export const GastosPage = () => {
-  const [activeTab, setActiveTab] = useState('facturas');
+  const [activeTab, setActiveTab] = useState('programados');
   const { negocio } = useAdminAuthStore();
 
   const {
     negocioId,
     gastos,
-    categorias,
-    facturasServicio,
     isLoadingGastos,
-    isLoadingFacturas,
     crearGasto,
     actualizarGasto,
     eliminarGasto,
     pagarGasto,
-    pagarFacturaServicio,
     isCreating,
     isUpdating,
     isDeleting,
     isPagandoGasto,
-    isPagandoFactura,
   } = useGastos();
 
-  /* Resumen rápido */
-  const pendientesFacturas = facturasServicio.filter((f) => f.estado === 'pendiente' || f.estado === 'vencida').length;
-  const pendientesGastos = gastos.filter((g) => g.estado === 'pendiente' || g.estado === 'aprobado').length;
-  const totalPendienteFacturas = facturasServicio
-    .filter((f) => f.estado === 'pendiente' || f.estado === 'vencida')
-    .reduce((s, f) => s + Number(f.total || 0), 0);
-  const totalPendienteGastos = gastos
+  /* Separar gastos pagados vs pendientes/programados */
+  const gastosPagados = useMemo(() => gastos.filter((g) => g.estado === 'pagado'), [gastos]);
+  const gastosProgramados = useMemo(() => gastos.filter((g) => g.estado !== 'pagado'), [gastos]);
+
+  const pendientesGastos = gastosProgramados.filter((g) => g.estado === 'pendiente' || g.estado === 'aprobado').length;
+  const gastosRecurrentes = gastos.filter((g) => g.esRecurrente).length;
+  const totalPagado = gastosPagados.reduce((s, g) => s + Number(g.total || g.monto || 0), 0);
+  const totalPendienteGastos = gastosProgramados
     .filter((g) => g.estado === 'pendiente' || g.estado === 'aprobado')
     .reduce((s, g) => s + Number(g.total || g.monto || 0), 0);
+  const costoMensualEstimado = useMemo(() => {
+    return gastos.filter((g) => g.esRecurrente).reduce((sum, g) => {
+      const monto = Number(g.monto || 0);
+      switch (g.periodoRecurrencia) {
+        case 'semanal': return sum + monto * 4.33;
+        case 'quincenal': return sum + monto * 2;
+        case 'mensual': return sum + monto;
+        case 'trimestral': return sum + monto / 3;
+        case 'anual': return sum + monto / 12;
+        default: return sum + monto;
+      }
+    }, 0);
+  }, [gastos]);
 
   return (
     <div className="space-y-6">
@@ -673,23 +687,23 @@ export const GastosPage = () => {
             Gastos
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Control de facturas del sistema y gastos externos del negocio
+            Programa y controla los gastos automáticos del negocio
           </p>
         </div>
       </div>
 
       {/* Stat cards resumen */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4 shadow-sm">
-          <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-            <FileText size={18} className="text-amber-600" />
+          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <CheckCircle size={18} className="text-green-600" />
           </div>
           <div>
-            <p className="text-xs text-gray-500">Facturas pendientes</p>
+            <p className="text-xs text-gray-500">Pagos realizados</p>
             <p className="text-lg font-bold text-gray-900">
-              {pendientesFacturas}
+              {gastosPagados.length}
               <span className="text-sm font-normal text-gray-500 ml-2">
-                ({formatCurrency(totalPendienteFacturas)})
+                ({formatCurrency(totalPagado)})
               </span>
             </p>
           </div>
@@ -699,12 +713,28 @@ export const GastosPage = () => {
             <Receipt size={18} className="text-red-600" />
           </div>
           <div>
-            <p className="text-xs text-gray-500">Gastos externos pendientes</p>
+            <p className="text-xs text-gray-500">Gastos pendientes</p>
             <p className="text-lg font-bold text-gray-900">
               {pendientesGastos}
               <span className="text-sm font-normal text-gray-500 ml-2">
                 ({formatCurrency(totalPendienteGastos)})
               </span>
+            </p>
+          </div>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4 shadow-sm">
+          <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+            <RotateCcw size={18} className="text-indigo-600" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Gastos recurrentes</p>
+            <p className="text-lg font-bold text-gray-900">
+              {gastosRecurrentes}
+              {costoMensualEstimado > 0 && (
+                <span className="text-sm font-normal text-gray-500 ml-2">
+                  (~{formatCurrency(costoMensualEstimado)}/mes)
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -728,12 +758,12 @@ export const GastosPage = () => {
               >
                 <Icon size={15} />
                 {tab.label}
-                {tab.id === 'facturas' && pendientesFacturas > 0 && (
-                  <span className="bg-amber-100 text-amber-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
-                    {pendientesFacturas}
+                {tab.id === 'historial' && gastosPagados.length > 0 && (
+                  <span className="bg-green-100 text-green-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                    {gastosPagados.length}
                   </span>
                 )}
-                {tab.id === 'externos' && pendientesGastos > 0 && (
+                {tab.id === 'programados' && pendientesGastos > 0 && (
                   <span className="bg-red-100 text-red-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
                     {pendientesGastos}
                   </span>
@@ -745,19 +775,16 @@ export const GastosPage = () => {
       </div>
 
       {/* Tab content */}
-      {activeTab === 'facturas' && (
-        <FacturasSistemaTab
-          facturas={facturasServicio}
-          isLoading={isLoadingFacturas}
-          onPagar={pagarFacturaServicio}
-          isPagando={isPagandoFactura}
+      {activeTab === 'historial' && (
+        <HistorialPagosTab
+          gastos={gastosPagados}
+          isLoading={isLoadingGastos}
         />
       )}
 
-      {activeTab === 'externos' && (
+      {activeTab === 'programados' && (
         <GastosExternosTab
-          gastos={gastos}
-          categorias={categorias}
+          gastos={gastosProgramados}
           negocioId={negocioId}
           isLoading={isLoadingGastos}
           onCrear={crearGasto}

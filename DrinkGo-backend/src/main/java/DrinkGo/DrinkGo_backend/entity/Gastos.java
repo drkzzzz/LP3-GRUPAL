@@ -9,14 +9,15 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "gastos")
 @SQLDelete(sql = "UPDATE gastos SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "negocioId", "sedeId", "numeroGasto", "categoriaId", "proveedorId", "descripcion", "monto",
-        "montoImpuesto", "total", "moneda", "fechaGasto", "metodoPago", "referenciaPago", "urlComprobante", "estado",
-        "esRecurrente", "periodoRecurrencia", "aprobadoPor", "registradoPor", "notas", "estaActivo", "creadoEn",
+@JsonPropertyOrder({ "id", "negocioId", "sedeId", "numeroGasto", "proveedorId", "descripcion", "monto",
+        "montoImpuesto", "total", "moneda", "fechaGasto", "horaGasto", "metodoPago", "referenciaPago", "urlComprobante", "estado",
+        "esRecurrente", "periodoRecurrencia", "proximaEjecucion", "aprobadoPor", "registradoPor", "notas", "estaActivo", "creadoEn",
         "actualizadoEn", "eliminadoEn" })
 public class Gastos {
 
@@ -34,10 +35,6 @@ public class Gastos {
 
     @Column(name = "numero_gasto", nullable = false, length = 30)
     private String numeroGasto;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "categoria_id", nullable = false)
-    private CategoriasGasto categoria;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "proveedor_id")
@@ -60,6 +57,9 @@ public class Gastos {
 
     @Column(name = "fecha_gasto", nullable = false)
     private LocalDate fechaGasto;
+
+    @Column(name = "hora_gasto")
+    private LocalTime horaGasto;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "metodo_pago", nullable = false)
@@ -89,6 +89,9 @@ public class Gastos {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registrado_por")
     private Usuarios registradoPor;
+
+    @Column(name = "proxima_ejecucion")
+    private LocalDate proximaEjecucion;
 
     @Column(columnDefinition = "TEXT")
     private String notas;
@@ -161,14 +164,6 @@ public class Gastos {
         this.numeroGasto = numeroGasto;
     }
 
-    public CategoriasGasto getCategoria() {
-        return categoria;
-    }
-
-    public void setCategoria(CategoriasGasto categoria) {
-        this.categoria = categoria;
-    }
-
     public Proveedores getProveedor() {
         return proveedor;
     }
@@ -223,6 +218,14 @@ public class Gastos {
 
     public void setFechaGasto(LocalDate fechaGasto) {
         this.fechaGasto = fechaGasto;
+    }
+
+    public LocalTime getHoraGasto() {
+        return horaGasto;
+    }
+
+    public void setHoraGasto(LocalTime horaGasto) {
+        this.horaGasto = horaGasto;
     }
 
     public MetodoPago getMetodoPago() {
@@ -295,6 +298,14 @@ public class Gastos {
 
     public void setNotas(String notas) {
         this.notas = notas;
+    }
+
+    public LocalDate getProximaEjecucion() {
+        return proximaEjecucion;
+    }
+
+    public void setProximaEjecucion(LocalDate proximaEjecucion) {
+        this.proximaEjecucion = proximaEjecucion;
     }
 
     public Boolean getEstaActivo() {

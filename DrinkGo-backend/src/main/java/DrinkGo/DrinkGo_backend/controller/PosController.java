@@ -307,6 +307,13 @@ public class PosController {
             // Asignar usuario a la caja si se envía usuarioAsignadoId
             if (body.containsKey("usuarioAsignadoId") && body.get("usuarioAsignadoId") != null) {
                 Long uId = Long.valueOf(body.get("usuarioAsignadoId").toString());
+                // Verificar que el usuario no esté asignado a otra caja
+                List<CajasRegistradoras> cajasDelUsuario = cajasRepo.findByUsuarioAsignadoId(uId);
+                if (!cajasDelUsuario.isEmpty()) {
+                    String nombreCajaExistente = cajasDelUsuario.get(0).getNombreCaja();
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("error", "Este usuario ya está asignado a la caja '" + nombreCajaExistente + "'. Un usuario solo puede estar asignado a una caja."));
+                }
                 caja.setUsuarioAsignado(usuariosRepo.findById(uId).orElse(null));
             }
 
@@ -336,6 +343,17 @@ public class PosController {
                 Object val = body.get("usuarioAsignadoId");
                 if (val != null) {
                     Long uId = Long.valueOf(val.toString());
+                    // Verificar que el usuario no esté asignado a otra caja (distinta de la actual)
+                    List<CajasRegistradoras> cajasDelUsuario = cajasRepo.findByUsuarioAsignadoId(uId);
+                    boolean asignadoAOtraCaja = cajasDelUsuario.stream()
+                            .anyMatch(c -> !c.getId().equals(cajaId));
+                    if (asignadoAOtraCaja) {
+                        String nombreCajaExistente = cajasDelUsuario.stream()
+                                .filter(c -> !c.getId().equals(cajaId))
+                                .findFirst().map(CajasRegistradoras::getNombreCaja).orElse("");
+                        return ResponseEntity.badRequest()
+                                .body(Map.of("error", "Este usuario ya está asignado a la caja '" + nombreCajaExistente + "'. Un usuario solo puede estar asignado a una caja."));
+                    }
                     caja.setUsuarioAsignado(usuariosRepo.findById(uId).orElse(null));
                 } else {
                     caja.setUsuarioAsignado(null);
@@ -481,6 +499,24 @@ public class PosController {
             List<MovimientosCaja> movimientos = movimientosRepo
                     .findBySesionCajaIdOrderByFechaMovimientoDesc(sesionCajaId);
             return ResponseEntity.ok(movimientos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/movimientos/{id}/devolver")
+    public ResponseEntity<?> devolverEgreso(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        try {
+            java.math.BigDecimal monto = new java.math.BigDecimal(body.get("monto").toString());
+            String motivo = body.containsKey("motivo") && body.get("motivo") != null
+                    ? body.get("motivo").toString() : null;
+            MovimientosCaja devolucion = posService.devolverEgreso(id, monto, motivo);
+            return ResponseEntity.status(HttpStatus.CREATED).body(devolucion);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));

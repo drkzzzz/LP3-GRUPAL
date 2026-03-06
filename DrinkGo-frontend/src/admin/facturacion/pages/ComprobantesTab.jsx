@@ -12,6 +12,7 @@ import { Eye, XCircle, Search, CheckCircle, AlertCircle, Hash, Monitor } from 'l
 import { useComprobantes, useCambiarEstadoComprobante } from '../hooks/useFacturacion';
 import { ComprobanteViewModal } from '../components/ComprobanteViewModal';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
+import { SinCajaAsignada } from '@/admin/ventas/components/SinCajaAsignada';
 
 /* ─── Mapeo de estados internos a etiquetas locales ─── */
 const getEstadoLocal = (estadoDocumento) => {
@@ -44,22 +45,24 @@ const formatCurrency = (amount) => {
 
 export const ComprobantesTab = () => {
   const { negocioId } = useOutletContext();
-  const { getAlcance, cajaAsignada } = useAdminAuthStore();
+  const { user, getAlcance, cajaAsignada } = useAdminAuthStore();
   const alcanceComprobantes = getAlcance('m.facturacion.comprobantes');
   const esSoloCaja = alcanceComprobantes === 'caja_asignada';
+
   const { data: comprobantesRaw = [], isLoading } = useComprobantes(negocioId);
   const cambiarEstado = useCambiarEstadoComprobante();
 
-  /* Filtrar comprobantes por caja + hoy si alcance es caja_asignada */
+  /* Filtrar comprobantes: solo los generados por el cajero + su caja + hoy */
   const comprobantes = useMemo(() => {
     if (!esSoloCaja || !cajaAsignada) return comprobantesRaw;
     const hoy = new Date().toISOString().slice(0, 10);
     return comprobantesRaw.filter(
       (c) =>
         c.ventaCajaId === cajaAsignada.id &&
+        c.usuarioId === user?.id &&
         (c.fechaEmision || c.creadoEn)?.slice(0, 10) === hoy,
     );
-  }, [comprobantesRaw, esSoloCaja, cajaAsignada]);
+  }, [comprobantesRaw, esSoloCaja, cajaAsignada, user?.id]);
 
   /* ─── Estado de filtros ─── */
   const [search, setSearch] = useState('');
@@ -74,6 +77,11 @@ export const ComprobantesTab = () => {
 
   /* ─── Modal detalle ─── */
   const [selectedDoc, setSelectedDoc] = useState(null);
+
+  /* Si es cajero con alcance caja_asignada pero sin caja asignada -> bloquear */
+  if (esSoloCaja && !cajaAsignada) {
+    return <SinCajaAsignada titulo="Comprobantes Electrónicos" />;
+  }
 
   /* ─── Stats ─── */
   const stats = useMemo(() => {

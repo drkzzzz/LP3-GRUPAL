@@ -85,6 +85,14 @@ export const cajasService = {
     return toArray(data);
   },
 
+  devolverEgreso: async ({ movimientoId, monto, motivo }) => {
+    const { data } = await adminApi.post(`/pos/movimientos/${movimientoId}/devolver`, {
+      monto,
+      motivo,
+    });
+    return data;
+  },
+
   getMovimientosByNegocio: async (negocioId, { cajaId, desde, hasta } = {}) => {
     const params = {};
     if (cajaId) params.cajaId = cajaId;

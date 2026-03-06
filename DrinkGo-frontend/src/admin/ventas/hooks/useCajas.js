@@ -226,11 +226,26 @@ export const useMovimientos = (sesionCajaId) => {
     },
   });
 
+  const devolverMutation = useMutation({
+    mutationFn: cajasService.devolverEgreso,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['movimientos'] });
+      queryClient.invalidateQueries({ queryKey: ['movimientos-negocio'] });
+      queryClient.invalidateQueries({ queryKey: ['resumen-turno'] });
+      message.success('Devolución de egreso registrada');
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.error || 'Error al devolver egreso');
+    },
+  });
+
   return {
     movimientos: query.data || [],
     isLoading: query.isLoading,
     registrar: registrarMutation.mutateAsync,
     isRegistrando: registrarMutation.isPending,
+    devolverEgreso: devolverMutation.mutateAsync,
+    isDevolviendo: devolverMutation.isPending,
   };
 };
 

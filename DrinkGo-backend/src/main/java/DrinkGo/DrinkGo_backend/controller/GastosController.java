@@ -36,14 +36,12 @@ public class GastosController {
 
     @PostMapping("/gastos")
     public Gastos guardar(@RequestBody Gastos entity) {
-        service.guardar(entity);
-        return entity;
+        return service.guardar(entity);
     }
 
     @PutMapping("/gastos")
     public Gastos modificar(@RequestBody Gastos entity) {
-        service.modificar(entity);
-        return entity;
+        return service.modificar(entity);
     }
 
     @GetMapping("/gastos/{id}")
