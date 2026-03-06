@@ -54,6 +54,9 @@ public class OrdenesCompra {
     @Column(precision = 10, scale = 2)
     private BigDecimal impuestos = BigDecimal.ZERO;
 
+    @Column(name = "incluir_igv")
+    private Boolean incluirIgv = true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id")
     private Usuarios usuario;
@@ -181,6 +184,14 @@ public class OrdenesCompra {
 
     public void setImpuestos(BigDecimal impuestos) {
         this.impuestos = impuestos;
+    }
+
+    public Boolean getIncluirIgv() {
+        return incluirIgv;
+    }
+
+    public void setIncluirIgv(Boolean incluirIgv) {
+        this.incluirIgv = incluirIgv;
     }
 
     public Usuarios getUsuario() {

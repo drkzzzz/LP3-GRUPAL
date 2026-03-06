@@ -14,6 +14,7 @@ public class OrdenesCompraDTO {
     private LocalDateTime fechaEntregaEsperada;
     private BigDecimal subtotal;
     private BigDecimal impuestos;
+    private Boolean incluirIgv;
     private BigDecimal total;
     private String estadoOrden;
     private String observaciones;
@@ -29,7 +30,7 @@ public class OrdenesCompraDTO {
 
     public OrdenesCompraDTO(Long id, Long negocioId, Long sedeId, String numeroOrden, Long proveedorId,
             LocalDateTime fechaOrden, LocalDateTime fechaEntregaEsperada, BigDecimal subtotal, BigDecimal impuestos,
-            BigDecimal total, String estadoOrden, String observaciones, Long usuarioId, Boolean estaActivo,
+            Boolean incluirIgv, BigDecimal total, String estadoOrden, String observaciones, Long usuarioId, Boolean estaActivo,
             LocalDateTime creadoEn, LocalDateTime actualizadoEn, LocalDateTime eliminadoEn) {
         this.id = id;
         this.negocioId = negocioId;
@@ -40,6 +41,7 @@ public class OrdenesCompraDTO {
         this.fechaEntregaEsperada = fechaEntregaEsperada;
         this.subtotal = subtotal;
         this.impuestos = impuestos;
+        this.incluirIgv = incluirIgv;
         this.total = total;
         this.estadoOrden = estadoOrden;
         this.observaciones = observaciones;
@@ -121,6 +123,14 @@ public class OrdenesCompraDTO {
 
     public void setImpuestos(BigDecimal impuestos) {
         this.impuestos = impuestos;
+    }
+
+    public Boolean getIncluirIgv() {
+        return incluirIgv;
+    }
+
+    public void setIncluirIgv(Boolean incluirIgv) {
+        this.incluirIgv = incluirIgv;
     }
 
     public BigDecimal getTotal() {

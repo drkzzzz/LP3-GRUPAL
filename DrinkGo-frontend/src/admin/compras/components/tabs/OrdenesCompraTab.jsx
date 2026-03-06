@@ -13,7 +13,7 @@
  */
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Search,
@@ -101,6 +101,7 @@ export const OrdenesCompraTab = () => {
       proveedorId: '',
       sedeId: '',
       almacenId: '',
+      incluirIgv: true,
       notas: '',
       items: [{ productoId: '', cantidadSolicitada: '', precioUnitario: '' }],
     },
@@ -111,25 +112,38 @@ export const OrdenesCompraTab = () => {
     name: 'items',
   });
 
-  const watchedItems = watch('items');
+  // Usar useWatch para mejor reactividad con arrays dinámicos
+  const watchedItems = useWatch({
+    control,
+    name: 'items',
+  });
+  const watchedIncluirIgv = useWatch({
+    control,
+    name: 'incluirIgv',
+  });
   const watchedProveedorId = watch('proveedorId');
 
   /* ─── Cálculos ─── */
   const formTotals = useMemo(() => {
     let subtotal = 0;
-    (watchedItems || []).forEach((item) => {
-      const qty = Number(item.cantidadSolicitada) || 0;
-      const price = Number(item.precioUnitario) || 0;
-      subtotal += qty * price;
-    });
-    const impuestos = subtotal * IGV_RATE;
+    if (Array.isArray(watchedItems)) {
+      watchedItems.forEach((item) => {
+        if (item) {
+          const qty = parseFloat(item.cantidadSolicitada) || 0;
+          const price = parseFloat(item.precioUnitario) || 0;
+          subtotal += qty * price;
+        }
+      });
+    }
+    // Calcular IGV solo si está marcado el checkbox
+    const impuestos = watchedIncluirIgv ? subtotal * IGV_RATE : 0;
     const total = subtotal + impuestos;
     return {
       subtotal: Number(subtotal.toFixed(2)),
       impuestos: Number(impuestos.toFixed(2)),
       total: Number(total.toFixed(2)),
     };
-  }, [watchedItems]);
+  }, [watchedItems, watchedIncluirIgv]);
 
   /* ─── Filtrado ─── */
   const filtered = useMemo(() => {
@@ -213,6 +227,7 @@ export const OrdenesCompraTab = () => {
       proveedorId: '',
       sedeId: '',
       almacenId: '',
+      incluirIgv: true,
       notas: '',
       items: [{ productoId: '', cantidadSolicitada: '', precioUnitario: '' }],
     });
@@ -235,6 +250,17 @@ export const OrdenesCompraTab = () => {
   };
 
   const onSubmit = async (formData) => {
+    // Validar que hay items y que el total es mayor a 0
+    if (!formData.items || formData.items.length === 0) {
+      message.error('Debe agregar al menos un producto a la orden');
+      return;
+    }
+
+    if (formTotals.total <= 0) {
+      message.error('El total de la orden debe ser mayor a 0. Verifique las cantidades y precios.');
+      return;
+    }
+
     const numeroOrden = generateNumeroOrden();
 
     const headerPayload = {
@@ -247,6 +273,7 @@ export const OrdenesCompraTab = () => {
       subtotal: formTotals.subtotal,
       impuestos: formTotals.impuestos,
       total: formTotals.total,
+      incluirIgv: formData.incluirIgv ?? true,
       notas: formData.notas?.trim() || null,
       usuario: user?.id ? { id: user.id } : null,
     };
@@ -509,6 +536,19 @@ export const OrdenesCompraTab = () => {
             />
           </div>
 
+          {/* Checkbox IGV */}
+          <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+            <input
+              type="checkbox"
+              id="incluirIgv"
+              {...register('incluirIgv')}
+              className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+            />
+            <label htmlFor="incluirIgv" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+              Incluir IGV (18%) en el cálculo del total
+            </label>
+          </div>
+
           {/* Ítems */}
           <div className="border-t border-gray-200 pt-4">
             <div className="flex items-center justify-between mb-3">
@@ -623,7 +663,7 @@ export const OrdenesCompraTab = () => {
                 <span className="font-medium">{formatCurrency(formTotals.subtotal)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">IGV (18%):</span>
+                <span className="text-gray-600">IGV ({watchedIncluirIgv ? '18%' : '0%'}):</span>
                 <span className="font-medium">{formatCurrency(formTotals.impuestos)}</span>
               </div>
               <div className="flex justify-between font-semibold text-base border-t pt-1.5">
