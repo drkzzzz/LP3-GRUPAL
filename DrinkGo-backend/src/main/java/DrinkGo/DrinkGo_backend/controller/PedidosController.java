@@ -27,7 +27,16 @@ public class PedidosController {
 
     @PostMapping("/pedidos")
     public Pedidos guardar(@RequestBody Pedidos entity) {
+        System.out.println("🔵 [POST /pedidos] Recibido:");
+        System.out.println("  - Cliente: " + (entity.getCliente() != null ? entity.getCliente().getId() : "NULL"));
+        System.out.println("  - Tipo pedido: " + entity.getTipoPedido());
+        System.out.println("  - Total: " + entity.getTotal());
+        System.out.println("  - Distrito: " + entity.getDistrito());
+        System.out.println("  - Zona delivery ID: " + (entity.getZonaDelivery() != null ? entity.getZonaDelivery().getId() : "NULL"));
+        
         service.guardar(entity);
+        
+        System.out.println("✅ Pedido guardado con ID: " + entity.getId());
         return entity;
     }
 

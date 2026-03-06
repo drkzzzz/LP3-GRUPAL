@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Table(name = "zonas_delivery")
 @SQLDelete(sql = "UPDATE zonas_delivery SET esta_activo = 0 WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "negocioId", "sedeId", "nombre", "descripcion", "tarifaDelivery", "montoMinimoPedido",
+@JsonPropertyOrder({ "id", "negocioId", "sedeId", "nombre", "descripcion", "distritos", "tarifaDelivery", "montoMinimoPedido",
         "estaActivo", "creadoEn", "actualizadoEn" })
 public class ZonasDelivery {
 
@@ -33,6 +33,13 @@ public class ZonasDelivery {
     private String nombre;
 
     private String descripcion;
+
+    /**
+     * Array de distritos cubiertos por esta zona (formato JSON)
+     * Ejemplo: ["Surco","Barranco","Chorrillos","San Juan de Miraflores"]
+     */
+    @Column(name = "distritos", columnDefinition = "JSON")
+    private String distritos;
 
     @Column(name = "tarifa_delivery", precision = 10, scale = 2)
     private BigDecimal tarifaDelivery = BigDecimal.ZERO;
@@ -99,6 +106,14 @@ public class ZonasDelivery {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+
+    public String getDistritos() {
+        return distritos;
+    }
+
+    public void setDistritos(String distritos) {
+        this.distritos = distritos;
     }
 
     public BigDecimal getTarifaDelivery() {

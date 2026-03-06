@@ -4,18 +4,22 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "pedidos")
 @SQLDelete(sql = "UPDATE pedidos SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "negocioId", "sedeId", "numeroPedido", "clienteId", "tipoPedido", "fechaPedido",
-        "fechaEntregaEstimada", "direccionEntrega", "zonDeliveryId", "subtotal", "descuento", "costoDelivery",
-        "impuestos", "total", "estadoPedido", "observaciones", "usuarioId", "estaActivo", "creadoEn", "actualizadoEn",
+@JsonPropertyOrder({ "id", "negocioId", "sedeId", "numeroPedido", "clienteId", "cliente", "ventaId", "tipoPedido", 
+        "origenPedido", "fechaPedido", "fechaEntregaEstimada", "direccionEntrega", "departamento", "provincia", 
+        "distrito", "referencia", "zonaDeliveryId", "subtotal", "descuento", "costoDelivery",
+        "impuestos", "total", "estadoPedido", "observaciones", "usuarioId", "detalles", "estaActivo", "creadoEn", "actualizadoEn",
         "eliminadoEn" })
 public class Pedidos {
 
@@ -42,6 +46,10 @@ public class Pedidos {
     @Column(name = "tipo_pedido", nullable = false)
     private TipoPedido tipoPedido;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origen_pedido", nullable = false)
+    private OrigenPedido origenPedido = OrigenPedido.tienda_online;
+
     @Column(name = "fecha_pedido", nullable = false)
     private LocalDateTime fechaPedido;
 
@@ -50,6 +58,18 @@ public class Pedidos {
 
     @Column(name = "direccion_entrega", columnDefinition = "TEXT")
     private String direccionEntrega;
+
+    @Column(name = "departamento", length = 100)
+    private String departamento;
+
+    @Column(name = "provincia", length = 100)
+    private String provincia;
+
+    @Column(name = "distrito", length = 100)
+    private String distrito;
+
+    @Column(name = "referencia", columnDefinition = "TEXT")
+    private String referencia;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "zona_delivery_id")
@@ -81,6 +101,10 @@ public class Pedidos {
     @JoinColumn(name = "usuario_id")
     private Usuarios usuario;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "venta_id")
+    private Ventas venta;
+
     @Column(name = "esta_activo")
     private Boolean estaActivo = true;
 
@@ -93,6 +117,11 @@ public class Pedidos {
     @Column(name = "eliminado_en")
     private LocalDateTime eliminadoEn;
 
+    // ✅ Relación bidireccional con DetallePedidos
+    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<DetallePedidos> detalles = new ArrayList<>();
+
     public enum TipoPedido {
         delivery, recojo_tienda
     }
@@ -101,12 +130,22 @@ public class Pedidos {
         pendiente, confirmado, preparando, listo, en_camino, entregado, cancelado
     }
 
+    public enum OrigenPedido {
+        tienda_online, telefono, whatsapp, pos, otro
+    }
+
     @PrePersist
     protected void onCreate() {
         creadoEn = LocalDateTime.now();
         actualizadoEn = LocalDateTime.now();
         if (fechaPedido == null) {
             fechaPedido = LocalDateTime.now();
+        }
+        // ✅ Vincular detalles bidireccionalmente
+        if (detalles != null) {
+            for (DetallePedidos detalle : detalles) {
+                detalle.setPedido(this);
+            }
         }
     }
 
@@ -164,6 +203,14 @@ public class Pedidos {
         this.tipoPedido = tipoPedido;
     }
 
+    public OrigenPedido getOrigenPedido() {
+        return origenPedido;
+    }
+
+    public void setOrigenPedido(OrigenPedido origenPedido) {
+        this.origenPedido = origenPedido;
+    }
+
     public LocalDateTime getFechaPedido() {
         return fechaPedido;
     }
@@ -186,6 +233,38 @@ public class Pedidos {
 
     public void setDireccionEntrega(String direccionEntrega) {
         this.direccionEntrega = direccionEntrega;
+    }
+
+    public String getDepartamento() {
+        return departamento;
+    }
+
+    public void setDepartamento(String departamento) {
+        this.departamento = departamento;
+    }
+
+    public String getProvincia() {
+        return provincia;
+    }
+
+    public void setProvincia(String provincia) {
+        this.provincia = provincia;
+    }
+
+    public String getDistrito() {
+        return distrito;
+    }
+
+    public void setDistrito(String distrito) {
+        this.distrito = distrito;
+    }
+
+    public String getReferencia() {
+        return referencia;
+    }
+
+    public void setReferencia(String referencia) {
+        this.referencia = referencia;
     }
 
     public ZonasDelivery getZonaDelivery() {
@@ -290,6 +369,38 @@ public class Pedidos {
 
     public void setEliminadoEn(LocalDateTime eliminadoEn) {
         this.eliminadoEn = eliminadoEn;
+    }
+
+    public Ventas getVenta() {
+        return venta;
+    }
+
+    public void setVenta(Ventas venta) {
+        this.venta = venta;
+    }
+
+    public List<DetallePedidos> getDetalles() {
+        return detalles;
+    }
+
+    public void setDetalles(List<DetallePedidos> detalles) {
+        this.detalles = detalles;
+        // ✅ Vincular bidireccionalmente
+        if (detalles != null) {
+            for (DetallePedidos detalle : detalles) {
+                detalle.setPedido(this);
+            }
+        }
+    }
+
+    public void addDetalle(DetallePedidos detalle) {
+        detalles.add(detalle);
+        detalle.setPedido(this);
+    }
+
+    public void removeDetalle(DetallePedidos detalle) {
+        detalles.remove(detalle);
+        detalle.setPedido(null);
     }
 
     @Override

@@ -414,7 +414,8 @@ CREATE TABLE zonas_delivery (
     sede_id BIGINT UNSIGNED NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     descripcion VARCHAR(300) NULL,
-    tarifa_delivery DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    distritos JSON NULL COMMENT 'Array de distritos cubiertos: ["Surco","Barranco","Chorrillos"]',
+    tarifa_delivery DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Costo base de delivery para esta zona',
     monto_minimo_pedido DECIMAL(10,2) NULL,
     esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -423,7 +424,7 @@ CREATE TABLE zonas_delivery (
     CONSTRAINT fk_zdel_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
     INDEX idx_zdel_negocio (negocio_id),
     INDEX idx_zdel_sede (sede_id)
-) ENGINE=InnoDB COMMENT='Zonas de delivery por sede (RF-ADM-009)';
+) ENGINE=InnoDB COMMENT='Zonas de delivery por sede con múltiples distritos (RF-ADM-009)';
 
 -- ============================================================
 -- 3.6 MESAS (PARA CONSUMO EN LOCAL)
@@ -1015,8 +1016,21 @@ CREATE TABLE pedidos (
     sede_id BIGINT UNSIGNED NOT NULL,
     numero_pedido VARCHAR(30) NOT NULL,
     cliente_id BIGINT UNSIGNED NOT NULL,
-    tipo_pedido ENUM('delivery','recojo','consumo_local') NOT NULL DEFAULT 'delivery',
+    
+    -- Relación con venta generada (NULL hasta que se entrega el pedido)
+    venta_id BIGINT UNSIGNED NULL COMMENT 'Venta generada al completarpedido',
+    
+    tipo_pedido ENUM('delivery','recojo_tienda','consumo_local') NOT NULL DEFAULT 'delivery',
     origen_pedido ENUM('tienda_online','telefono','whatsapp','pos','otro') NOT NULL DEFAULT 'tienda_online',
+
+    -- Dirección de entrega completa
+    direccion_entrega TEXT NULL COMMENT 'Dirección completa de entrega',
+    departamento VARCHAR(100) NULL,
+    provincia VARCHAR(100) NULL,
+    distrito VARCHAR(100) NULL,
+    referencia TEXT NULL COMMENT 'Referencias adicionales para encontrar la dirección',
+    latitud DECIMAL(10,8) NULL,
+    longitud DECIMAL(11,8) NULL,
 
     -- Zona de delivery
     zona_delivery_id BIGINT UNSIGNED NULL,
@@ -1025,36 +1039,49 @@ CREATE TABLE pedidos (
     subtotal DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     monto_descuento DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     monto_impuesto DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    tarifa_delivery DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    costo_delivery DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     moneda VARCHAR(3) NOT NULL DEFAULT 'PEN',
 
-    -- Estado del pedido
-    estado ENUM(
-        'pendiente','confirmado','preparando','listo','asignado',
-        'en_delivery','entregado','recogido','completado','cancelado','reembolsado'
+    -- Estado del pedido (sincronizado con Java Entity)
+    estado_pedido ENUM(
+        'pendiente','confirmado','preparando','listo','en_camino','entregado','cancelado'
     ) NOT NULL DEFAULT 'pendiente',
+
+    -- Fechas
+    fecha_pedido TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_entrega_estimada TIMESTAMP NULL,
+
+    -- Observaciones y usuario que registró
+    observaciones TEXT NULL,
+    usuario_id BIGINT UNSIGNED NULL,
 
     -- Info fiscal
     ruc_cliente VARCHAR(20) NULL,
     razon_social_cliente VARCHAR(200) NULL,
     confirmado_en TIMESTAMP NULL,
     razon_cancelacion VARCHAR(500) NULL,
+    
+    -- Auditoría
+    esta_activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    eliminado_en TIMESTAMP NULL,
 
     CONSTRAINT fk_ped_negocio FOREIGN KEY (negocio_id) REFERENCES negocios(id),
     CONSTRAINT fk_ped_sede FOREIGN KEY (sede_id) REFERENCES sedes(id),
     CONSTRAINT fk_ped_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id),
-    -- FK fk_ped_direccion eliminada: tabla direcciones_cliente fue removida (Bloque 7 simplificado)
+    CONSTRAINT fk_ped_venta FOREIGN KEY (venta_id) REFERENCES ventas(id) ON DELETE SET NULL,
     CONSTRAINT fk_ped_zona FOREIGN KEY (zona_delivery_id) REFERENCES zonas_delivery(id) ON DELETE SET NULL,
+    CONSTRAINT fk_ped_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL,
 
     UNIQUE KEY uk_ped_negocio_numero (negocio_id, numero_pedido),
     INDEX idx_ped_negocio (negocio_id),
     INDEX idx_ped_sede (sede_id),
     INDEX idx_ped_cliente (cliente_id),
-    INDEX idx_ped_estado (negocio_id, estado),
-    INDEX idx_ped_fecha (negocio_id, creado_en),
+    INDEX idx_ped_venta (venta_id),
+    INDEX idx_ped_estado (negocio_id, estado_pedido),
+    INDEX idx_ped_fecha (negocio_id, fecha_pedido),
     INDEX idx_ped_tipo (negocio_id, tipo_pedido)
 ) ENGINE=InnoDB COMMENT='Pedidos de clientes (RF-PED-001..006)';
 

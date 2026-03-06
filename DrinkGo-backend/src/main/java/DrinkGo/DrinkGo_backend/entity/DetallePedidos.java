@@ -4,6 +4,7 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -23,6 +24,7 @@ public class DetallePedidos {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pedido_id", nullable = false)
+    @JsonBackReference
     private Pedidos pedido;
 
     @ManyToOne(fetch = FetchType.LAZY)
