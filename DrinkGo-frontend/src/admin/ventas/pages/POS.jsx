@@ -87,17 +87,23 @@ export const POS = () => {
       pagos,
     };
 
-    const ventaResponse = await crearVenta(ventaData);
+    try {
+      const ventaResponse = await crearVenta(ventaData);
 
-    /* Guardar datos para el comprobante */
-    setReceiptData({
-      venta: ventaResponse,
-      items: itemsSnapshot,
-      pagos,
-    });
+      /* Guardar datos para el comprobante */
+      setReceiptData({
+        venta: ventaResponse,
+        items: itemsSnapshot,
+        pagos,
+      });
 
-    setShowPagoModal(false);
-    clearCart();
+      setShowPagoModal(false);
+      clearCart();
+    } catch {
+      // Error manejado por onError de la mutation (refreshStock + toast).
+      // Cerrar modal de pago para que el cajero vea el carrito actualizado.
+      setShowPagoModal(false);
+    }
   };
 
   /* ─── LOADING ─── */

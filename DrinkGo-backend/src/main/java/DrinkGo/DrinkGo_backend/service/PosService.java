@@ -120,10 +120,8 @@ public class PosService {
                 .findFirstBySede_IdAndEsPredeterminado(request.getSedeId(), true)
                 .orElse(null);
 
-        // ── 4. Validar stock de cada ítem ──
-        if (almacenDefault != null) {
-            validarStockItems(request.getItems(), almacenDefault.getId(), request.getNegocioId());
-        }
+        // ── 4. Validar stock de cada ítem (en TODOS los almacenes del negocio) ──
+        validarStockItems(request.getItems(), request.getNegocioId());
 
         // ── 5. Generar número de venta (secuencia propia por sede para evitar duplicados) ──
         long count = ventasRepo.countBySedeId(request.getSedeId());
@@ -250,10 +248,8 @@ public class PosService {
         movimiento.setFechaMovimiento(LocalDateTime.now());
         movimientosRepo.save(movimiento);
 
-        // ── 11. Deducir stock del inventario ──
-        if (almacenDefault != null) {
-            deducirStockVenta(request.getItems(), almacenDefault, negocio, usuario, venta.getNumeroVenta());
-        }
+        // ── 11. Deducir stock del inventario (en TODOS los almacenes del negocio) ──
+        deducirStockVenta(request.getItems(), almacenDefault, negocio, usuario, venta.getNumeroVenta());
 
         // ── 12. Generar comprobante de facturación (transacción separada) ──
         try {
@@ -581,22 +577,24 @@ public class PosService {
 
     /**
      * Valida que haya stock suficiente para todos los ítems de la venta.
+     * Suma el stock de TODOS los almacenes del negocio para cada producto,
+     * igual que como lo muestra el POS al cajero.
      */
-    private void validarStockItems(List<CrearVentaPosRequest.ItemVenta> items, Long almacenId, Long negocioId) {
+    private void validarStockItems(List<CrearVentaPosRequest.ItemVenta> items, Long negocioId) {
         for (CrearVentaPosRequest.ItemVenta item : items) {
             if (item.getProductoId() == null) continue;
 
-            Optional<StockInventario> stockOpt = stockRepo
-                    .findFirstByProductoIdAndAlmacenId(item.getProductoId(), almacenId);
+            List<StockInventario> stockRecords = stockRepo
+                    .findByProductoIdAndNegocioId(item.getProductoId(), negocioId);
 
-            if (stockOpt.isEmpty()) {
+            if (stockRecords.isEmpty()) {
                 // No hay registro de stock — permitir la venta (puede no tener inventario configurado)
                 continue;
             }
 
-            StockInventario stock = stockOpt.get();
-            BigDecimal disponible = stock.getCantidadDisponible() != null
-                    ? stock.getCantidadDisponible() : BigDecimal.ZERO;
+            BigDecimal disponible = stockRecords.stream()
+                    .map(s -> s.getCantidadDisponible() != null ? s.getCantidadDisponible() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal cantidadRequerida = BigDecimal.valueOf(item.getCantidad());
 
             if (disponible.compareTo(cantidadRequerida) < 0) {
@@ -611,59 +609,82 @@ public class PosService {
 
     /**
      * Deduce stock del inventario usando FIFO por lotes.
+     * Busca en TODOS los almacenes del negocio donde el producto tenga stock
+     * (prioriza el almacén predeterminado de la sede).
      * Crea movimientos de inventario tipo SALIDA por cada deducción.
      */
     private void deducirStockVenta(List<CrearVentaPosRequest.ItemVenta> items,
-                                    Almacenes almacen, Negocios negocio,
+                                    Almacenes almacenDefault, Negocios negocio,
                                     Usuarios usuario, String referenciaVenta) {
         for (CrearVentaPosRequest.ItemVenta item : items) {
             if (item.getProductoId() == null) continue;
 
-            BigDecimal cantidadADeducir = BigDecimal.valueOf(item.getCantidad());
+            BigDecimal restante = BigDecimal.valueOf(item.getCantidad());
             Productos producto = productosRepo.getReferenceById(item.getProductoId());
 
-            // Actualizar stock consolidado
-            Optional<StockInventario> stockOpt = stockRepo
-                    .findByProductoIdAndAlmacenIdForUpdate(item.getProductoId(), almacen.getId());
+            // Buscar stock en TODOS los almacenes del negocio para este producto
+            List<StockInventario> stockRecords = stockRepo
+                    .findByProductoIdAndNegocioId(item.getProductoId(), negocio.getId());
 
-            if (stockOpt.isPresent()) {
-                StockInventario stock = stockOpt.get();
-                stock.setCantidadActual(stock.getCantidadActual().subtract(cantidadADeducir));
-                stock.setCantidadDisponible(stock.getCantidadDisponible().subtract(cantidadADeducir));
-                stockRepo.save(stock);
-            }
+            // Priorizar almacén predeterminado
+            stockRecords.sort((a, b) -> {
+                boolean aDefault = almacenDefault != null && almacenDefault.getId().equals(a.getAlmacen().getId());
+                boolean bDefault = almacenDefault != null && almacenDefault.getId().equals(b.getAlmacen().getId());
+                if (aDefault && !bDefault) return -1;
+                if (!aDefault && bDefault) return 1;
+                return 0;
+            });
 
-            // Deducir de lotes (FIFO)
-            List<LotesInventario> lotes = lotesRepo
-                    .findLotesConStockFIFOForUpdate(item.getProductoId(), almacen.getId());
-
-            BigDecimal restante = cantidadADeducir;
-            for (LotesInventario lote : lotes) {
+            for (StockInventario stock : stockRecords) {
                 if (restante.compareTo(BigDecimal.ZERO) <= 0) break;
 
-                BigDecimal disponibleLote = lote.getCantidadActual();
-                BigDecimal aDeducirDeLote = restante.min(disponibleLote);
+                BigDecimal disponible = stock.getCantidadDisponible() != null
+                        ? stock.getCantidadDisponible() : BigDecimal.ZERO;
+                BigDecimal aDeducirDeAlmacen = restante.min(disponible);
 
-                lote.setCantidadActual(disponibleLote.subtract(aDeducirDeLote));
-                lotesRepo.save(lote);
+                if (aDeducirDeAlmacen.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-                // Registrar movimiento de inventario
-                MovimientosInventario movInv = new MovimientosInventario();
-                movInv.setNegocio(negocio);
-                movInv.setProducto(producto);
-                movInv.setAlmacenOrigen(almacen);
-                movInv.setLote(lote);
-                movInv.setTipoMovimiento(MovimientosInventario.TipoMovimiento.salida);
-                movInv.setCantidad(aDeducirDeLote);
-                movInv.setCostoUnitario(lote.getCostoUnitario());
-                movInv.setMontoTotal(aDeducirDeLote.multiply(lote.getCostoUnitario()).setScale(2, RoundingMode.HALF_UP));
-                movInv.setMotivoMovimiento("Venta POS");
-                movInv.setReferenciaDocumento(referenciaVenta);
-                movInv.setUsuario(usuario);
-                movInv.setFechaMovimiento(LocalDateTime.now());
-                movInventarioRepo.save(movInv);
+                // Actualizar stock consolidado del almacén
+                stock.setCantidadActual(stock.getCantidadActual().subtract(aDeducirDeAlmacen));
+                stock.setCantidadDisponible(stock.getCantidadDisponible().subtract(aDeducirDeAlmacen));
+                stockRepo.save(stock);
 
-                restante = restante.subtract(aDeducirDeLote);
+                Almacenes almacenActual = stock.getAlmacen();
+
+                // Deducir de lotes en este almacén (FIFO)
+                List<LotesInventario> lotes = lotesRepo
+                        .findLotesConStockFIFO(item.getProductoId(), almacenActual.getId());
+
+                BigDecimal restanteLotes = aDeducirDeAlmacen;
+                for (LotesInventario lote : lotes) {
+                    if (restanteLotes.compareTo(BigDecimal.ZERO) <= 0) break;
+
+                    BigDecimal disponibleLote = lote.getCantidadActual();
+                    BigDecimal aDeducirDeLote = restanteLotes.min(disponibleLote);
+
+                    lote.setCantidadActual(disponibleLote.subtract(aDeducirDeLote));
+                    lotesRepo.save(lote);
+
+                    // Registrar movimiento de inventario
+                    MovimientosInventario movInv = new MovimientosInventario();
+                    movInv.setNegocio(negocio);
+                    movInv.setProducto(producto);
+                    movInv.setAlmacenOrigen(almacenActual);
+                    movInv.setLote(lote);
+                    movInv.setTipoMovimiento(MovimientosInventario.TipoMovimiento.salida);
+                    movInv.setCantidad(aDeducirDeLote);
+                    movInv.setCostoUnitario(lote.getCostoUnitario());
+                    movInv.setMontoTotal(aDeducirDeLote.multiply(lote.getCostoUnitario()).setScale(2, RoundingMode.HALF_UP));
+                    movInv.setMotivoMovimiento("Venta POS");
+                    movInv.setReferenciaDocumento(referenciaVenta);
+                    movInv.setUsuario(usuario);
+                    movInv.setFechaMovimiento(LocalDateTime.now());
+                    movInventarioRepo.save(movInv);
+
+                    restanteLotes = restanteLotes.subtract(aDeducirDeLote);
+                }
+
+                restante = restante.subtract(aDeducirDeAlmacen);
             }
         }
     }

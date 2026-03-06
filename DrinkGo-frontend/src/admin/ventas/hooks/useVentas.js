@@ -6,15 +6,17 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ventasService } from '../services/ventasService';
+import { invalidarCacheProductos } from '../services/productosAdapter';
 import { message } from '@/shared/utils/notifications';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
 /* ═══ LISTAR VENTAS POR NEGOCIO ═══ */
 
 export const useVentas = () => {
-  const { negocio, sede } = useAdminAuthStore();
+  const { negocio, sede, getAlcance, cajaAsignada } = useAdminAuthStore();
   const negocioId = negocio?.id;
   const sedeId = sede?.id;
+  const alcanceHistorial = getAlcance('m.ventas.historial');
 
   const query = useQuery({
     queryKey: ['ventas', negocioId, sedeId],
@@ -22,10 +24,20 @@ export const useVentas = () => {
     enabled: !!negocioId,
     staleTime: 1000 * 60 * 2,
     select: (data) => {
+      let filtered = data;
       if (sedeId) {
-        return data.filter((v) => v.sede?.id === sedeId);
+        filtered = filtered.filter((v) => v.sede?.id === sedeId);
       }
-      return data;
+      // Si alcance es caja_asignada, mostrar solo ventas de la caja del usuario + del día
+      if (alcanceHistorial === 'caja_asignada' && cajaAsignada) {
+        const hoy = new Date().toISOString().slice(0, 10);
+        filtered = filtered.filter(
+          (v) =>
+            v.sesionCaja?.caja?.id === cajaAsignada.id &&
+            v.creadoEn?.slice(0, 10) === hoy,
+        );
+      }
+      return filtered;
     },
   });
 
@@ -34,6 +46,7 @@ export const useVentas = () => {
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,
+    alcanceHistorial,
   };
 };
 
@@ -98,10 +111,22 @@ export const useCrearVenta = () => {
       queryClient.invalidateQueries({ queryKey: ['movimientos'] });
       // Refrescar comprobantes en módulo de facturación sin recargar la página
       queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
+      // Invalidar cache de productos para reflejar el nuevo stock en el POS
+      invalidarCacheProductos();
+      queryClient.invalidateQueries({ queryKey: ['productos-pos'] });
       message.success('Venta registrada exitosamente');
     },
-    onError: (err) => {
-      message.error(err.response?.data?.error || 'Error al registrar venta');
+    onError: async (err) => {
+      const errorMsg = err.response?.data?.error || 'Error al registrar venta';
+
+      // Si el error es por stock insuficiente, refrescar stock automáticamente
+      if (errorMsg.toLowerCase().includes('stock insuficiente')) {
+        const { useCartStore } = await import('../stores/cartStore');
+        await useCartStore.getState().refreshStock();
+        message.error(errorMsg + '. El stock se ha actualizado.');
+      } else {
+        message.error(errorMsg);
+      }
     },
   });
 

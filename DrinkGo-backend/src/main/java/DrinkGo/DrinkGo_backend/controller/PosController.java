@@ -34,6 +34,7 @@ import DrinkGo.DrinkGo_backend.entity.PagosVenta;
 import DrinkGo.DrinkGo_backend.entity.Productos;
 import DrinkGo.DrinkGo_backend.entity.Sedes;
 import DrinkGo.DrinkGo_backend.entity.SesionesCaja;
+import DrinkGo.DrinkGo_backend.entity.Usuarios;
 import DrinkGo.DrinkGo_backend.entity.Ventas;
 import DrinkGo.DrinkGo_backend.repository.CajasRegistradorasRepository;
 import DrinkGo.DrinkGo_backend.repository.CategoriasGastoRepository;
@@ -45,6 +46,7 @@ import DrinkGo.DrinkGo_backend.repository.NegociosRepository;
 import DrinkGo.DrinkGo_backend.repository.PagosVentaRepository;
 import DrinkGo.DrinkGo_backend.repository.SedesRepository;
 import DrinkGo.DrinkGo_backend.repository.SesionesCajaRepository;
+import DrinkGo.DrinkGo_backend.repository.UsuariosRepository;
 import DrinkGo.DrinkGo_backend.repository.VentasRepository;
 import DrinkGo.DrinkGo_backend.service.FacturacionService;
 import DrinkGo.DrinkGo_backend.service.PosService;
@@ -72,6 +74,7 @@ public class PosController {
     @Autowired private NegociosRepository negociosRepo;
     @Autowired private SedesRepository sedesRepo;
     @Autowired private CategoriasGastoRepository categoriasGastoRepo;
+    @Autowired private UsuariosRepository usuariosRepo;
 
     // PRODUCTOS POS (enriquecidos con stock y precio)
 
@@ -246,6 +249,18 @@ public class PosController {
         }
     }
 
+    /** Cajas asignadas a un usuario específico */
+    @GetMapping("/cajas/usuario/{usuarioId}")
+    public ResponseEntity<?> getCajasByUsuario(@PathVariable Long usuarioId) {
+        try {
+            List<CajasRegistradoras> cajas = cajasRepo.findByUsuarioAsignadoId(usuarioId);
+            return ResponseEntity.ok(cajas);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/cajas/{cajaId}/negocio/{negocioId}")
     public ResponseEntity<?> getCajaById(@PathVariable Long cajaId, @PathVariable Long negocioId) {
         try {
@@ -268,18 +283,32 @@ public class PosController {
             Negocios negocio = negociosRepo.findById(negocioId)
                     .orElseThrow(() -> new RuntimeException("Negocio no encontrado"));
 
-            // Obtener la primera sede del negocio
-            List<Sedes> sedes = sedesRepo.findByNegocioId(negocioId);
-            if (sedes.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "El negocio no tiene sedes configuradas"));
+            // Usar la sede enviada o la primera del negocio
+            Sedes sede;
+            if (body.containsKey("sedeId") && body.get("sedeId") != null) {
+                Long sedeId = Long.valueOf(body.get("sedeId").toString());
+                sede = sedesRepo.findById(sedeId)
+                        .orElseThrow(() -> new RuntimeException("Sede no encontrada"));
+            } else {
+                List<Sedes> sedes = sedesRepo.findByNegocioId(negocioId);
+                if (sedes.isEmpty()) {
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("error", "El negocio no tiene sedes configuradas"));
+                }
+                sede = sedes.get(0);
             }
 
             CajasRegistradoras caja = new CajasRegistradoras();
             caja.setNegocio(negocio);
-            caja.setSede(sedes.get(0));
+            caja.setSede(sede);
             caja.setNombreCaja(body.get("nombreCaja").toString());
             caja.setCodigo(body.get("codigo").toString());
+
+            // Asignar usuario a la caja si se envía usuarioAsignadoId
+            if (body.containsKey("usuarioAsignadoId") && body.get("usuarioAsignadoId") != null) {
+                Long uId = Long.valueOf(body.get("usuarioAsignadoId").toString());
+                caja.setUsuarioAsignado(usuariosRepo.findById(uId).orElse(null));
+            }
 
             cajasRepo.save(caja);
             return ResponseEntity.status(HttpStatus.CREATED).body(caja);
@@ -302,6 +331,17 @@ public class PosController {
             if (body.containsKey("nombreCaja")) caja.setNombreCaja(body.get("nombreCaja").toString());
             if (body.containsKey("codigo")) caja.setCodigo(body.get("codigo").toString());
 
+            // Actualizar usuario asignado (null para desasignar)
+            if (body.containsKey("usuarioAsignadoId")) {
+                Object val = body.get("usuarioAsignadoId");
+                if (val != null) {
+                    Long uId = Long.valueOf(val.toString());
+                    caja.setUsuarioAsignado(usuariosRepo.findById(uId).orElse(null));
+                } else {
+                    caja.setUsuarioAsignado(null);
+                }
+            }
+
             cajasRepo.save(caja);
             return ResponseEntity.ok(caja);
         } catch (Exception e) {
@@ -315,7 +355,21 @@ public class PosController {
         try {
             CajasRegistradoras caja = cajasRepo.findById(cajaId)
                     .orElseThrow(() -> new RuntimeException("Caja no encontrada"));
-            caja.setEstaHabilitada(!Boolean.TRUE.equals(caja.getEstaHabilitada()));
+
+            // Si se intenta deshabilitar, verificar que no tenga sesión abierta
+            boolean estaHabilitada = Boolean.TRUE.equals(caja.getEstaHabilitada());
+            if (estaHabilitada) {
+                boolean tieneSesionAbierta = sesionesRepo
+                        .findFirstByCajaIdAndEstadoSesion(cajaId, SesionesCaja.EstadoSesion.abierta)
+                        .isPresent();
+                if (tieneSesionAbierta) {
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("error",
+                                    "No se puede deshabilitar una caja que tiene una sesión activa. Cierre la sesión primero."));
+                }
+            }
+
+            caja.setEstaHabilitada(!estaHabilitada);
             cajasRepo.save(caja);
             return ResponseEntity.ok(caja);
         } catch (Exception e) {

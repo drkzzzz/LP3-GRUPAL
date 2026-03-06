@@ -17,6 +17,14 @@ public interface UsuariosRolesRepository extends JpaRepository<UsuariosRoles, Lo
     List<String> findCodigosPermisoByUsuarioId(@Param("usuarioId") Long usuarioId);
 
     /**
+     * Devuelve pares [codigo, alcance] de los permisos del usuario.
+     * Cada fila: Object[] { String codigo, String alcance }.
+     */
+    @Query("SELECT rp.permiso.codigo, rp.alcance FROM RolesPermisos rp " +
+            "WHERE rp.rol.id IN (SELECT ur.rol.id FROM UsuariosRoles ur WHERE ur.usuario.id = :usuarioId)")
+    List<Object[]> findPermisosConAlcanceByUsuarioId(@Param("usuarioId") Long usuarioId);
+
+    /**
      * Carga los roles del usuario junto con el objeto Roles (JOIN FETCH)
      * para evitar LazyInitializationException al serializar.
      */

@@ -8,9 +8,10 @@
  */
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Eye, XCircle, Search, CheckCircle, AlertCircle, Hash } from 'lucide-react';
+import { Eye, XCircle, Search, CheckCircle, AlertCircle, Hash, Monitor } from 'lucide-react';
 import { useComprobantes, useCambiarEstadoComprobante } from '../hooks/useFacturacion';
 import { ComprobanteViewModal } from '../components/ComprobanteViewModal';
+import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
 /* ─── Mapeo de estados internos a etiquetas locales ─── */
 const getEstadoLocal = (estadoDocumento) => {
@@ -43,8 +44,22 @@ const formatCurrency = (amount) => {
 
 export const ComprobantesTab = () => {
   const { negocioId } = useOutletContext();
-  const { data: comprobantes = [], isLoading } = useComprobantes(negocioId);
+  const { getAlcance, cajaAsignada } = useAdminAuthStore();
+  const alcanceComprobantes = getAlcance('m.facturacion.comprobantes');
+  const esSoloCaja = alcanceComprobantes === 'caja_asignada';
+  const { data: comprobantesRaw = [], isLoading } = useComprobantes(negocioId);
   const cambiarEstado = useCambiarEstadoComprobante();
+
+  /* Filtrar comprobantes por caja + hoy si alcance es caja_asignada */
+  const comprobantes = useMemo(() => {
+    if (!esSoloCaja || !cajaAsignada) return comprobantesRaw;
+    const hoy = new Date().toISOString().slice(0, 10);
+    return comprobantesRaw.filter(
+      (c) =>
+        c.ventaCajaId === cajaAsignada.id &&
+        (c.fechaEmision || c.creadoEn)?.slice(0, 10) === hoy,
+    );
+  }, [comprobantesRaw, esSoloCaja, cajaAsignada]);
 
   /* ─── Estado de filtros ─── */
   const [search, setSearch] = useState('');
@@ -121,6 +136,16 @@ export const ComprobantesTab = () => {
         <h1 className="text-2xl font-bold text-gray-900">Comprobantes Electrónicos</h1>
         <p className="text-gray-600 mt-1">Consulta y gestión de boletas, facturas y notas de crédito</p>
       </div>
+
+      {/* Banner alcance restringido */}
+      {esSoloCaja && cajaAsignada && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <Monitor size={16} className="text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-700">
+            Mostrando solo los comprobantes del día de tu caja: <strong>{cajaAsignada.nombreCaja}</strong>
+          </p>
+        </div>
+      )}
 
       {/* ─── Stats Cards (3 cards: Total, Confirmados, Anulados) ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

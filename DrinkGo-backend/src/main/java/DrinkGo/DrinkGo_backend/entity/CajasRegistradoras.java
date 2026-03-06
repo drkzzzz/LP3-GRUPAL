@@ -3,6 +3,7 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -13,8 +14,8 @@ import java.time.LocalDateTime;
 @Table(name = "cajas_registradoras")
 @SQLDelete(sql = "UPDATE cajas_registradoras SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "negocioId", "sedeId", "nombreCaja", "codigo", "montoAperturaDefecto", "estaHabilitada",
-        "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
+@JsonPropertyOrder({ "id", "negocioId", "sedeId", "usuarioAsignadoId", "nombreCaja", "codigo", "montoAperturaDefecto",
+        "estaHabilitada", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class CajasRegistradoras {
 
     @Id
@@ -28,6 +29,12 @@ public class CajasRegistradoras {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sede_id", nullable = false)
     private Sedes sede;
+
+    /** Usuario asignado a esta caja (cajero). Nullable = sin asignación fija. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_asignado_id")
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "hashContrasena", "negocio" })
+    private Usuarios usuarioAsignado;
 
     @Column(name = "nombre_caja", nullable = false)
     private String nombreCaja;
@@ -87,6 +94,14 @@ public class CajasRegistradoras {
 
     public void setSede(Sedes sede) {
         this.sede = sede;
+    }
+
+    public Usuarios getUsuarioAsignado() {
+        return usuarioAsignado;
+    }
+
+    public void setUsuarioAsignado(Usuarios usuarioAsignado) {
+        this.usuarioAsignado = usuarioAsignado;
     }
 
     public String getNombreCaja() {
