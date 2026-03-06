@@ -35,7 +35,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/restful/token", "/restful/registros",
-                                "/restful/superadmin/auth/login", "/restful/admin/auth/login")
+                                "/restful/superadmin/auth/login", "/restful/admin/auth/login",
+                                "/uploads/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

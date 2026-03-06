@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/restful")
@@ -62,6 +64,32 @@ public class GastosController {
             @RequestParam(required = false) String referencia) {
         try {
             Gastos gasto = service.marcarPagado(id, metodoPago, referencia);
+            return ResponseEntity.ok(gasto);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping(value = "/gastos/{id}/comprobante", consumes = "multipart/form-data")
+    public ResponseEntity<?> subirComprobante(
+            @PathVariable("id") Long id,
+            @RequestPart("archivo") MultipartFile archivo) {
+        try {
+            Gastos gasto = service.subirComprobante(id, archivo);
+            return ResponseEntity.ok(java.util.Map.of(
+                    "message", "Comprobante subido correctamente",
+                    "urlComprobante", gasto.getUrlComprobante() != null ? gasto.getUrlComprobante() : ""));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/gastos/{id}/comprobante")
+    public ResponseEntity<?> eliminarComprobante(@PathVariable("id") Long id) {
+        try {
+            Gastos gasto = service.eliminarComprobante(id);
             return ResponseEntity.ok(gasto);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

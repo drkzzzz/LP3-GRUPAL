@@ -15,7 +15,7 @@ import java.time.LocalTime;
 @Table(name = "gastos")
 @SQLDelete(sql = "UPDATE gastos SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "negocioId", "sedeId", "numeroGasto", "proveedorId", "descripcion", "monto",
+@JsonPropertyOrder({ "id", "negocioId", "sedeId", "categoriaGastoId", "numeroGasto", "proveedorId", "descripcion", "monto",
         "montoImpuesto", "total", "moneda", "fechaGasto", "horaGasto", "metodoPago", "referenciaPago", "urlComprobante", "estado",
         "esRecurrente", "periodoRecurrencia", "proximaEjecucion", "aprobadoPor", "registradoPor", "notas", "estaActivo", "creadoEn",
         "actualizadoEn", "eliminadoEn" })
@@ -35,6 +35,10 @@ public class Gastos {
 
     @Column(name = "numero_gasto", nullable = false, length = 30)
     private String numeroGasto;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoria_gasto_id")
+    private CategoriasGasto categoriaGasto;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "proveedor_id")
@@ -117,7 +121,7 @@ public class Gastos {
     }
 
     public enum PeriodoRecurrencia {
-        semanal, quincenal, mensual, trimestral, anual
+        diario, semanal, quincenal, mensual, trimestral, anual
     }
 
     @PrePersist
@@ -162,6 +166,14 @@ public class Gastos {
 
     public void setNumeroGasto(String numeroGasto) {
         this.numeroGasto = numeroGasto;
+    }
+
+    public CategoriasGasto getCategoriaGasto() {
+        return categoriaGasto;
+    }
+
+    public void setCategoriaGasto(CategoriasGasto categoriaGasto) {
+        this.categoriaGasto = categoriaGasto;
     }
 
     public Proveedores getProveedor() {

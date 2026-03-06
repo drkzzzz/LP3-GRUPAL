@@ -14,6 +14,10 @@ import {
   Clock,
   CalendarClock,
   History,
+  X,
+  Upload,
+  Eye,
+  AlertCircle,
 } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
@@ -55,6 +59,7 @@ const ESTADO_GASTO_LABEL = {
 };
 
 const PERIODO_LABEL = {
+  diario: 'Diario',
   semanal: 'Semanal',
   quincenal: 'Quincenal',
   mensual: 'Mensual',
@@ -71,6 +76,7 @@ const METODOS_PAGO = [
 ];
 
 const PERIODOS = [
+  { value: 'diario', label: 'Diario' },
   { value: 'semanal', label: 'Semanal' },
   { value: 'quincenal', label: 'Quincenal' },
   { value: 'mensual', label: 'Mensual' },
@@ -88,19 +94,34 @@ const hoyLocal = () => {
 /*  Modal: Registrar Pago                      */
 /* ─────────────────────────────────────────── */
 
+const ACCEPTED_FILE_TYPES = 'image/jpeg,image/png,image/webp,application/pdf';
+
 const PagoModal = ({ isOpen, onClose, titulo, monto, onConfirm, isLoading }) => {
   const [metodoPago, setMetodoPago] = useState('efectivo');
   const [referencia, setReferencia] = useState('');
+  const [archivoComprobante, setArchivoComprobante] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onConfirm({ metodoPago, referencia });
+    onConfirm({ metodoPago, referencia, archivoComprobante });
   };
 
   const handleClose = () => {
     setMetodoPago('efectivo');
     setReferencia('');
+    setArchivoComprobante(null);
     onClose();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        e.target.value = '';
+        return;
+      }
+      setArchivoComprobante(file);
+    }
   };
 
   return (
@@ -139,6 +160,37 @@ const PagoModal = ({ isOpen, onClose, titulo, monto, onConfirm, isLoading }) => 
             placeholder="Nro. operación, voucher, etc."
           />
         </div>
+        {/* Comprobante upload */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Comprobante de pago
+          </label>
+          {archivoComprobante ? (
+            <div className="flex items-center gap-2 border border-green-200 bg-green-50 rounded-lg px-3 py-2">
+              <CheckCircle size={14} className="text-green-600 shrink-0" />
+              <span className="text-sm text-green-800 truncate flex-1">{archivoComprobante.name}</span>
+              <button
+                type="button"
+                onClick={() => setArchivoComprobante(null)}
+                className="text-gray-400 hover:text-red-500 transition-colors shrink-0"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <label className="flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-lg px-3 py-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors">
+              <Upload size={16} className="text-gray-400" />
+              <span className="text-sm text-gray-500">Seleccionar archivo</span>
+              <input
+                type="file"
+                accept={ACCEPTED_FILE_TYPES}
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </label>
+          )}
+          <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP o PDF (máx. 5 MB)</p>
+        </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
             Cancelar
@@ -160,8 +212,24 @@ const PagoModal = ({ isOpen, onClose, titulo, monto, onConfirm, isLoading }) => 
 /*  Modal: Crear / Editar Gasto                */
 /* ─────────────────────────────────────────── */
 
-const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoading }) => {
+const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoading, categorias = [], onCrearCategoria, isCreatingCategoria }) => {
   const isEdit = !!initialData?.id;
+  const [showNewCategoria, setShowNewCategoria] = useState(false);
+  const [newCategoriaNombre, setNewCategoriaNombre] = useState('');
+
+  const handleCrearCategoria = async () => {
+    if (!newCategoriaNombre.trim()) return;
+    try {
+      const created = await onCrearCategoria({
+        negocio: { id: negocioId },
+        nombre: newCategoriaNombre.trim(),
+        tipo: 'operativo',
+      });
+      setForm((prev) => ({ ...prev, categoriaGastoId: created?.id || '' }));
+      setNewCategoriaNombre('');
+      setShowNewCategoria(false);
+    } catch { /* error handled by hook */ }
+  };
 
   const [form, setForm] = useState(() => ({
     descripcion: initialData?.descripcion || '',
@@ -171,6 +239,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
     esRecurrente: initialData?.esRecurrente || false,
     periodoRecurrencia: initialData?.periodoRecurrencia || 'mensual',
     metodoPago: initialData?.metodoPago || 'efectivo',
+    categoriaGastoId: initialData?.categoriaGasto?.id || '',
   }));
 
   const set = (field) => (e) => {
@@ -193,6 +262,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
       periodoRecurrencia: form.esRecurrente ? form.periodoRecurrencia : null,
       metodoPago: form.metodoPago,
       moneda: 'PEN',
+      categoriaGasto: form.categoriaGastoId ? { id: Number(form.categoriaGastoId) } : null,
     };
     onSave(payload);
   };
@@ -206,6 +276,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
       esRecurrente: false,
       periodoRecurrencia: 'mensual',
       metodoPago: 'efectivo',
+      categoriaGastoId: '',
     });
     onClose();
   };
@@ -229,6 +300,62 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
             placeholder="Ej: Alquiler de local, Luz, Agua..."
             required
           />
+        </div>
+
+        {/* Categoría */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Categoría de Gasto
+          </label>
+          {!showNewCategoria ? (
+            <div className="flex gap-2">
+              <select
+                value={form.categoriaGastoId}
+                onChange={set('categoriaGastoId')}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Sin categoría</option>
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowNewCategoria(true)}
+                className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                title="Crear nueva categoría"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                value={newCategoriaNombre}
+                onChange={(e) => setNewCategoriaNombre(e.target.value)}
+                placeholder="Nombre de la categoría"
+                className="flex-1"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCrearCategoria(); } }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleCrearCategoria}
+                disabled={isCreatingCategoria || !newCategoriaNombre.trim()}
+                className="shrink-0"
+              >
+                {isCreatingCategoria ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+              </Button>
+              <button
+                type="button"
+                onClick={() => { setShowNewCategoria(false); setNewCategoriaNombre(''); }}
+                className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Monto */}
@@ -356,8 +483,22 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
 /*  Tab 1: Historial de Pagos                  */
 /* ─────────────────────────────────────────── */
 
-const HistorialPagosTab = ({ gastos, isLoading }) => {
+const HistorialPagosTab = ({ gastos, isLoading, onSubirComprobante, onEliminarComprobante, isSubiendoComprobante }) => {
   const totalPagado = gastos.reduce((sum, g) => sum + Number(g.total || g.monto || 0), 0);
+  const sinComprobante = gastos.filter((g) => !g.urlComprobante).length;
+
+  const handleUpload = (gastoId) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/webp,application/pdf';
+    input.onchange = (e) => {
+      const archivo = e.target.files?.[0];
+      if (archivo) {
+        onSubirComprobante({ id: gastoId, archivo });
+      }
+    };
+    input.click();
+  };
 
   const columns = [
     { key: 'numero', title: 'N° Gasto', render: (_, g) => (
@@ -371,43 +512,88 @@ const HistorialPagosTab = ({ gastos, isLoading }) => {
         )}
       </div>
     )},
+    { key: 'categoria', title: 'Categoría', render: (_, g) => (
+      <span className="text-sm text-gray-700">{g.categoriaGasto?.nombre || '—'}</span>
+    )},
     { key: 'total', title: 'Total', render: (_, g) => (
       <span className="font-semibold text-gray-900">{formatCurrency(g.total || g.monto)}</span>
     )},
-    { key: 'metodo', title: 'Método de pago', render: (_, g) => (
+    { key: 'metodo', title: 'Método', render: (_, g) => (
       <span className="text-sm text-gray-700">
         {METODO_PAGO_LABEL[g.metodoPago] || g.metodoPago || '—'}
       </span>
     )},
-    { key: 'fecha', title: 'Fecha de creación', render: (_, g) => (
+    { key: 'fecha', title: 'Fecha', render: (_, g) => (
       <div className="text-xs text-gray-600">
-        <span>{formatDate(g.fechaGasto)}</span>
-        {g.horaGasto && (
-          <span className="flex items-center gap-0.5 text-gray-500 mt-0.5">
-            <Clock size={10} />
-            {g.horaGasto.slice(0, 5)}
-          </span>
-        )}
+        <span>{g.creadoEn ? formatDate(g.creadoEn) : '—'}</span>
       </div>
     )},
-    { key: 'estado', title: 'Estado', render: () => (
-      <Badge variant="success">Pagado</Badge>
-    )},
+    { key: 'comprobante', title: 'Comprobante', width: '140px', align: 'center', render: (_, g) => {
+      if (g.urlComprobante) {
+        return (
+          <div className="flex items-center justify-center gap-1">
+            <a
+              href={`/uploads/${g.urlComprobante}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+              title="Ver comprobante"
+            >
+              <Eye size={13} />
+              Ver
+            </a>
+            <button
+              onClick={() => onEliminarComprobante(g.id)}
+              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+              title="Eliminar comprobante"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        );
+      }
+      return (
+        <button
+          onClick={() => handleUpload(g.id)}
+          disabled={isSubiendoComprobante}
+          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors disabled:opacity-50"
+          title="Subir comprobante"
+        >
+          {isSubiendoComprobante ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+          Subir
+        </button>
+      );
+    }},
   ];
 
   return (
     <div className="space-y-4">
       {gastos.length > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
-          <CheckCircle size={18} className="text-green-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-green-800">
-              {gastos.length} gasto{gastos.length > 1 ? 's' : ''} pagado{gastos.length > 1 ? 's' : ''}
-            </p>
-            <p className="text-sm text-green-700">
-              Total pagado: <strong>{formatCurrency(totalPagado)}</strong>
-            </p>
+        <div className="flex gap-3">
+          <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+            <CheckCircle size={18} className="text-green-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-green-800">
+                {gastos.length} gasto{gastos.length > 1 ? 's' : ''} pagado{gastos.length > 1 ? 's' : ''}
+              </p>
+              <p className="text-sm text-green-700">
+                Total pagado: <strong>{formatCurrency(totalPagado)}</strong>
+              </p>
+            </div>
           </div>
+          {sinComprobante > 0 && (
+            <div className="flex-1 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle size={18} className="text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  {sinComprobante} sin comprobante
+                </p>
+                <p className="text-sm text-amber-700">
+                  Suba el comprobante del proveedor para justificar el gasto
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -435,10 +621,15 @@ const GastosExternosTab = ({
   onActualizar,
   onEliminar,
   onPagar,
+  onSubirComprobante,
   isCreating,
   isUpdating,
   isDeleting,
   isPagando,
+  isSubiendoComprobante,
+  categorias,
+  onCrearCategoria,
+  isCreatingCategoria,
 }) => {
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
@@ -489,10 +680,13 @@ const GastosExternosTab = ({
         )}
       </div>
     )},
+    { key: 'categoria', title: 'Categoría', render: (_, g) => (
+      <span className="text-sm text-gray-700">{g.categoriaGasto?.nombre || '—'}</span>
+    )},
     { key: 'total', title: 'Total', render: (_, g) => (
       <span className="font-semibold text-gray-900">{formatCurrency(g.total || g.monto)}</span>
     )},
-    { key: 'fecha', title: 'Fecha de creación', render: (_, g) => (
+    { key: 'fecha', title: 'Fecha del cobro', render: (_, g) => (
       <div className="text-xs text-gray-600">
         <span>{formatDate(g.fechaGasto)}</span>
         {g.horaGasto && (
@@ -543,6 +737,7 @@ const GastosExternosTab = ({
     return recurrentes.reduce((sum, g) => {
       const monto = Number(g.monto || 0);
       switch (g.periodoRecurrencia) {
+        case 'diario': return sum + monto * 30;
         case 'semanal': return sum + monto * 4.33;
         case 'quincenal': return sum + monto * 2;
         case 'mensual': return sum + monto;
@@ -595,6 +790,9 @@ const GastosExternosTab = ({
         negocioId={negocioId}
         onSave={handleSave}
         isLoading={isCreating || isUpdating}
+        categorias={categorias}
+        onCrearCategoria={onCrearCategoria}
+        isCreatingCategoria={isCreatingCategoria}
       />
 
       <PagoModal
@@ -602,9 +800,12 @@ const GastosExternosTab = ({
         onClose={() => setPagarTarget(null)}
         titulo="Registrar Pago de Gasto"
         monto={pagarTarget?.total || pagarTarget?.monto}
-        isLoading={isPagando}
-        onConfirm={async ({ metodoPago, referencia }) => {
+        isLoading={isPagando || isSubiendoComprobante}
+        onConfirm={async ({ metodoPago, referencia, archivoComprobante }) => {
           await onPagar({ id: pagarTarget.id, metodoPago, referencia });
+          if (archivoComprobante) {
+            await onSubirComprobante({ id: pagarTarget.id, archivo: archivoComprobante });
+          }
           setPagarTarget(null);
         }}
       />
@@ -642,6 +843,7 @@ export const GastosPage = () => {
   const {
     negocioId,
     gastos,
+    categoriasGasto,
     isLoadingGastos,
     crearGasto,
     actualizarGasto,
@@ -651,6 +853,11 @@ export const GastosPage = () => {
     isUpdating,
     isDeleting,
     isPagandoGasto,
+    crearCategoria,
+    isCreatingCategoria,
+    subirComprobante,
+    eliminarComprobante,
+    isSubiendoComprobante,
   } = useGastos();
 
   /* Separar gastos pagados vs pendientes/programados */
@@ -667,6 +874,7 @@ export const GastosPage = () => {
     return gastos.filter((g) => g.esRecurrente).reduce((sum, g) => {
       const monto = Number(g.monto || 0);
       switch (g.periodoRecurrencia) {
+        case 'diario': return sum + monto * 30;
         case 'semanal': return sum + monto * 4.33;
         case 'quincenal': return sum + monto * 2;
         case 'mensual': return sum + monto;
@@ -779,6 +987,9 @@ export const GastosPage = () => {
         <HistorialPagosTab
           gastos={gastosPagados}
           isLoading={isLoadingGastos}
+          onSubirComprobante={subirComprobante}
+          onEliminarComprobante={eliminarComprobante}
+          isSubiendoComprobante={isSubiendoComprobante}
         />
       )}
 
@@ -791,10 +1002,15 @@ export const GastosPage = () => {
           onActualizar={actualizarGasto}
           onEliminar={eliminarGasto}
           onPagar={pagarGasto}
+          onSubirComprobante={subirComprobante}
           isCreating={isCreating}
           isUpdating={isUpdating}
           isDeleting={isDeleting}
           isPagando={isPagandoGasto}
+          isSubiendoComprobante={isSubiendoComprobante}
+          categorias={categoriasGasto}
+          onCrearCategoria={crearCategoria}
+          isCreatingCategoria={isCreatingCategoria}
         />
       )}
     </div>

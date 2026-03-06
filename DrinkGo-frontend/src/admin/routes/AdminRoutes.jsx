@@ -50,6 +50,7 @@ import { PseTab } from '../facturacion/pages/PseTab';
 import { ConfiguracionPage } from '../pages/Configuracion';
 import { NegocioYSedesPage } from '../configuracion/components/tabs/NegocioYSedesPage';
 import { OperacionesPage } from '../configuracion/components/tabs/OperacionesPage';
+import { CategoriasGastosPage } from '../configuracion/components/tabs/CategoriasGastosPage';
 
 
 const ProtectedRoute = ({ children }) => {
@@ -87,6 +88,7 @@ export const AdminRoutes = () => {
           <Route index element={<Navigate to="negocio" replace />} />
           <Route path="negocio" element={<NegocioYSedesPage />} />
           <Route path="operaciones" element={<OperacionesPage />} />
+          <Route path="categorias-gastos" element={<CategoriasGastosPage />} />
         </Route>
         <Route path="usuarios" element={<Usuarios />} />
 

@@ -22,6 +22,9 @@ public class CategoriasGastoService implements ICategoriasGastoService {
     }
 
     public void guardar(CategoriasGasto categoriasGasto) {
+        if (categoriasGasto.getCodigo() == null || categoriasGasto.getCodigo().isBlank()) {
+            categoriasGasto.setCodigo(generarCodigo(categoriasGasto.getNombre()));
+        }
         repoCategoriasGasto.save(categoriasGasto);
     }
 
@@ -35,5 +38,13 @@ public class CategoriasGastoService implements ICategoriasGastoService {
 
     public void eliminar(Long id) {
         repoCategoriasGasto.deleteById(id);
+    }
+
+    private String generarCodigo(String nombre) {
+        if (nombre == null || nombre.isBlank()) return "CAT-" + System.currentTimeMillis();
+        String base = nombre.trim().toUpperCase()
+                .replaceAll("[^A-Z0-9]", "");
+        if (base.length() > 5) base = base.substring(0, 5);
+        return base + "-" + (System.currentTimeMillis() % 10000);
     }
 }

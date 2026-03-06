@@ -9,12 +9,9 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import DrinkGo.DrinkGo_backend.entity.Gastos;
-import DrinkGo.DrinkGo_backend.entity.MovimientosCaja;
-import DrinkGo.DrinkGo_backend.entity.SesionesCaja;
 import DrinkGo.DrinkGo_backend.repository.GastosRepository;
-import DrinkGo.DrinkGo_backend.repository.MovimientosCajaRepository;
-import DrinkGo.DrinkGo_backend.repository.SesionesCajaRepository;
 import DrinkGo.DrinkGo_backend.service.IGastosService;
 
 @Service
@@ -23,10 +20,7 @@ public class GastosService implements IGastosService {
     private GastosRepository repoGastos;
 
     @Autowired
-    private SesionesCajaRepository repoSesionesCaja;
-
-    @Autowired
-    private MovimientosCajaRepository repoMovimientos;
+    private FileStorageService fileStorageService;
 
     public List<Gastos> buscarTodos() {
         return repoGastos.findAll();
@@ -98,33 +92,7 @@ public class GastosService implements IGastosService {
         if (referencia != null && !referencia.isBlank()) {
             gasto.setReferenciaPago(referencia);
         }
-        Gastos saved = repoGastos.save(gasto);
-
-        // Registrar egreso en caja solo si efectivo
-        boolean esEfectivo = saved.getMetodoPago() == Gastos.MetodoPago.efectivo;
-        try {
-            Long negocioId = gasto.getNegocio() != null ? gasto.getNegocio().getId() : null;
-            if (negocioId != null && esEfectivo) {
-                Optional<SesionesCaja> sesionOpt = repoSesionesCaja
-                        .findByCajaNegocioIdOrderByFechaAperturaDesc(negocioId)
-                        .stream()
-                        .filter(s -> s.getEstadoSesion() == SesionesCaja.EstadoSesion.abierta)
-                        .findFirst();
-                if (sesionOpt.isPresent()) {
-                    MovimientosCaja mov = new MovimientosCaja();
-                    mov.setSesionCaja(sesionOpt.get());
-                    mov.setTipoMovimiento(MovimientosCaja.TipoMovimiento.egreso_gasto);
-                    mov.setMonto(gasto.getTotal() != null ? gasto.getTotal() : gasto.getMonto());
-                    mov.setDescripcion("Pago gasto: " + gasto.getDescripcion());
-                    mov.setGastoId(gasto.getId());
-                    mov.setFechaMovimiento(LocalDateTime.now());
-                    repoMovimientos.save(mov);
-                }
-            }
-        } catch (Exception ignored) {
-            // No bloquear el pago si hay error al registrar movimiento
-        }
-        return saved;
+        return repoGastos.save(gasto);
     }
 
     /* ─────────────────────────────────────────────────────────────────── */
@@ -166,6 +134,7 @@ public class GastosService implements IGastosService {
                 copia.setMetodoPago(template.getMetodoPago());
                 copia.setEstado(Gastos.EstadoGasto.pendiente);
                 copia.setEsRecurrente(false);
+                copia.setCategoriaGasto(template.getCategoriaGasto());
                 copia.setNotas("Generado automáticamente desde gasto recurrente #" + template.getNumeroGasto());
                 repoGastos.save(copia);
 
@@ -221,6 +190,7 @@ public class GastosService implements IGastosService {
                 copia.setMetodoPago(template.getMetodoPago());
                 copia.setEstado(Gastos.EstadoGasto.pendiente);
                 copia.setEsRecurrente(false);
+                copia.setCategoriaGasto(template.getCategoriaGasto());
                 copia.setNotas("Generado automáticamente desde gasto recurrente #" + template.getNumeroGasto());
                 repoGastos.save(copia);
 
@@ -236,6 +206,7 @@ public class GastosService implements IGastosService {
         if (desde == null || periodo == null)
             return null;
         return switch (periodo) {
+            case diario -> desde.plusDays(1);
             case semanal -> desde.plusWeeks(1);
             case quincenal -> desde.plusDays(15);
             case mensual -> desde.plusMonths(1);
@@ -246,5 +217,42 @@ public class GastosService implements IGastosService {
 
     private String generarNumeroGasto() {
         return "GAS-" + System.currentTimeMillis();
+    }
+
+    /**
+     * Sube un comprobante (imagen/PDF) para un gasto pagado.
+     */
+    public Gastos subirComprobante(Long id, MultipartFile archivo) {
+        Gastos gasto = repoGastos.findById(id)
+                .orElseThrow(() -> new RuntimeException("Gasto no encontrado: " + id));
+        try {
+            // Si ya tenía comprobante, eliminar el anterior
+            if (gasto.getUrlComprobante() != null && !gasto.getUrlComprobante().isBlank()) {
+                fileStorageService.eliminar(gasto.getUrlComprobante());
+            }
+            String ruta = fileStorageService.guardar(archivo, "comprobantes");
+            gasto.setUrlComprobante(ruta);
+            return repoGastos.save(gasto);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Error al guardar el comprobante: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Elimina el comprobante de un gasto.
+     */
+    public Gastos eliminarComprobante(Long id) {
+        Gastos gasto = repoGastos.findById(id)
+                .orElseThrow(() -> new RuntimeException("Gasto no encontrado: " + id));
+        if (gasto.getUrlComprobante() != null && !gasto.getUrlComprobante().isBlank()) {
+            try {
+                fileStorageService.eliminar(gasto.getUrlComprobante());
+            } catch (java.io.IOException ignored) {
+                // Si no se puede eliminar el archivo, continuar
+            }
+            gasto.setUrlComprobante(null);
+            return repoGastos.save(gasto);
+        }
+        return gasto;
     }
 }

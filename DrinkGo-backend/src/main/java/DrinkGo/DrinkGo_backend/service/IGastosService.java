@@ -3,6 +3,7 @@ package DrinkGo.DrinkGo_backend.service;
 import java.util.List;
 import java.util.Optional;
 import DrinkGo.DrinkGo_backend.entity.Gastos;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface IGastosService {
     List<Gastos> buscarTodos();
@@ -18,4 +19,8 @@ public interface IGastosService {
     void eliminar(Long id);
 
     Gastos marcarPagado(Long id, String metodoPago, String referencia);
+
+    Gastos subirComprobante(Long id, MultipartFile archivo);
+
+    Gastos eliminarComprobante(Long id);
 }

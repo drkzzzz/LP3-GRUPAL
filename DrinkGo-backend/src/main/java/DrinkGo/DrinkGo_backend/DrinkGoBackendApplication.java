@@ -1,5 +1,7 @@
 package DrinkGo.DrinkGo_backend;
 
+import java.util.TimeZone;
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -11,6 +13,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableScheduling
 public class DrinkGoBackendApplication {
+
+	@PostConstruct
+	void setTimezone() {
+		TimeZone.setDefault(TimeZone.getTimeZone("America/Lima"));
+	}
 
 	public static void main(String[] args) {
 		SpringApplication.run(DrinkGoBackendApplication.class, args);

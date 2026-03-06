@@ -33,6 +33,7 @@ import {
   Receipt,
   Zap,
   TrendingDown,
+  Tags,
   MapPin,
   RotateCcw,
   Code2,
@@ -45,6 +46,7 @@ import { useAuthStore } from '@/stores/authStore';
 const CONFIGURACION_SUBITEMS = [
   { to: '/admin/configuracion/negocio', label: 'Negocio y Sedes', icon: Building2, permiso: 'm.configuracion.negocio' },
   { to: '/admin/configuracion/operaciones', label: 'Operaciones', icon: SlidersHorizontal, permiso: 'm.configuracion.operaciones' },
+  { to: '/admin/configuracion/categorias-gastos', label: 'Categorías de Gastos', icon: Tags, permiso: 'm.configuracion.categorias-gastos' },
 ];
 
 /* ─── Sub-items del menú Catálogo ─── */
