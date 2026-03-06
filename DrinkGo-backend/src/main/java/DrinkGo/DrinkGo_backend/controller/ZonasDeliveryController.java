@@ -27,13 +27,31 @@ public class ZonasDeliveryController {
 
     @PostMapping("/zonas-delivery")
     public ZonasDelivery guardar(@RequestBody ZonasDelivery entity) {
+        System.out.println("🔵 [POST /zonas-delivery] Recibido:");
+        System.out.println("  - Nombre: " + entity.getNombre());
+        System.out.println("  - Distritos (raw): " + entity.getDistritos());
+        System.out.println("  - Tarifa: " + entity.getTarifaDelivery());
+        System.out.println("  - Monto mínimo: " + entity.getMontoMinimoPedido());
+        System.out.println("  - Negocio ID: " + (entity.getNegocio() != null ? entity.getNegocio().getId() : "NULL"));
+        System.out.println("  - Sede ID: " + (entity.getSede() != null ? entity.getSede().getId() : "NULL"));
+        
         service.guardar(entity);
+        
+        System.out.println("✅ Zona guardada con ID: " + entity.getId());
         return entity;
     }
 
     @PutMapping("/zonas-delivery")
     public ZonasDelivery modificar(@RequestBody ZonasDelivery entity) {
+        System.out.println("🔵 [PUT /zonas-delivery] Recibido:");
+        System.out.println("  - ID: " + entity.getId());
+        System.out.println("  - Nombre: " + entity.getNombre());
+        System.out.println("  - Distritos (raw): " + entity.getDistritos());
+        System.out.println("  - Tarifa: " + entity.getTarifaDelivery());
+        
         service.modificar(entity);
+        
+        System.out.println("✅ Zona actualizada");
         return entity;
     }
 

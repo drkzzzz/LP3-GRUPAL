@@ -99,6 +99,7 @@ export const ZonasDeliveryTab = ({ context }) => {
     setEditing({
       ...item,
       sedeId: item.sede?.id ? String(item.sede.id) : '',
+      distritos: item.distritos || '[]', // Asegurar que sea string JSON
     });
     setIsFormOpen(true);
   };
@@ -110,6 +111,7 @@ export const ZonasDeliveryTab = ({ context }) => {
       sede: { id: Number(formData.sedeId) },
       nombre: formData.nombre.trim(),
       descripcion: formData.descripcion?.trim() || '',
+      distritos: formData.distritos, // JSON string desde formulario
       tarifaDelivery: formData.tarifaDelivery,
       montoMinimoPedido: formData.montoMinimoPedido,
     };
@@ -141,12 +143,35 @@ export const ZonasDeliveryTab = ({ context }) => {
     {
       key: 'nombre',
       title: 'Nombre',
-      render: (_, row) => (
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{row.nombre}</p>
-          {row.descripcion && <p className="text-xs text-gray-500 truncate">{row.descripcion}</p>}
-        </div>
-      ),
+      render: (_, row) => {
+        // Parsear distritos desde JSON
+        let distritosArray = [];
+        try {
+          distritosArray = row.distritos ? JSON.parse(row.distritos) : [];
+        } catch (e) {
+          distritosArray = [];
+        }
+
+        return (
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">{row.nombre}</p>
+            {distritosArray.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {distritosArray.slice(0, 3).map((distrito) => (
+                  <span key={distrito} className="inline-block px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                    {distrito}
+                  </span>
+                ))}
+                {distritosArray.length > 3 && (
+                  <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                    +{distritosArray.length - 3} más
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'sede',
