@@ -28,11 +28,14 @@ public class Clientes {
     @JoinColumn(name = "negocio_id", nullable = false)
     private Negocios negocio;
 
+    @Column(name = "uuid", unique = true, nullable = false, length = 36)
+    private String uuid;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_documento", nullable = false)
+    @Column(name = "tipo_documento")
     private TipoDocumento tipoDocumento;
 
-    @Column(name = "numero_documento", nullable = false)
+    @Column(name = "numero_documento")
     private String numeroDocumento;
 
     private String nombres;
@@ -78,6 +81,9 @@ public class Clientes {
 
     @PrePersist
     protected void onCreate() {
+        if (uuid == null) {
+            uuid = java.util.UUID.randomUUID().toString();
+        }
         creadoEn = LocalDateTime.now();
         actualizadoEn = LocalDateTime.now();
     }
@@ -102,6 +108,14 @@ public class Clientes {
 
     public void setNegocio(Negocios negocio) {
         this.negocio = negocio;
+    }
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
     }
 
     public TipoDocumento getTipoDocumento() {
