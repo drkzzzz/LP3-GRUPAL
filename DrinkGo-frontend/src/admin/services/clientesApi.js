@@ -59,16 +59,23 @@ export const getClienteById = async (id) => {
  * POST /restful/clientes
  */
 export const createClienteRapido = async (clienteData) => {
+  // Obtener negocio del store (debe estar disponible en sesión admin)
+  const { useAdminAuthStore } = await import('@/stores/adminAuthStore');
+  const negocioId = useAdminAuthStore.getState().negocio?.id;
+  
+  if (!negocioId) {
+    throw new Error('No se encontró el negocio en la sesión');
+  }
+  
   const payload = {
+    negocio: { id: negocioId },
+    tipoDocumento: clienteData.numeroDocumento ? 'DNI' : 'OTRO',
+    numeroDocumento: clienteData.numeroDocumento || null,
     nombres: clienteData.nombres,
-    apellidos: clienteData.apellidos || '',
+    apellidos: clienteData.apellidos || null,
     telefono: clienteData.telefono,
     email: clienteData.email || null,
-    tipoDocumento: clienteData.tipoDocumento || 'DNI',
-    numeroDocumento: clienteData.numeroDocumento || '',
-    direccion: clienteData.direccion || '',
-    distrito: clienteData.distrito || '',
-    referencia: clienteData.referencia || '',
+    direccion: clienteData.direccion || null,
     estaActivo: true,
   };
   

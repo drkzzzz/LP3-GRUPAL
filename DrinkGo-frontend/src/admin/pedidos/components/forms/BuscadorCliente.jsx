@@ -13,9 +13,9 @@ export function BuscadorCliente({ clienteSeleccionado, onClienteSeleccionado }) 
   const [nuevoCliente, setNuevoCliente] = useState({
     nombres: '',
     apellidos: '',
+    numeroDocumento: '',
     telefono: '',
     direccion: '',
-    distrito: '',
   });
   
   const debouncedSearch = useDebounce(busqueda, 400);
@@ -29,9 +29,7 @@ export function BuscadorCliente({ clienteSeleccionado, onClienteSeleccionado }) 
     setBusqueda('');
   };
   
-  const handleCrearCliente = async (e) => {
-    e.preventDefault();
-    
+  const handleCrearCliente = async () => {
     if (!nuevoCliente.nombres || !nuevoCliente.telefono) {
       alert('Nombre y teléfono son obligatorios');
       return;
@@ -41,7 +39,7 @@ export function BuscadorCliente({ clienteSeleccionado, onClienteSeleccionado }) 
       const clienteCreado = await crearCliente(nuevoCliente);
       onClienteSeleccionado(clienteCreado);
       setMostrarFormCrear(false);
-      setNuevoCliente({ nombres: '', apellidos: '', telefono: '', direccion: '', distrito: '' });
+      setNuevoCliente({ nombres: '', apellidos: '', numeroDocumento: '', telefono: '', direccion: '' });
       setBusqueda('');
     } catch (error) {
       console.error('Error al crear cliente:', error);
@@ -67,12 +65,6 @@ export function BuscadorCliente({ clienteSeleccionado, onClienteSeleccionado }) 
                     <Phone className="w-3.5 h-3.5" />
                     {clienteSeleccionado.telefono}
                   </span>
-                  {clienteSeleccionado.distrito && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {clienteSeleccionado.distrito}
-                    </span>
-                  )}
                 </div>
                 {clienteSeleccionado.direccion && (
                   <p className="text-sm text-gray-500 mt-1">
@@ -126,7 +118,6 @@ export function BuscadorCliente({ clienteSeleccionado, onClienteSeleccionado }) 
                     </p>
                     <div className="flex items-center gap-3 mt-1 text-sm text-gray-600">
                       <span>{cliente.telefono}</span>
-                      {cliente.distrito && <span>• {cliente.distrito}</span>}
                     </div>
                   </button>
                 ))}
@@ -155,7 +146,7 @@ export function BuscadorCliente({ clienteSeleccionado, onClienteSeleccionado }) 
           
           {/* Formulario crear cliente */}
           {mostrarFormCrear && (
-            <form onSubmit={handleCrearCliente} className="bg-gray-50 p-4 rounded-lg space-y-3">
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -182,17 +173,32 @@ export function BuscadorCliente({ clienteSeleccionado, onClienteSeleccionado }) 
                 </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Teléfono *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={nuevoCliente.telefono}
-                  onChange={(e) => setNuevoCliente({...nuevoCliente, telefono: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    DNI / Documento
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevoCliente.numeroDocumento}
+                    onChange={(e) => setNuevoCliente({...nuevoCliente, numeroDocumento: e.target.value})}
+                    placeholder="12345678"
+                    maxLength="20"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Teléfono *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={nuevoCliente.telefono}
+                    onChange={(e) => setNuevoCliente({...nuevoCliente, telefono: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
               </div>
               
               <div>
@@ -204,24 +210,14 @@ export function BuscadorCliente({ clienteSeleccionado, onClienteSeleccionado }) 
                   value={nuevoCliente.direccion}
                   onChange={(e) => setNuevoCliente({...nuevoCliente, direccion: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Distrito
-                </label>
-                <input
-                  type="text"
-                  value={nuevoCliente.distrito}
-                  onChange={(e) => setNuevoCliente({...nuevoCliente, distrito: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="Calle y número, distrito"
                 />
               </div>
               
               <button
-                type="submit"
-                disabled={creandoCliente}
+                type="button"
+                onClick={handleCrearCliente}
+                disabled={creandoCliente || !nuevoCliente.nombres || !nuevoCliente.telefono}
                 className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {creandoCliente ? (
@@ -236,7 +232,7 @@ export function BuscadorCliente({ clienteSeleccionado, onClienteSeleccionado }) 
                   </>
                 )}
               </button>
-            </form>
+            </div>
           )}
         </>
       )}
