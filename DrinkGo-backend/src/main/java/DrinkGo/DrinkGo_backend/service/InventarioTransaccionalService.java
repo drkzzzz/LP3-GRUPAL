@@ -504,8 +504,9 @@ public class InventarioTransaccionalService {
                                            Long negocioId, BigDecimal cantidad) {
         Long almacenId = resolverAlmacenConReserva(productoId, almacenPreferidoId, negocioId, cantidad);
         if (almacenId == null) {
-            throw new IllegalArgumentException(
-                "No hay reserva para liberar para producto " + productoId);
+            // Sin reserva que liberar (ej. pedido insertado manualmente sin reserva de stock)
+            System.out.println("⚠️ Sin reserva que liberar para producto " + productoId + " — se omite");
+            return;
         }
         liberarReserva(productoId, almacenId, cantidad);
     }
@@ -517,8 +518,12 @@ public class InventarioTransaccionalService {
                                                     String motivoMovimiento, String referenciaDocumento) {
         Long almacenId = resolverAlmacenConReserva(productoId, almacenPreferidoId, negocioId, cantidad);
         if (almacenId == null) {
-            throw new IllegalArgumentException(
-                "No hay reserva para confirmar para producto " + productoId);
+            // Sin reserva — intentar con stock disponible directamente
+            almacenId = resolverAlmacenConStockDisponible(productoId, almacenPreferidoId, negocioId, cantidad);
+        }
+        if (almacenId == null) {
+            System.out.println("⚠️ Sin stock que confirmar para producto " + productoId + " — se omite");
+            return;
         }
         confirmarReservaYSalida(negocioId, productoId, almacenId, cantidad, usuarioId,
                                 motivoMovimiento, referenciaDocumento);

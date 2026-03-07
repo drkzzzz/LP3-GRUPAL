@@ -103,6 +103,15 @@ export const updatePedido = async (pedidoData) => {
 };
 
 /**
+ * Cambiar solo el estado de un pedido
+ * PATCH /restful/pedidos/:id/estado
+ */
+export const cambiarEstadoPedido = async ({ id, nuevoEstado }) => {
+  await adminApi.patch(`/pedidos/${id}/estado`, { estado: nuevoEstado });
+  // El backend devuelve { id, estado, ok } — la tabla se refresca por invalidateQueries
+};
+
+/**
  * Eliminar pedido (soft delete)
  * DELETE /restful/pedidos/:id
  */
@@ -210,5 +219,29 @@ export const updateSeguimientoPedido = async (seguimientoData) => {
  */
 export const deleteSeguimientoPedido = async (id) => {
   const response = await adminApi.delete(`/seguimiento-pedidos/${id}`);
+  return response.data;
+};
+
+/**
+ * ==========================================
+ * PAGOS DE PEDIDO
+ * ==========================================
+ */
+
+/**
+ * Obtener pagos de un pedido específico
+ * GET /restful/pagos-pedido/por-pedido/:pedidoId
+ */
+export const getPagosPorPedido = async (pedidoId) => {
+  const response = await adminApi.get(`/pagos-pedido/por-pedido/${pedidoId}`);
+  return response.data;
+};
+
+/**
+ * Aprobar un pago (marcarlo como pagado)
+ * PATCH /restful/pagos-pedido/:id/aprobar
+ */
+export const aprobarPago = async (pagoId) => {
+  const response = await adminApi.patch(`/pagos-pedido/${pagoId}/aprobar`);
   return response.data;
 };

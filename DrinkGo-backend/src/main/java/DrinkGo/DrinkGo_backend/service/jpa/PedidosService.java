@@ -176,6 +176,39 @@ public class PedidosService implements IPedidosService {
     }
 
     /**
+     * Cambia solo el estado de un pedido, cargando el registro completo desde BD.
+     * Evita sobrescribir relaciones (negocio, sede, cliente) con nulos.
+     */
+    @Transactional
+    public void cambiarEstado(Long pedidoId, String nuevoEstado) {
+        Pedidos pedido = repoPedidos.findById(pedidoId)
+            .orElseThrow(() -> new IllegalArgumentException("Pedido no encontrado: " + pedidoId));
+
+        Pedidos.EstadoPedido estadoAnterior = pedido.getEstadoPedido();
+        Pedidos.EstadoPedido estadoNuevo;
+        try {
+            estadoNuevo = Pedidos.EstadoPedido.valueOf(nuevoEstado);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Estado no v\u00e1lido: " + nuevoEstado);
+        }
+
+        if (estadoAnterior.equals(estadoNuevo)) {
+            return; // nada que cambiar
+        }
+
+        // Manejar reservas de stock seg\u00fan transici\u00f3n
+        if (estadoNuevo == Pedidos.EstadoPedido.cancelado) {
+            liberarStockParaPedido(pedido);
+        } else if (estadoNuevo == Pedidos.EstadoPedido.entregado) {
+            confirmarSalidaStockParaPedido(pedido);
+        }
+
+        pedido.setEstadoPedido(estadoNuevo);
+        repoPedidos.save(pedido);
+        System.out.println("\u2705 Estado pedido " + pedido.getNumeroPedido() + ": " + estadoAnterior + " \u2192 " + estadoNuevo);
+    }
+
+    /**
      * Libera la reserva de stock cuando un pedido se cancela.
      */
     private void liberarStockParaPedido(Pedidos pedido) {

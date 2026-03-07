@@ -3,7 +3,7 @@
  * Muestra tabla con todos los pedidos, filtros y acciones
  */
 import { useMemo, useState } from 'react';
-import { usePedidos, useUpdatePedido } from '../../hooks/usePedidos';
+import { usePedidos, useUpdatePedido, useCambiarEstadoPedido } from '../../hooks/usePedidos';
 import { useDetallePedidos } from '../../hooks/useDetallePedidos';
 import { useCreateSeguimientoPedido } from '../../hooks/useSeguimientoPedidos';
 import { message } from '@/shared/utils/notifications';
@@ -13,6 +13,7 @@ import { Card } from '@/admin/components/ui/Card';
 import { StatCard } from '@/admin/components/ui/StatCard';
 import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { DetallePedidoModal } from '../modals/DetallePedidoModal';
+import { VerificarPagoModal } from '../modals/VerificarPagoModal';
 import { Eye, Truck, CheckCircle, XCircle, Clock, Package, Search, Loader2, PackageX, ChefHat } from 'lucide-react';
 import {
   ESTADOS_PEDIDO,
@@ -26,13 +27,14 @@ import {
 
 export function ListaPedidosTab() {
   // Estados locales
-  const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroEstado, setFiltroEstado] = useState('activos');
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [busqueda, setBusqueda] = useState('');
   const [selectedPedido, setSelectedPedido] = useState(null);
   const [showConfirmCambioEstado, setShowConfirmCambioEstado] = useState(false);
   const [nuevoEstado, setNuevoEstado] = useState(null);
   const [showDetalleModal, setShowDetalleModal] = useState(false);
+  const [showVerificarPago, setShowVerificarPago] = useState(false);
 
   // Debounce search
   const debouncedSearch = useDebounce(busqueda, 400);
@@ -41,6 +43,7 @@ export function ListaPedidosTab() {
   const { data: pedidos = [], isLoading, error } = usePedidos();
   const { data: detallesPedidos = [] } = useDetallePedidos();
   const { mutateAsync: updatePedido } = useUpdatePedido();
+  const { mutateAsync: cambiarEstado } = useCambiarEstadoPedido();
   const { mutateAsync: createSeguimiento } = useCreateSeguimientoPedido();
 
   // Agrupar detalles por pedido
@@ -61,7 +64,11 @@ export function ListaPedidosTab() {
     let resultado = [...pedidos];
 
     // Filtro por estado
-    if (filtroEstado !== 'todos') {
+    if (filtroEstado === 'activos') {
+      resultado = resultado.filter(
+        (p) => p.estado !== ESTADOS_PEDIDO.CANCELADO && p.estado !== ESTADOS_PEDIDO.ENTREGADO
+      );
+    } else if (filtroEstado !== 'todos') {
       resultado = resultado.filter((p) => p.estado === filtroEstado);
     }
 
@@ -138,7 +145,12 @@ export function ListaPedidosTab() {
   const handleCambiarEstado = async (pedido, estado) => {
     setSelectedPedido(pedido);
     setNuevoEstado(estado);
-    setShowConfirmCambioEstado(true);
+    // Si va a confirmar un pedido pendiente, abrir modal de verificar pago primero
+    if (estado === ESTADOS_PEDIDO.CONFIRMADO && pedido.estado === ESTADOS_PEDIDO.PENDIENTE) {
+      setShowVerificarPago(true);
+    } else {
+      setShowConfirmCambioEstado(true);
+    }
   };
 
   // Confirmar cambio de estado
@@ -146,13 +158,8 @@ export function ListaPedidosTab() {
     if (!selectedPedido || !nuevoEstado) return;
 
     try {
-      // 1. Actualizar estado del pedido
-      const pedidoActualizado = {
-        ...selectedPedido,
-        estado: nuevoEstado,
-      };
-
-      await updatePedido(pedidoActualizado);
+      // 1. Cambiar estado usando endpoint dedicado (carga pedido completo desde BD)
+      await cambiarEstado({ id: selectedPedido.id, nuevoEstado });
 
       // 2. Crear registro de seguimiento
       await createSeguimiento({
@@ -418,6 +425,7 @@ export function ListaPedidosTab() {
             onChange={(e) => setFiltroEstado(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
           >
+            <option value="activos">Activos (sin cancelados/entregados)</option>
             <option value="todos">Todos los estados</option>
             <option value={ESTADOS_PEDIDO.PENDIENTE}>Pendiente</option>
             <option value={ESTADOS_PEDIDO.CONFIRMADO}>Confirmado</option>
@@ -459,39 +467,55 @@ export function ListaPedidosTab() {
       </Card>
 
       {/* Modal de confirmación de cambio de estado */}
-      {showConfirmCambioEstado && (
-        <ConfirmDialog
-          title="Cambiar Estado del Pedido"
-          message={
-            <div>
-              <p className="mb-2">
-                ¿Estás seguro de cambiar el estado del pedido{' '}
-                <strong>#{selectedPedido?.numeroPedido || selectedPedido?.id}</strong>?
-              </p>
-              <div className="bg-gray-50 p-3 rounded-md">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-gray-600">Estado actual:</span>
-                  <span className={`px-2 py-1 rounded text-xs ${getConfigEstado(selectedPedido?.estado).color}`}>
-                    {getConfigEstado(selectedPedido?.estado).label}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Nuevo estado:</span>
-                  <span className={`px-2 py-1 rounded text-xs ${getConfigEstado(nuevoEstado).color}`}>
-                    {getConfigEstado(nuevoEstado).label}
-                  </span>
-                </div>
+      <ConfirmDialog
+        isOpen={showConfirmCambioEstado}
+        title="Cambiar Estado del Pedido"
+        message={
+          <div>
+            <p className="mb-2">
+              ¿Estás seguro de cambiar el estado del pedido{' '}
+              <strong>#{selectedPedido?.numeroPedido || selectedPedido?.id}</strong>?
+            </p>
+            <div className="bg-gray-50 p-3 rounded-md">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm text-gray-600">Estado actual:</span>
+                <span className={`px-2 py-1 rounded text-xs ${getConfigEstado(selectedPedido?.estado).color}`}>
+                  {getConfigEstado(selectedPedido?.estado).label}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Nuevo estado:</span>
+                <span className={`px-2 py-1 rounded text-xs ${getConfigEstado(nuevoEstado).color}`}>
+                  {getConfigEstado(nuevoEstado).label}
+                </span>
               </div>
             </div>
-          }
-          onConfirm={confirmarCambioEstado}
-          onCancel={() => {
-            setShowConfirmCambioEstado(false);
+          </div>
+        }
+        onConfirm={confirmarCambioEstado}
+        onClose={() => {
+          setShowConfirmCambioEstado(false);
+          setSelectedPedido(null);
+          setNuevoEstado(null);
+        }}
+        confirmText="Cambiar Estado"
+        cancelText="Cancelar"
+      />
+
+      {/* Modal de verificación de pago (antes de confirmar un pedido pendiente) */}
+      {showVerificarPago && selectedPedido && (
+        <VerificarPagoModal
+          pedido={selectedPedido}
+          onClose={() => {
+            setShowVerificarPago(false);
             setSelectedPedido(null);
             setNuevoEstado(null);
           }}
-          confirmText="Cambiar Estado"
-          cancelText="Cancelar"
+          onConfirmarPedido={() => {
+            setShowVerificarPago(false);
+            // Ejecutar el cambio de estado directamente (ya verificamos el pago)
+            confirmarCambioEstado();
+          }}
         />
       )}
 
