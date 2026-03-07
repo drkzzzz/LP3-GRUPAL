@@ -18,6 +18,7 @@ export const TiendaOnlineForm = ({ initialData, onSubmit, isLoading }) => {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isDirty },
   } = useForm({
     resolver: zodResolver(tiendaOnlineSchema),
@@ -26,18 +27,28 @@ export const TiendaOnlineForm = ({ initialData, onSubmit, isLoading }) => {
       nombreTienda: '',
       slugTienda: '',
       dominioPersonalizado: '',
+      colorPrimario: '',
+      colorSecundario: '',
+      mensajeBienvenida: '',
     },
   });
 
   const isEnabled = watch('estaHabilitado');
+  const colorPrimario = watch('colorPrimario');
+  const colorSecundario = watch('colorSecundario');
 
   useEffect(() => {
     if (initialData) {
+      let cv = {};
+      try { cv = initialData.configVisual ? JSON.parse(initialData.configVisual) : {}; } catch { cv = {}; }
       reset({
         estaHabilitado: initialData.estaHabilitado ?? false,
         nombreTienda: initialData.nombreTienda || '',
         slugTienda: initialData.slugTienda || '',
         dominioPersonalizado: initialData.dominioPersonalizado || '',
+        colorPrimario: cv.color_primario || '',
+        colorSecundario: cv.color_secundario || '',
+        mensajeBienvenida: cv.mensaje_bienvenida || '',
       });
     }
   }, [initialData, reset]);
@@ -98,6 +109,56 @@ export const TiendaOnlineForm = ({ initialData, onSubmit, isLoading }) => {
             error={errors.dominioPersonalizado?.message}
             placeholder="www.mitienda.com"
           />
+        </div>
+
+        {/* Colores de marca */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Color Primario</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={colorPrimario || '#000000'}
+                onChange={(e) => setValue('colorPrimario', e.target.value, { shouldDirty: true })}
+                className="h-10 w-14 rounded border border-gray-300 cursor-pointer p-0.5"
+              />
+              <Input
+                {...register('colorPrimario')}
+                placeholder="#3B82F6"
+                error={errors.colorPrimario?.message}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Color Secundario</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={colorSecundario || '#000000'}
+                onChange={(e) => setValue('colorSecundario', e.target.value, { shouldDirty: true })}
+                className="h-10 w-14 rounded border border-gray-300 cursor-pointer p-0.5"
+              />
+              <Input
+                {...register('colorSecundario')}
+                placeholder="#10B981"
+                error={errors.colorSecundario?.message}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Mensaje de bienvenida */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Mensaje de Bienvenida</label>
+          <textarea
+            {...register('mensajeBienvenida')}
+            rows={3}
+            placeholder="¡Bienvenido a nuestra tienda!"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+          />
+          {errors.mensajeBienvenida && (
+            <p className="text-xs text-red-500 mt-1">{errors.mensajeBienvenida.message}</p>
+          )}
         </div>
       </div>
 

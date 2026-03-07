@@ -63,6 +63,11 @@ export const clientesService = {
     return toArray(data);
   },
 
+  getByNegocio: async (negocioId) => {
+    const { data } = await adminApi.get(`/clientes/por-negocio/${negocioId}`);
+    return toArray(data);
+  },
+
   getById: async (id) => {
     const { data } = await adminApi.get(`/clientes/${id}`);
     return data;

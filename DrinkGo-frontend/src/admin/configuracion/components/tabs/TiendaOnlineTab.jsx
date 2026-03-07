@@ -31,6 +31,11 @@ export const TiendaOnlineTab = ({ context }) => {
       nombreTienda: formData.nombreTienda?.trim() || '',
       slugTienda: formData.slugTienda?.trim() || '',
       dominioPersonalizado: formData.dominioPersonalizado?.trim() || '',
+      configVisual: JSON.stringify({
+        color_primario: formData.colorPrimario || '',
+        color_secundario: formData.colorSecundario || '',
+        mensaje_bienvenida: formData.mensajeBienvenida || '',
+      }),
     };
 
     if (tiendaConfig?.id) {

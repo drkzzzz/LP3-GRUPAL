@@ -17,6 +17,10 @@ public class ClientesService implements IClientesService {
         return repoClientes.findAll();
     }
 
+    public List<Clientes> buscarPorNegocio(Long negocioId) {
+        return repoClientes.findByNegocioId(negocioId);
+    }
+
     public void guardar(Clientes clientes) {
         repoClientes.save(clientes);
     }
