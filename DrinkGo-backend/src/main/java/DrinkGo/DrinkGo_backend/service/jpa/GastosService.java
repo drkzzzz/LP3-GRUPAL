@@ -2,7 +2,6 @@ package DrinkGo.DrinkGo_backend.service.jpa;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +26,6 @@ public class GastosService implements IGastosService {
     }
 
     public List<Gastos> buscarPorNegocio(Long negocioId) {
-        generarGastosPendientes(negocioId);
         return repoGastos.findByNegocioIdOrderByCreadoEnDesc(negocioId);
     }
 
@@ -48,14 +46,44 @@ public class GastosService implements IGastosService {
     }
 
     public Gastos modificar(Gastos gastos) {
-        if (Boolean.TRUE.equals(gastos.getEsRecurrente()) && gastos.getProximaEjecucion() == null
-                && gastos.getFechaGasto() != null && gastos.getPeriodoRecurrencia() != null) {
-            gastos.setProximaEjecucion(gastos.getFechaGasto());
+        Gastos existente = repoGastos.findById(gastos.getId())
+                .orElseThrow(() -> new RuntimeException("Gasto no encontrado: " + gastos.getId()));
+
+        // Campos siempre editables (no rompen lógica de recurrencia)
+        if (gastos.getDescripcion() != null) {
+            existente.setDescripcion(gastos.getDescripcion());
         }
-        if (!Boolean.TRUE.equals(gastos.getEsRecurrente())) {
-            gastos.setProximaEjecucion(null);
+        if (gastos.getMonto() != null) {
+            existente.setMonto(gastos.getMonto());
+            existente.setMontoImpuesto(
+                    gastos.getMontoImpuesto() != null ? gastos.getMontoImpuesto() : BigDecimal.ZERO);
+            existente.setTotal(gastos.getTotal() != null ? gastos.getTotal() : gastos.getMonto());
         }
-        return repoGastos.save(gastos);
+        if (gastos.getMetodoPago() != null) {
+            existente.setMetodoPago(gastos.getMetodoPago());
+        }
+        existente.setCategoriaGasto(gastos.getCategoriaGasto());
+
+        // Campos de programación: solo editables si NO es recurrente.
+        // Para recurrentes se ignoran fecha, hora, periodo y toggle de recurrencia
+        // para no romper la cadena de pagos ya generada.
+        if (!Boolean.TRUE.equals(existente.getEsRecurrente())) {
+            if (gastos.getFechaGasto() != null) {
+                existente.setFechaGasto(gastos.getFechaGasto());
+            }
+            existente.setHoraGasto(gastos.getHoraGasto());
+
+            existente.setEsRecurrente(Boolean.TRUE.equals(gastos.getEsRecurrente()));
+            if (Boolean.TRUE.equals(existente.getEsRecurrente())) {
+                existente.setPeriodoRecurrencia(gastos.getPeriodoRecurrencia());
+                existente.setProximaEjecucion(existente.getFechaGasto());
+            } else {
+                existente.setPeriodoRecurrencia(null);
+                existente.setProximaEjecucion(null);
+            }
+        }
+
+        return repoGastos.save(existente);
     }
 
     public Optional<Gastos> buscarId(Long id) {
@@ -67,13 +95,61 @@ public class GastosService implements IGastosService {
     }
 
     /**
-     * Marca un gasto como pagado y registra egreso en caja (si efectivo + caja
-     * abierta).
+     * Marca un gasto como pagado. Si es recurrente, crea un registro de pago
+     * en el historial y avanza la fecha; si no, lo paga directamente.
      */
     public Gastos marcarPagado(Long id, String metodoPago, String referencia) {
         Gastos gasto = repoGastos.findById(id)
                 .orElseThrow(() -> new RuntimeException("Gasto no encontrado: " + id));
+        if (Boolean.TRUE.equals(gasto.getEsRecurrente())) {
+            return pagarRecurrente(gasto, metodoPago, referencia);
+        }
         return ejecutarPago(gasto, metodoPago, referencia);
+    }
+
+    /**
+     * Crea un registro de pago en el historial y avanza la fecha del gasto recurrente.
+     */
+    private Gastos pagarRecurrente(Gastos template, String metodoPagoStr, String referencia) {
+        Gastos historial = new Gastos();
+        historial.setNegocio(template.getNegocio());
+        historial.setSede(template.getSede());
+        historial.setNumeroGasto(generarNumeroGasto());
+        historial.setProveedor(template.getProveedor());
+        historial.setDescripcion(template.getDescripcion());
+        historial.setCategoriaGasto(template.getCategoriaGasto());
+        historial.setMonto(template.getMonto());
+        historial.setMontoImpuesto(
+                template.getMontoImpuesto() != null ? template.getMontoImpuesto() : BigDecimal.ZERO);
+        historial.setTotal(template.getTotal() != null ? template.getTotal() : template.getMonto());
+        historial.setMoneda(template.getMoneda());
+        historial.setFechaGasto(LocalDate.now());
+        historial.setHoraGasto(LocalTime.now());
+        historial.setEstado(Gastos.EstadoGasto.pagado);
+        historial.setEsRecurrente(false);
+        historial.setNotas("Pago de gasto recurrente #" + template.getNumeroGasto());
+
+        if (metodoPagoStr != null && !metodoPagoStr.isBlank()) {
+            try {
+                historial.setMetodoPago(Gastos.MetodoPago.valueOf(metodoPagoStr));
+            } catch (IllegalArgumentException e) {
+                historial.setMetodoPago(Gastos.MetodoPago.otro);
+            }
+        } else {
+            historial.setMetodoPago(template.getMetodoPago());
+        }
+        if (referencia != null && !referencia.isBlank()) {
+            historial.setReferenciaPago(referencia);
+        }
+
+        Gastos registroPagado = repoGastos.save(historial);
+
+        // Avanzar proximaEjecucion al siguiente periodo
+        template.setProximaEjecucion(
+                calcularSiguienteEjecucion(template.getProximaEjecucion(), template.getPeriodoRecurrencia()));
+        repoGastos.save(template);
+
+        return registroPagado;
     }
 
     /**
@@ -100,104 +176,73 @@ public class GastosService implements IGastosService {
 
     /**
      * Cada minuto revisa:
-     * 1) Gastos recurrentes cuya proximaEjecucion ya venció → genera copia
-     * pendiente.
+     * 1) Gastos recurrentes cuya proximaEjecucion ya venció → crea registro pagado
+     *    en el historial y avanza la fecha al siguiente periodo.
      * 2) Gastos pendientes (no recurrentes) cuya fecha+hora ya pasó → los paga
-     * automáticamente.
+     *    automáticamente.
      */
     @Scheduled(fixedRate = 60_000) // cada 60 segundos
     public void procesarGastosProgramados() {
         LocalDate hoy = LocalDate.now();
         LocalTime ahora = LocalTime.now();
 
-        // 1) Generar copias de recurrentes vencidos (todos los negocios)
+        // 1) Procesar recurrentes vencidos: crear registros pagados directamente
         List<Gastos> recurrentes = repoGastos
                 .findByEsRecurrenteTrueAndProximaEjecucionLessThanEqual(hoy);
         for (Gastos template : recurrentes) {
-            LocalDate prox = template.getProximaEjecucion();
             int generados = 0;
-            while (prox != null && !prox.isAfter(hoy) && generados < 12) {
-                Gastos copia = new Gastos();
-                copia.setNegocio(template.getNegocio());
-                copia.setSede(template.getSede());
-                copia.setNumeroGasto(generarNumeroGasto());
-                copia.setProveedor(template.getProveedor());
-                copia.setDescripcion(template.getDescripcion());
-                copia.setMonto(template.getMonto());
-                copia.setMontoImpuesto(
-                        template.getMontoImpuesto() != null ? template.getMontoImpuesto() : BigDecimal.ZERO);
-                copia.setTotal(template.getTotal() != null ? template.getTotal() : template.getMonto());
-                copia.setMoneda(template.getMoneda());
-                copia.setFechaGasto(prox);
-                copia.setHoraGasto(template.getHoraGasto());
-                copia.setMetodoPago(template.getMetodoPago());
-                copia.setEstado(Gastos.EstadoGasto.pendiente);
-                copia.setEsRecurrente(false);
-                copia.setCategoriaGasto(template.getCategoriaGasto());
-                copia.setNotas("Generado automáticamente desde gasto recurrente #" + template.getNumeroGasto());
-                repoGastos.save(copia);
+            while (template.getProximaEjecucion() != null
+                    && !template.getProximaEjecucion().isAfter(hoy)
+                    && generados < 12) {
+                LocalDate fechaPago = template.getProximaEjecucion();
 
-                prox = calcularSiguienteEjecucion(prox, template.getPeriodoRecurrencia());
+                // Si es hoy y aún no es la hora configurada → esperar
+                if (fechaPago.isEqual(hoy) && template.getHoraGasto() != null
+                        && ahora.isBefore(template.getHoraGasto())) {
+                    break;
+                }
+
+                // Crear registro pagado en el historial
+                Gastos historial = new Gastos();
+                historial.setNegocio(template.getNegocio());
+                historial.setSede(template.getSede());
+                historial.setNumeroGasto(generarNumeroGasto());
+                historial.setProveedor(template.getProveedor());
+                historial.setDescripcion(template.getDescripcion());
+                historial.setCategoriaGasto(template.getCategoriaGasto());
+                historial.setMonto(template.getMonto());
+                historial.setMontoImpuesto(
+                        template.getMontoImpuesto() != null ? template.getMontoImpuesto() : BigDecimal.ZERO);
+                historial.setTotal(template.getTotal() != null ? template.getTotal() : template.getMonto());
+                historial.setMoneda(template.getMoneda());
+                historial.setFechaGasto(fechaPago);
+                historial.setHoraGasto(template.getHoraGasto());
+                historial.setMetodoPago(template.getMetodoPago());
+                historial.setEstado(Gastos.EstadoGasto.pagado);
+                historial.setEsRecurrente(false);
+                historial.setReferenciaPago("Auto-pago programado");
+                historial.setNotas("Generado automáticamente desde gasto recurrente #" + template.getNumeroGasto());
+                repoGastos.save(historial);
+
+                // Avanzar al siguiente periodo
+                template.setProximaEjecucion(
+                        calcularSiguienteEjecucion(fechaPago, template.getPeriodoRecurrencia()));
                 generados++;
             }
-            template.setProximaEjecucion(prox);
             repoGastos.save(template);
         }
 
-        // 2) Auto-pagar gastos pendientes cuya fecha+hora ya pasó
+        // 2) Auto-pagar gastos pendientes (no recurrentes) cuya fecha+hora ya pasó
         List<Gastos> pendientes = repoGastos.findGastosPendientesDue(hoy);
         for (Gastos g : pendientes) {
-            // Si tiene hora y aún no es la hora → skip
             if (g.getFechaGasto().isEqual(hoy) && g.getHoraGasto() != null
                     && ahora.isBefore(g.getHoraGasto())) {
                 continue;
             }
-            // La fecha ya pasó o (es hoy y la hora ya pasó/no tiene hora) → pagar
             try {
-                ejecutarPago(g, g.getMetodoPago().name(), "Auto-pago programado");
+                ejecutarPago(g, g.getMetodoPago() != null ? g.getMetodoPago().name() : null, "Auto-pago programado");
             } catch (Exception ignored) {
-                // Si falla un gasto, continuar con los demás
             }
-        }
-    }
-
-    /**
-     * Generar gastos pendientes por negocio (al listar).
-     */
-    public void generarGastosPendientes(Long negocioId) {
-        LocalDate hoy = LocalDate.now();
-        List<Gastos> recurrentes = repoGastos
-                .findByNegocioIdAndEsRecurrenteTrueAndProximaEjecucionLessThanEqual(negocioId, hoy);
-
-        for (Gastos template : recurrentes) {
-            LocalDate prox = template.getProximaEjecucion();
-            int generados = 0;
-            while (prox != null && !prox.isAfter(hoy) && generados < 12) {
-                Gastos copia = new Gastos();
-                copia.setNegocio(template.getNegocio());
-                copia.setSede(template.getSede());
-                copia.setNumeroGasto(generarNumeroGasto());
-                copia.setProveedor(template.getProveedor());
-                copia.setDescripcion(template.getDescripcion());
-                copia.setMonto(template.getMonto());
-                copia.setMontoImpuesto(
-                        template.getMontoImpuesto() != null ? template.getMontoImpuesto() : BigDecimal.ZERO);
-                copia.setTotal(template.getTotal() != null ? template.getTotal() : template.getMonto());
-                copia.setMoneda(template.getMoneda());
-                copia.setFechaGasto(prox);
-                copia.setHoraGasto(template.getHoraGasto());
-                copia.setMetodoPago(template.getMetodoPago());
-                copia.setEstado(Gastos.EstadoGasto.pendiente);
-                copia.setEsRecurrente(false);
-                copia.setCategoriaGasto(template.getCategoriaGasto());
-                copia.setNotas("Generado automáticamente desde gasto recurrente #" + template.getNumeroGasto());
-                repoGastos.save(copia);
-
-                prox = calcularSiguienteEjecucion(prox, template.getPeriodoRecurrencia());
-                generados++;
-            }
-            template.setProximaEjecucion(prox);
-            repoGastos.save(template);
         }
     }
 

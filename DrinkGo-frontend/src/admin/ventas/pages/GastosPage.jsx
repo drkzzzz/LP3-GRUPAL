@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   TrendingDown,
   Plus,
@@ -214,6 +214,7 @@ const PagoModal = ({ isOpen, onClose, titulo, monto, onConfirm, isLoading }) => 
 
 const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoading, categorias = [], onCrearCategoria, isCreatingCategoria }) => {
   const isEdit = !!initialData?.id;
+  const isRecurrenteExistente = isEdit && !!initialData?.esRecurrente;
   const [showNewCategoria, setShowNewCategoria] = useState(false);
   const [newCategoriaNombre, setNewCategoriaNombre] = useState('');
 
@@ -231,16 +232,25 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
     } catch { /* error handled by hook */ }
   };
 
-  const [form, setForm] = useState(() => ({
-    descripcion: initialData?.descripcion || '',
-    monto: initialData?.monto || '',
-    fechaGasto: initialData?.fechaGasto || hoyLocal(),
-    horaGasto: initialData?.horaGasto || '',
-    esRecurrente: initialData?.esRecurrente || false,
-    periodoRecurrencia: initialData?.periodoRecurrencia || 'mensual',
-    metodoPago: initialData?.metodoPago || 'efectivo',
-    categoriaGastoId: initialData?.categoriaGasto?.id || '',
-  }));
+  const buildFormState = (data) => ({
+    descripcion: data?.descripcion || '',
+    monto: data?.monto || '',
+    fechaGasto: data?.fechaGasto || hoyLocal(),
+    horaGasto: data?.horaGasto ? String(data.horaGasto).slice(0, 5) : '',
+    esRecurrente: data?.esRecurrente || false,
+    periodoRecurrencia: data?.periodoRecurrencia || 'mensual',
+    metodoPago: data?.metodoPago || 'efectivo',
+    categoriaGastoId: data?.categoriaGasto?.id || '',
+  });
+
+  const [form, setForm] = useState(() => buildFormState(initialData));
+
+  // Sync form when opening with different initialData
+  useEffect(() => {
+    if (isOpen) {
+      setForm(buildFormState(initialData));
+    }
+  }, [isOpen, initialData]);
 
   const set = (field) => (e) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -268,16 +278,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
   };
 
   const handleClose = () => {
-    setForm({
-      descripcion: '',
-      monto: '',
-      fechaGasto: hoyLocal(),
-      horaGasto: '',
-      esRecurrente: false,
-      periodoRecurrencia: 'mensual',
-      metodoPago: 'efectivo',
-      categoriaGastoId: '',
-    });
+    setForm(buildFormState(null));
     onClose();
   };
 
@@ -385,6 +386,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
               value={form.fechaGasto}
               onChange={set('fechaGasto')}
               required
+              disabled={isRecurrenteExistente}
             />
           </div>
           <div>
@@ -395,6 +397,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
               type="time"
               value={form.horaGasto}
               onChange={set('horaGasto')}
+              disabled={isRecurrenteExistente}
             />
           </div>
         </div>
@@ -417,12 +420,13 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
 
         {/* Recurrencia */}
         <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+          <label className={`flex items-center gap-2 text-sm text-gray-700 select-none ${isRecurrenteExistente ? 'opacity-50' : 'cursor-pointer'}`}>
             <input
               type="checkbox"
               checked={form.esRecurrente}
               onChange={set('esRecurrente')}
               className="rounded border-gray-300 text-blue-600"
+              disabled={isRecurrenteExistente}
             />
             Gasto recurrente
           </label>
@@ -435,19 +439,30 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
                   onChange={set('periodoRecurrencia')}
                   className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500"
                   required
+                  disabled={isRecurrenteExistente}
                 >
                   {PERIODOS.map((p) => (
                     <option key={p.value} value={p.value}>{p.label}</option>
                   ))}
                 </select>
               </div>
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-xs text-indigo-700 flex items-start gap-2">
-                <RefreshCw size={13} className="mt-0.5 shrink-0" />
-                <span>
-                  Este gasto se cobrará automáticamente cada periodo
-                  ({PERIODO_LABEL[form.periodoRecurrencia]?.toLowerCase()}) a partir del {form.fechaGasto || '—'}{form.horaGasto ? ` a las ${form.horaGasto}` : ''}.
-                </span>
-              </div>
+              {isRecurrenteExistente ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700 flex items-start gap-2">
+                  <AlertCircle size={13} className="mt-0.5 shrink-0" />
+                  <span>
+                    La fecha, hora, periodo y tipo de recurrencia no se pueden modificar para evitar conflictos con pagos ya generados.
+                    Si necesitas cambiar estos datos, elimina este gasto y crea uno nuevo.
+                  </span>
+                </div>
+              ) : (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-xs text-indigo-700 flex items-start gap-2">
+                  <RefreshCw size={13} className="mt-0.5 shrink-0" />
+                  <span>
+                    Este gasto se cobrará automáticamente cada periodo
+                    ({PERIODO_LABEL[form.periodoRecurrencia]?.toLowerCase()}) a partir del {form.fechaGasto || '—'}{form.horaGasto ? ` a las ${form.horaGasto}` : ''}.
+                  </span>
+                </div>
+              )}
             </>
           )}
           {!form.esRecurrente && form.fechaGasto && (
@@ -802,9 +817,10 @@ const GastosExternosTab = ({
         monto={pagarTarget?.total || pagarTarget?.monto}
         isLoading={isPagando || isSubiendoComprobante}
         onConfirm={async ({ metodoPago, referencia, archivoComprobante }) => {
-          await onPagar({ id: pagarTarget.id, metodoPago, referencia });
+          const gastoPagado = await onPagar({ id: pagarTarget.id, metodoPago, referencia });
           if (archivoComprobante) {
-            await onSubirComprobante({ id: pagarTarget.id, archivo: archivoComprobante });
+            const idComprobante = gastoPagado?.id || pagarTarget.id;
+            await onSubirComprobante({ id: idComprobante, archivo: archivoComprobante });
           }
           setPagarTarget(null);
         }}
