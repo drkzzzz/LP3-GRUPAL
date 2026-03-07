@@ -14,4 +14,8 @@ public interface IPagosPedidoService {
     Optional<PagosPedido> buscarId(Long id);
 
     void eliminar(Long id);
+
+    List<PagosPedido> buscarPorPedido(Long pedidoId);
+
+    void aprobarPago(Long pagoId);
 }

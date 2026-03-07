@@ -9,6 +9,7 @@ import {
   createPedido,
   updatePedido,
   deletePedido,
+  cambiarEstadoPedido,
 } from '../services/pedidosApi';
 
 /**
@@ -70,6 +71,23 @@ export const useUpdatePedido = () => {
     onError: (error) => {
       console.error('Error al actualizar pedido:', error);
       message.error('Error al actualizar el pedido');
+    },
+  });
+};
+
+/**
+ * Hook para cambiar solo el estado de un pedido (evita problemas con WRITE_ONLY fields)
+ */
+export const useCambiarEstadoPedido = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: cambiarEstadoPedido,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pedidos'] });
+    },
+    onError: (error) => {
+      console.error('Error al cambiar estado del pedido:', error);
     },
   });
 };

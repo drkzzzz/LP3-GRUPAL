@@ -13,7 +13,8 @@ import java.time.LocalDateTime;
 @Table(name = "pagos_pedido")
 @SQLDelete(sql = "UPDATE pagos_pedido SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "pedidoId", "metodoPagoId", "monto", "numeroReferencia", "estadoPago", "fechaPago",
+@JsonPropertyOrder({ "id", "pedidoId", "metodoPagoId", "metodoPagoNombre", "metodoPagoTipo",
+        "monto", "numeroReferencia", "urlComprobante", "estadoPago", "fechaPago",
         "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class PagosPedido {
 
@@ -34,6 +35,9 @@ public class PagosPedido {
 
     @Column(name = "numero_referencia")
     private String numeroReferencia;
+
+    @Column(name = "url_comprobante", columnDefinition = "TEXT")
+    private String urlComprobante;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_pago", nullable = false)
@@ -92,6 +96,27 @@ public class PagosPedido {
 
     public void setMetodoPago(MetodosPago metodoPago) {
         this.metodoPago = metodoPago;
+    }
+
+    // Campos derivados para serialización (sin lazy problems)
+    public Long getMetodoPagoId() {
+        return metodoPago != null ? metodoPago.getId() : null;
+    }
+
+    public String getMetodoPagoNombre() {
+        return metodoPago != null ? metodoPago.getNombre() : null;
+    }
+
+    public String getMetodoPagoTipo() {
+        return metodoPago != null ? metodoPago.getTipo() != null ? metodoPago.getTipo().name() : null : null;
+    }
+
+    public String getUrlComprobante() {
+        return urlComprobante;
+    }
+
+    public void setUrlComprobante(String urlComprobante) {
+        this.urlComprobante = urlComprobante;
     }
 
     public BigDecimal getMonto() {

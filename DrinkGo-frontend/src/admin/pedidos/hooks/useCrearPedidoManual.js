@@ -3,6 +3,7 @@
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createPedido } from '@/admin/pedidos/services/pedidosApi';
+import { adminApi } from '@/admin/services/adminApi';
 import { message } from '@/shared/utils/notifications';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
@@ -131,6 +132,32 @@ export function useCrearPedidoManual() {
       
       // Crear pedido en el backend
       const response = await createPedido(payload);
+
+      // ─── Crear registro de pago pendiente automáticamente ───────────────
+      // Buscar el ID del método de pago por nombre
+      try {
+        const metodosRes = await adminApi.get('/metodos-pago');
+        const metodos = Array.isArray(metodosRes.data) ? metodosRes.data : [];
+        const metodoEncontrado = metodos.find(
+          m => m.nombre?.toLowerCase() === pedidoData.metodoPago?.toLowerCase()
+            || m.codigo?.toLowerCase() === pedidoData.metodoPago?.toLowerCase()
+        );
+        if (metodoEncontrado && response?.id) {
+          await adminApi.post('/pagos-pedido', {
+            pedido: { id: response.id },
+            metodoPago: { id: metodoEncontrado.id },
+            monto: pedidoData.total,
+            numeroReferencia: null,
+            estadoPago: 'pendiente',
+          });
+          console.log('💳 Registro de pago pendiente creado para pedido', response.id);
+        }
+      } catch (err) {
+        // No bloquear la creación del pedido si falla el pago
+        console.warn('⚠️ No se pudo crear el registro de pago:', err.message);
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       return response;
     },
     onSuccess: (data) => {

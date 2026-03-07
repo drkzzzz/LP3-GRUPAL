@@ -1,5 +1,6 @@
 package DrinkGo.DrinkGo_backend.service.jpa;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,5 +32,17 @@ public class PagosPedidoService implements IPagosPedidoService {
 
     public void eliminar(Long id) {
         repoPagosPedido.deleteById(id);
+    }
+
+    public List<PagosPedido> buscarPorPedido(Long pedidoId) {
+        return repoPagosPedido.findByPedidoId(pedidoId);
+    }
+
+    public void aprobarPago(Long pagoId) {
+        PagosPedido pago = repoPagosPedido.findById(pagoId)
+            .orElseThrow(() -> new IllegalArgumentException("Pago no encontrado: " + pagoId));
+        pago.setEstadoPago(PagosPedido.EstadoPago.pagado);
+        pago.setFechaPago(LocalDateTime.now());
+        repoPagosPedido.save(pago);
     }
 }

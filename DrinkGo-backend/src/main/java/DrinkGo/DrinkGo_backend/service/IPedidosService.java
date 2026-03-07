@@ -11,6 +11,8 @@ public interface IPedidosService {
 
     void modificar(Pedidos pedidos);
 
+    void cambiarEstado(Long pedidoId, String nuevoEstado);
+
     Optional<Pedidos> buscarId(Long id);
 
     void eliminar(Long id);
