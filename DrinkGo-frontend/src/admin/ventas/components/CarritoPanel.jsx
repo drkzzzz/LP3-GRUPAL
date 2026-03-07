@@ -5,7 +5,7 @@
  * Muestra stock disponible y resalta en rojo si la cantidad
  * supera el stock real.
  */
-import { Trash2, Minus, Plus, AlertTriangle } from 'lucide-react';
+import { Trash2, Minus, Plus, AlertTriangle, Gift } from 'lucide-react';
 import { useCartStore } from '../stores/cartStore';
 import { formatCurrency } from '@/shared/utils/formatters';
 import { Button } from '@/admin/components/ui/Button';
@@ -52,96 +52,130 @@ export const CarritoPanel = () => {
           const lineTotal = producto.precioVenta * cantidad;
           const stockReal = producto.stock ?? 0;
           const excede = cantidad > stockReal;
+          const esCombo = producto._tipo === 'combo';
           return (
-            <div
-              key={producto.id}
-              className={`grid grid-cols-12 gap-2 px-3 py-2.5 items-center transition-colors ${
-                excede
-                  ? 'bg-red-50 hover:bg-red-100'
-                  : 'hover:bg-gray-50'
-              }`}
-            >
-              {/* Nombre + stock */}
-              <div className="col-span-5 min-w-0">
-                <p className={`text-sm font-medium truncate ${
+            <div key={producto.id}>
+              <div
+                className={`grid grid-cols-12 gap-2 px-3 py-2.5 items-center transition-colors ${
+                  excede
+                    ? 'bg-red-50 hover:bg-red-100'
+                    : 'hover:bg-gray-50'
+                }`}
+              >
+                {/* Nombre + stock */}
+                <div className="col-span-5 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    {esCombo && <Gift size={14} className="text-purple-500 shrink-0" />}
+                    <p className={`text-sm font-medium truncate ${
+                      excede ? 'text-red-700' : 'text-gray-900'
+                    }`}>
+                      {producto.nombre}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {!esCombo && <p className="text-xs text-gray-400">{producto.sku}</p>}
+                    {esCombo && <p className="text-xs text-purple-400">{producto._productosCombo?.length || 0} productos</p>}
+                    <span className={`text-xs font-medium ${
+                      excede ? 'text-red-500' : 'text-gray-400'
+                    }`}>
+                      • Stock: {stockReal}
+                    </span>
+                  </div>
+                  {excede && (
+                    <p className="text-xs text-red-500 font-medium mt-0.5">
+                      Sin stock suficiente
+                    </p>
+                  )}
+                  {/* Promo badge */}
+                  {producto._promocion && (
+                    <p className="text-xs text-orange-500 mt-0.5">
+                      🏷️ {producto._promocion.nombre} (-{producto._promocion.tipoDescuento === 'porcentaje' ? `${producto._promocion.valorDescuento}%` : formatCurrency(producto._promocion.valorDescuento)})
+                    </p>
+                  )}
+                </div>
+
+                {/* Precio unitario */}
+                <div className="col-span-2 text-center text-sm text-gray-600">
+                  {producto._precioOriginal && producto._precioOriginal !== producto.precioVenta ? (
+                    <div>
+                      <span className="line-through text-gray-400 text-xs">{formatCurrency(producto._precioOriginal)}</span>
+                      <br />
+                      <span className="text-green-600 font-medium">{formatCurrency(producto.precioVenta)}</span>
+                    </div>
+                  ) : (
+                    formatCurrency(producto.precioVenta)
+                  )}
+                </div>
+
+                {/* Cantidad */}
+                <div className="col-span-3 flex items-center justify-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="w-7 h-7 p-0"
+                    onClick={() => updateQuantity(producto.id, cantidad - 1)}
+                    disabled={cantidad <= 1}
+                  >
+                    <Minus size={14} />
+                  </Button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={stockReal}
+                    value={cantidad}
+                    onChange={(e) =>
+                      updateQuantity(producto.id, parseInt(e.target.value) || 1)
+                    }
+                    className={`w-12 text-center border rounded text-sm py-0.5
+                               focus:outline-none focus:ring-1 ${
+                      excede
+                        ? 'border-red-400 text-red-700 bg-red-50 focus:ring-red-500'
+                        : 'border-gray-300 focus:ring-green-500'
+                    }`}
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="w-7 h-7 p-0"
+                    onClick={() => updateQuantity(producto.id, cantidad + 1)}
+                    disabled={cantidad >= stockReal}
+                  >
+                    <Plus size={14} />
+                  </Button>
+                </div>
+
+                {/* Total línea */}
+                <div className={`col-span-1 text-right text-sm font-semibold ${
                   excede ? 'text-red-700' : 'text-gray-900'
                 }`}>
-                  {producto.nombre}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs text-gray-400">{producto.sku}</p>
-                  <span className={`text-xs font-medium ${
-                    excede ? 'text-red-500' : 'text-gray-400'
-                  }`}>
-                    • Stock: {stockReal}
-                  </span>
+                  {formatCurrency(lineTotal)}
                 </div>
-                {excede && (
-                  <p className="text-xs text-red-500 font-medium mt-0.5">
-                    Sin stock suficiente
-                  </p>
-                )}
-              </div>
 
-              {/* Precio unitario */}
-              <div className="col-span-2 text-center text-sm text-gray-600">
-                {formatCurrency(producto.precioVenta)}
+                {/* Eliminar */}
+                <div className="col-span-1 flex justify-end">
+                  <button
+                    onClick={() => removeItem(producto.id)}
+                    className="p-1 text-red-400 hover:text-red-600 transition-colors"
+                    title="Quitar"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
-
-              {/* Cantidad */}
-              <div className="col-span-3 flex items-center justify-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="w-7 h-7 p-0"
-                  onClick={() => updateQuantity(producto.id, cantidad - 1)}
-                  disabled={cantidad <= 1}
-                >
-                  <Minus size={14} />
-                </Button>
-                <input
-                  type="number"
-                  min={1}
-                  max={stockReal}
-                  value={cantidad}
-                  onChange={(e) =>
-                    updateQuantity(producto.id, parseInt(e.target.value) || 1)
-                  }
-                  className={`w-12 text-center border rounded text-sm py-0.5
-                             focus:outline-none focus:ring-1 ${
-                    excede
-                      ? 'border-red-400 text-red-700 bg-red-50 focus:ring-red-500'
-                      : 'border-gray-300 focus:ring-green-500'
-                  }`}
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="w-7 h-7 p-0"
-                  onClick={() => updateQuantity(producto.id, cantidad + 1)}
-                  disabled={cantidad >= stockReal}
-                >
-                  <Plus size={14} />
-                </Button>
-              </div>
-
-              {/* Total línea */}
-              <div className={`col-span-1 text-right text-sm font-semibold ${
-                excede ? 'text-red-700' : 'text-gray-900'
-              }`}>
-                {formatCurrency(lineTotal)}
-              </div>
-
-              {/* Eliminar */}
-              <div className="col-span-1 flex justify-end">
-                <button
-                  onClick={() => removeItem(producto.id)}
-                  className="p-1 text-red-400 hover:text-red-600 transition-colors"
-                  title="Quitar"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+              {/* Detalle de productos del combo */}
+              {esCombo && producto._productosCombo?.length > 0 && (
+                <div className="bg-purple-50 border-t border-purple-100 px-4 py-1.5">
+                  {producto._productosCombo.map((comp, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-xs text-purple-700 py-0.5">
+                      <span className="flex items-center gap-1">
+                        <span className="text-purple-400">└</span>
+                        {comp.nombre} × {comp.cantidad * cantidad}
+                      </span>
+                      <span className="text-purple-500">{formatCurrency(comp.precioVenta)}/u</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

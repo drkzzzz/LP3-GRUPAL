@@ -4,7 +4,7 @@
  * Historial de ventas del negocio con filtro, detalle y anulación.
  */
 import { useState, useMemo } from 'react';
-import { Eye, Ban, Search, Receipt, Banknote, XCircle, Monitor } from 'lucide-react';
+import { Eye, Ban, Search, Receipt, Banknote, XCircle, Monitor, Gift } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
 import { Badge } from '@/admin/components/ui/Badge';
@@ -303,20 +303,82 @@ export const HistorialVentas = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {detalle.map((d, i) => (
-                      <tr key={i}>
-                        <td className="px-3 py-2">
-                          {d.nombreProducto || d.producto?.nombre || '—'}
-                        </td>
-                        <td className="px-3 py-2 text-center">{d.cantidad}</td>
-                        <td className="px-3 py-2 text-right">
-                          {formatCurrency(d.precioUnitario)}
-                        </td>
-                        <td className="px-3 py-2 text-right font-medium">
-                          {formatCurrency(d.total || d.subtotal)}
-                        </td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      /* Agrupar items que pertenecen a un combo */
+                      const comboGroups = {};
+                      const standalone = [];
+
+                      (detalle || []).forEach((d) => {
+                        if (d.comboId) {
+                          if (!comboGroups[d.comboId]) {
+                            comboGroups[d.comboId] = {
+                              nombre: d.nombreCombo || `Combo #${d.comboId}`,
+                              items: [],
+                              totalCombo: 0,
+                            };
+                          }
+                          comboGroups[d.comboId].items.push(d);
+                          comboGroups[d.comboId].totalCombo += Number(d.total || d.subtotal || 0);
+                        } else {
+                          standalone.push(d);
+                        }
+                      });
+
+                      const rows = [];
+
+                      /* Renderizar combos agrupados */
+                      Object.entries(comboGroups).forEach(([cId, group]) => {
+                        rows.push(
+                          <tr key={`combo-header-${cId}`} className="bg-purple-50">
+                            <td className="px-3 py-2 font-semibold text-purple-700" colSpan={3}>
+                              <span className="flex items-center gap-1.5">
+                                <Gift size={14} className="text-purple-500" />
+                                📦 {group.nombre}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-purple-700">
+                              {formatCurrency(group.totalCombo)}
+                            </td>
+                          </tr>,
+                        );
+                        group.items.forEach((d, i) =>
+                          rows.push(
+                            <tr key={`combo-${cId}-${i}`} className="bg-purple-50/50">
+                              <td className="px-3 py-1.5 pl-7 text-gray-500 text-xs">
+                                └ {d.nombreProducto || d.producto?.nombre || '—'}
+                              </td>
+                              <td className="px-3 py-1.5 text-center text-gray-500 text-xs">{d.cantidad}</td>
+                              <td className="px-3 py-1.5 text-right text-gray-500 text-xs">
+                                {formatCurrency(d.precioUnitario)}
+                              </td>
+                              <td className="px-3 py-1.5 text-right text-gray-500 text-xs">
+                                {formatCurrency(d.total || d.subtotal)}
+                              </td>
+                            </tr>,
+                          ),
+                        );
+                      });
+
+                      /* Renderizar productos sueltos */
+                      standalone.forEach((d, i) =>
+                        rows.push(
+                          <tr key={`std-${i}`}>
+                            <td className="px-3 py-2">
+                              {d.nombreProducto || d.producto?.nombre || '—'}
+                            </td>
+                            <td className="px-3 py-2 text-center">{d.cantidad}</td>
+                            <td className="px-3 py-2 text-right">
+                              {formatCurrency(d.precioUnitario)}
+                            </td>
+                            <td className="px-3 py-2 text-right font-medium">
+                              {formatCurrency(d.total || d.subtotal)}
+                            </td>
+                          </tr>,
+                        ),
+                      );
+
+                      return rows;
+                    })()}
                   </tbody>
                 </table>
               </div>

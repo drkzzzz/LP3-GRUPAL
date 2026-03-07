@@ -35,6 +35,9 @@ public class DetalleVentas {
     @JoinColumn(name = "combo_id")
     private Combos combo;
 
+    @Column(name = "nombre_producto")
+    private String nombreProductoSnapshot;
+
     @Column(precision = 10, scale = 2, nullable = false)
     private BigDecimal cantidad = BigDecimal.ZERO;
 
@@ -115,7 +118,17 @@ public class DetalleVentas {
 
     @JsonProperty("nombreProducto")
     public String getNombreProducto() {
+        if (nombreProductoSnapshot != null) return nombreProductoSnapshot;
         return producto != null ? producto.getNombre() : null;
+    }
+
+    public void setNombreProductoSnapshot(String nombreProducto) {
+        this.nombreProductoSnapshot = nombreProducto;
+    }
+
+    @JsonProperty("nombreCombo")
+    public String getNombreCombo() {
+        return combo != null ? combo.getNombre() : null;
     }
 
     @JsonIgnore

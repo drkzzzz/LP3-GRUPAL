@@ -11,7 +11,7 @@
  *   - Método de pago
  *   - Pie de página legal
  */
-import { useRef } from 'react';
+import React, { useRef } from 'react';
 import { Printer, X } from 'lucide-react';
 import { formatCurrency } from '@/shared/utils/formatters';
 
@@ -251,22 +251,64 @@ export const ComprobanteVenta = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item, idx) => (
-                    <tr key={idx}>
-                      <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
-                        {item.cantidad}
-                      </td>
-                      <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
-                        {item.producto.nombre}
-                      </td>
-                      <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
-                        {formatCurrency(item.producto.precioVenta)}
-                      </td>
-                      <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
-                        {formatCurrency(item.producto.precioVenta * item.cantidad)}
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((item, idx) => {
+                    const esCombo = item.producto._tipo === 'combo';
+                    return esCombo ? (
+                      <React.Fragment key={idx}>
+                        {/* Fila del combo */}
+                        <tr>
+                          <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: 'none', color: '#444', fontWeight: 600 }}>
+                            {item.cantidad}
+                          </td>
+                          <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: 'none', color: '#6b21a8', fontWeight: 600 }}>
+                            📦 {item.producto.nombre}
+                          </td>
+                          <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: 'none', color: '#444', textAlign: 'right', fontWeight: 600 }}>
+                            {formatCurrency(item.producto.precioVenta)}
+                          </td>
+                          <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: 'none', color: '#444', textAlign: 'right', fontWeight: 600 }}>
+                            {formatCurrency(item.producto.precioVenta * item.cantidad)}
+                          </td>
+                        </tr>
+                        {/* Componentes del combo */}
+                        {(item.producto._productosCombo || []).map((comp, cIdx) => (
+                          <tr key={`${idx}-c-${cIdx}`}>
+                            <td style={{ padding: '2px 10px 2px 20px', fontSize: 10, borderBottom: cIdx === (item.producto._productosCombo || []).length - 1 ? '1px solid #eee' : 'none', color: '#888' }}>
+                              {comp.cantidad * item.cantidad}
+                            </td>
+                            <td style={{ padding: '2px 10px', fontSize: 10, borderBottom: cIdx === (item.producto._productosCombo || []).length - 1 ? '1px solid #eee' : 'none', color: '#888' }}>
+                              └ {comp.nombre}
+                            </td>
+                            <td style={{ padding: '2px 10px', fontSize: 10, borderBottom: cIdx === (item.producto._productosCombo || []).length - 1 ? '1px solid #eee' : 'none', color: '#888', textAlign: 'right' }}>
+                              {formatCurrency(comp.precioVenta)}
+                            </td>
+                            <td style={{ padding: '2px 10px', fontSize: 10, borderBottom: cIdx === (item.producto._productosCombo || []).length - 1 ? '1px solid #eee' : 'none', color: '#888', textAlign: 'right' }}>
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    ) : (
+                      <tr key={idx}>
+                        <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
+                          {item.cantidad}
+                        </td>
+                        <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
+                          {item.producto.nombre}
+                          {item.producto._promocion && (
+                            <span style={{ fontSize: 9, color: '#ea580c', marginLeft: 4 }}>
+                              🏷️ {item.producto._promocion.nombre}
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
+                          {formatCurrency(item.producto.precioVenta)}
+                        </td>
+                        <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
+                          {formatCurrency(item.producto.precioVenta * item.cantidad)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
 

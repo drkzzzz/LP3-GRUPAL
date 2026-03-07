@@ -52,6 +52,7 @@ public class PosService {
     @Autowired private LotesInventarioRepository lotesRepo;
     @Autowired private MovimientosInventarioRepository movInventarioRepo;
     @Autowired private AlmacenesRepository almacenesRepo;
+    @Autowired private CombosRepository combosRepo;
 
     @Autowired private FacturacionService facturacionService;
 
@@ -208,6 +209,15 @@ public class PosService {
             if (item.getProductoId() != null) {
                 Productos producto = productosRepo.getReferenceById(item.getProductoId());
                 detalle.setProducto(producto);
+            }
+
+            if (item.getComboId() != null) {
+                detalle.setCombo(combosRepo.getReferenceById(item.getComboId()));
+            }
+
+            // Guardar snapshot del nombre para historial
+            if (item.getNombreProducto() != null) {
+                detalle.setNombreProductoSnapshot(item.getNombreProducto());
             }
 
             BigDecimal cantidad = BigDecimal.valueOf(item.getCantidad());

@@ -5,7 +5,7 @@
  * Usa productosAdapter (mock o real según USE_MOCK).
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, Plus, Package } from 'lucide-react';
+import { Search, Plus, Package, Gift, Tag } from 'lucide-react';
 import { buscarProductos } from '../services/productosAdapter';
 import { useCartStore } from '../stores/cartStore';
 import { formatCurrency } from '@/shared/utils/formatters';
@@ -93,31 +93,64 @@ export const ProductoSearch = () => {
       {/* Dropdown de resultados */}
       {isOpen && (
         <div className="absolute z-30 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
-          {results.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => handleSelect(p)}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-green-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
-            >
-              <div className="p-2 bg-gray-100 rounded-lg shrink-0">
-                <Package size={18} className="text-gray-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {p.nombre}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {p.sku} · {p.categoria?.nombre || '—'} · Stock: {p.stock}
-                </p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-sm font-bold text-green-700">
-                  {formatCurrency(p.precioVenta)}
-                </p>
-              </div>
-              <Plus size={18} className="text-green-600 shrink-0" />
-            </button>
-          ))}
+          {results.map((p) => {
+            const esCombo = p._tipo === 'combo';
+            const tienePromo = !esCombo && !!p._promocion;
+            return (
+              <button
+                key={p.id}
+                onClick={() => handleSelect(p)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-green-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
+              >
+                <div className={`p-2 rounded-lg shrink-0 ${esCombo ? 'bg-purple-100' : tienePromo ? 'bg-orange-100' : 'bg-gray-100'}`}>
+                  {esCombo ? (
+                    <Gift size={18} className="text-purple-600" />
+                  ) : tienePromo ? (
+                    <Tag size={18} className="text-orange-500" />
+                  ) : (
+                    <Package size={18} className="text-gray-500" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {esCombo && <span className="text-purple-600 font-semibold mr-1">[Combo]</span>}
+                    {p.nombre}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {esCombo ? (
+                      <>{p._productosCombo?.length || 0} productos · Stock: {p.stock}</>
+                    ) : (
+                      <>{p.sku} · {p.categoria?.nombre || '—'} · Stock: {p.stock}</>
+                    )}
+                  </p>
+                  {tienePromo && (
+                    <p className="text-xs text-orange-600 font-medium mt-0.5">
+                      {p._promocion.nombre} ({p._promocion.tipoDescuento === 'porcentaje'
+                        ? `-${p._promocion.valorDescuento}%`
+                        : `-${formatCurrency(p._promocion.valorDescuento)}`})
+                    </p>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  {(esCombo && p._precioRegular > p.precioVenta) || tienePromo ? (
+                    <>
+                      <p className="text-xs text-gray-400 line-through">
+                        {formatCurrency(esCombo ? p._precioRegular : p._precioOriginal)}
+                      </p>
+                      <p className="text-sm font-bold text-green-700">
+                        {formatCurrency(p.precioVenta)}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm font-bold text-green-700">
+                      {formatCurrency(p.precioVenta)}
+                    </p>
+                  )}
+                </div>
+                <Plus size={18} className="text-green-600 shrink-0" />
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

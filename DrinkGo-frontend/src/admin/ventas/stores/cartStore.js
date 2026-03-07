@@ -2,6 +2,7 @@
  * cartStore.js
  * ────────────
  * Estado del carrito POS usando Zustand.
+ * Soporta productos individuales y combos.
  * NO persiste en localStorage (se limpia al recargar).
  */
 import { create } from 'zustand';
@@ -21,7 +22,8 @@ export const useCartStore = create((set, get) => ({
     const existing = items.find((i) => i.producto.id === producto.id);
 
     if (existing) {
-      if (existing.cantidad >= producto.stock) return; // sin stock
+      const maxStock = producto.stock ?? 0;
+      if (existing.cantidad >= maxStock) return;
       set({
         items: items.map((i) =>
           i.producto.id === producto.id
@@ -30,7 +32,7 @@ export const useCartStore = create((set, get) => ({
         ),
       });
     } else {
-      if (producto.stock <= 0) return;
+      if ((producto.stock ?? 0) <= 0) return;
       set({
         items: [...items, { producto, cantidad: 1, descuento: 0 }],
       });
@@ -46,7 +48,7 @@ export const useCartStore = create((set, get) => ({
     set({
       items: get().items.map((i) =>
         i.producto.id === productoId
-          ? { ...i, cantidad: Math.min(cantidad, i.producto.stock) }
+          ? { ...i, cantidad: Math.min(cantidad, i.producto.stock ?? 0) }
           : i,
       ),
     });

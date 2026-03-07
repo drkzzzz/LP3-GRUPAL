@@ -24,6 +24,7 @@ public class CrearVentaPosRequest {
 
     public static class ItemVenta {
         private Long productoId;
+        private Long comboId;
         private String nombreProducto;
         private BigDecimal precioUnitario;
         private Integer cantidad;
@@ -31,6 +32,8 @@ public class CrearVentaPosRequest {
 
         public Long getProductoId() { return productoId; }
         public void setProductoId(Long productoId) { this.productoId = productoId; }
+        public Long getComboId() { return comboId; }
+        public void setComboId(Long comboId) { this.comboId = comboId; }
         public String getNombreProducto() { return nombreProducto; }
         public void setNombreProducto(String nombreProducto) { this.nombreProducto = nombreProducto; }
         public BigDecimal getPrecioUnitario() { return precioUnitario; }

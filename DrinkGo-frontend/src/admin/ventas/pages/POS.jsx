@@ -73,6 +73,68 @@ export const POS = () => {
     /* Snapshot de los ítems ANTES de limpiar el carrito */
     const itemsSnapshot = items.map((i) => ({ ...i, producto: { ...i.producto } }));
 
+    /* Construir ítems expandiendo combos en productos componentes */
+    const ventaItems = [];
+    for (const i of items) {
+      if (i.producto._tipo === 'combo' && i.producto._productosCombo?.length) {
+        const comps = i.producto._productosCombo;
+        const comboId = i.producto._comboId;
+        const comboPrice = i.producto.precioVenta;
+        const comboQty = i.cantidad;
+        const lineDiscount = i.descuento || 0;
+
+        /* Sumatoria de precios regulares de los componentes */
+        const regularSum = comps.reduce((s, c) => s + c.precioVenta * c.cantidad, 0);
+
+        /* Distribuir precio del combo proporcionalmente entre componentes */
+        let cumPrice = 0;
+        let cumDisc = 0;
+        comps.forEach((comp, idx) => {
+          const isLast = idx === comps.length - 1;
+          const proportion = regularSum > 0
+            ? (comp.precioVenta * comp.cantidad) / regularSum
+            : 1 / comps.length;
+
+          /*
+           * Precio proporcional total para esta línea (precio × qty componente).
+           * El último componente absorbe el centavo residual para que la suma
+           * sea siempre exactamente igual al precio total del combo.
+           */
+          const compLineTotal = isLast
+            ? +(comboPrice * comboQty - cumPrice).toFixed(2)
+            : +(comboPrice * proportion * comboQty).toFixed(2);
+          if (!isLast) cumPrice += compLineTotal;
+
+          /*
+           * Enviamos precioUnitario = compLineTotal y cantidad = 1
+           * para que el backend calcule subtotal = precioUnitario × 1 = compLineTotal
+           * sin riesgos de redondeo por división.
+           */
+          const compDisc = isLast
+            ? +(lineDiscount * comboQty - cumDisc).toFixed(2)
+            : +(lineDiscount * proportion * comboQty).toFixed(2);
+          if (!isLast) cumDisc += compDisc;
+
+          ventaItems.push({
+            productoId: comp.productoId,
+            comboId,
+            nombreProducto: comp.nombre,
+            precioUnitario: compLineTotal,
+            cantidad: 1,
+            descuento: compDisc,
+          });
+        });
+      } else {
+        ventaItems.push({
+          productoId: i.producto.id,
+          nombreProducto: i.producto.nombre,
+          precioUnitario: i.producto.precioVenta,
+          cantidad: i.cantidad,
+          descuento: i.descuento || 0,
+        });
+      }
+    }
+
     const ventaData = {
       negocioId: negocio?.id,
       sedeId: sesion?.caja?.sede?.id || null,
@@ -85,13 +147,7 @@ export const POS = () => {
       docClienteNumero,
       docClienteNombre,
       docClienteDireccion: docClienteDireccion || null,
-      items: items.map((i) => ({
-        productoId: i.producto.id,
-        nombreProducto: i.producto.nombre,
-        precioUnitario: i.producto.precioVenta,
-        cantidad: i.cantidad,
-        descuento: i.descuento || 0,
-      })),
+      items: ventaItems,
       pagos,
     };
 
