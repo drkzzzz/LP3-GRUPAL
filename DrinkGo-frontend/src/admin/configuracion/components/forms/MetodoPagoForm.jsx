@@ -19,8 +19,8 @@ const METODOS_PREDEFINIDOS = [
   { key: 'tarjeta_credito',        nombre: 'Tarjeta de Crédito',     codigo: 'tarjeta_credito',        tipo: 'tarjeta_credito' },
   { key: 'tarjeta_debito',         nombre: 'Tarjeta de Débito',      codigo: 'tarjeta_debito',         tipo: 'tarjeta_debito' },
   { key: 'transferencia_bancaria', nombre: 'Transferencia Bancaria', codigo: 'transferencia_bancaria', tipo: 'transferencia_bancaria' },
-  { key: 'yape',                   nombre: 'Yape',                   codigo: 'yape',                   tipo: 'billetera_digital' },
-  { key: 'plin',                   nombre: 'Plin',                   codigo: 'plin',                   tipo: 'billetera_digital' },
+  { key: 'yape',                   nombre: 'Yape',                   codigo: 'yape',                   tipo: 'yape' },
+  { key: 'plin',                   nombre: 'Plin',                   codigo: 'plin',                   tipo: 'plin' },
   { key: 'qr',                     nombre: 'QR',                     codigo: 'qr',                     tipo: 'qr' },
 ];
 

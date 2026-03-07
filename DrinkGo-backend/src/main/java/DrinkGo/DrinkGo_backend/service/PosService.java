@@ -448,6 +448,8 @@ public class PosService {
                     MetodosPago mp = pago.getMetodoPago();
                     BigDecimal monto = pago.getMonto() != null ? pago.getMonto() : BigDecimal.ZERO;
                     if (mp != null && mp.getTipo() != null) {
+                        // Clasificar por tipo, con fallback por codigo para billetera_digital
+                        String codigo = mp.getCodigo() != null ? mp.getCodigo().toLowerCase() : "";
                         switch (mp.getTipo()) {
                             case efectivo:
                                 totalEfectivo = totalEfectivo.add(monto);
@@ -461,6 +463,16 @@ public class PosService {
                                 break;
                             case plin:
                                 totalPlin = totalPlin.add(monto);
+                                break;
+                            case billetera_digital:
+                                // Reclasificar billeteras digitales conocidas por su codigo
+                                if ("yape".equals(codigo)) {
+                                    totalYape = totalYape.add(monto);
+                                } else if ("plin".equals(codigo)) {
+                                    totalPlin = totalPlin.add(monto);
+                                } else {
+                                    totalOtros = totalOtros.add(monto);
+                                }
                                 break;
                             default:
                                 totalOtros = totalOtros.add(monto);

@@ -38,11 +38,11 @@ public class GastosService implements IGastosService {
         if (gastos.getEstado() == null) {
             gastos.setEstado(Gastos.EstadoGasto.pendiente);
         }
-        // Si es recurrente, calcular la primera proximaEjecucion
+        // Si es recurrente, la primera proximaEjecucion es la propia fechaGasto
+        // para que el scheduler genere la copia del primer cobro y luego avance.
         if (Boolean.TRUE.equals(gastos.getEsRecurrente()) && gastos.getProximaEjecucion() == null
                 && gastos.getFechaGasto() != null && gastos.getPeriodoRecurrencia() != null) {
-            gastos.setProximaEjecucion(
-                    calcularSiguienteEjecucion(gastos.getFechaGasto(), gastos.getPeriodoRecurrencia()));
+            gastos.setProximaEjecucion(gastos.getFechaGasto());
         }
         return repoGastos.save(gastos);
     }
@@ -50,8 +50,7 @@ public class GastosService implements IGastosService {
     public Gastos modificar(Gastos gastos) {
         if (Boolean.TRUE.equals(gastos.getEsRecurrente()) && gastos.getProximaEjecucion() == null
                 && gastos.getFechaGasto() != null && gastos.getPeriodoRecurrencia() != null) {
-            gastos.setProximaEjecucion(
-                    calcularSiguienteEjecucion(gastos.getFechaGasto(), gastos.getPeriodoRecurrencia()));
+            gastos.setProximaEjecucion(gastos.getFechaGasto());
         }
         if (!Boolean.TRUE.equals(gastos.getEsRecurrente())) {
             gastos.setProximaEjecucion(null);

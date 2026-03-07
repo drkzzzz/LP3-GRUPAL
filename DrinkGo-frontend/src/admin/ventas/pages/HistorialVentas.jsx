@@ -306,7 +306,7 @@ export const HistorialVentas = () => {
                     {detalle.map((d, i) => (
                       <tr key={i}>
                         <td className="px-3 py-2">
-                          {d.producto?.nombre || '—'}
+                          {d.nombreProducto || d.producto?.nombre || '—'}
                         </td>
                         <td className="px-3 py-2 text-center">{d.cantidad}</td>
                         <td className="px-3 py-2 text-right">
@@ -334,7 +334,8 @@ export const HistorialVentas = () => {
                     className="flex justify-between text-sm bg-gray-50 px-3 py-2 rounded"
                   >
                     <span className="text-gray-600">
-                      {p.metodoPago?.nombre ||
+                      {p.metodoPagoNombre ||
+                        p.metodoPago?.nombre ||
                         p.metodoPago?.tipoMetodoPago?.replace(/_/g, ' ') ||
                         'Método'}
                     </span>
