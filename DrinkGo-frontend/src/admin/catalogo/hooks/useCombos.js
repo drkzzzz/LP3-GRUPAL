@@ -7,14 +7,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { combosService, detalleCombosService } from '../services/catalogoService';
 import { message } from '@/shared/utils/notifications';
 
-export const useCombos = (negocioId) => {
+export const useCombos = (sedeId, negocioId) => {
   const queryClient = useQueryClient();
 
   /* ─── Queries ─── */
   const combosQuery = useQuery({
-    queryKey: ['combos', negocioId],
-    queryFn: () => combosService.getAll(negocioId),
-    enabled: !!negocioId,
+    queryKey: ['combos', sedeId],
+    queryFn: () => combosService.getAll(sedeId),
+    enabled: !!sedeId,
   });
 
   const detallesQuery = useQuery({

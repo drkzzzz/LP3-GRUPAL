@@ -32,7 +32,7 @@ import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { ProductoForm } from '../forms/ProductoForm';
 
 export const ProductosTab = () => {
-  const { negocioId } = useOutletContext();
+  const { negocioId, sedeId } = useOutletContext();
   /* ─── State ─── */
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -55,7 +55,7 @@ export const ProductosTab = () => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = useProductos(negocioId);
+  } = useProductos(sedeId);
 
   const { categorias } = useCategorias(negocioId);
   const { marcas } = useMarcas(negocioId);
@@ -328,6 +328,7 @@ export const ProductosTab = () => {
           marcas={marcas}
           unidades={unidades}
           negocioId={negocioId}
+          sedeId={sedeId}
           onSubmit={handleCreate}
           onCancel={() => setIsCreateOpen(false)}
           isLoading={isCreating}
@@ -348,6 +349,7 @@ export const ProductosTab = () => {
             marcas={marcas}
             unidades={unidades}
             negocioId={negocioId}
+            sedeId={sedeId}
             onSubmit={handleUpdate}
             onCancel={() => { setIsEditOpen(false); setSelected(null); }}
             isLoading={isUpdating}

@@ -143,6 +143,7 @@ const EntitySearch = ({ label, required, items, selectedId, onSelect, onClear, p
 export const PromocionForm = ({
   initialData,
   negocioId,
+  sedeId,
   categorias = [],
   productos = [],
   onSubmit,
@@ -202,6 +203,7 @@ export const PromocionForm = ({
     const payload = {
       ...(isEdit && { id: initialData.id }),
       negocio: { id: negocioId },
+      sede: { id: sedeId },
       nombre: formData.nombre,
       codigo: formData.codigo || null,
       tipoDescuento: formData.tipoDescuento,

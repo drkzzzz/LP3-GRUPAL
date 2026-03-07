@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- SEED 04: CATÁLOGO DEMO (CATEGORÍAS, MARCAS, UNIDADES, PRODUCTOS, COMBOS)
 -- Idempotente: usa WHERE NOT EXISTS para no duplicar al reiniciar backend
 -- Dependencia: 03_negocios_demo.sql (negocios ya creados)
@@ -526,53 +526,53 @@ WHERE NOT EXISTS (SELECT 1 FROM productos WHERE negocio_id = @n_premium AND sku 
 -- ╚══════════════════════════════════════════════════════════════╝
 
 -- ── DON PEPE ──
-INSERT INTO combos (negocio_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
-SELECT @n_donpepe, 'Pack Parrillero', 'dp-pack-parrillero',
+INSERT INTO combos (negocio_id, sede_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
+SELECT @n_donpepe, @sede_donpepe, 'Pack Parrillero', 'dp-pack-parrillero',
     '2 Cervezas Pilsen Callao 630ml + 1 Papitas Lay''s 200g. El combo perfecto para la parrilla.',
     22.00, 18.90, 14.09, '2026-03-01', '2026-06-30', 1, 1, 1, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM combos WHERE slug = 'dp-pack-parrillero');
 
-INSERT INTO combos (negocio_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
-SELECT @n_donpepe, 'Combo Ron + Gaseosa', 'dp-combo-ron-gaseosa',
+INSERT INTO combos (negocio_id, sede_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
+SELECT @n_donpepe, @sede_donpepe, 'Combo Ron + Gaseosa', 'dp-combo-ron-gaseosa',
     '1 Ron Cartavio Black 750ml + 2 Coca-Cola 1.5L. Listo para la reunión.',
     57.00, 49.90, 12.46, '2026-03-01', '2026-06-30', 1, 1, 0, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM combos WHERE slug = 'dp-combo-ron-gaseosa');
 
 -- ── LA BODEGA ──
-INSERT INTO combos (negocio_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
-SELECT @n_labodega, 'Pack Parrillero', 'lb-pack-parrillero',
+INSERT INTO combos (negocio_id, sede_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
+SELECT @n_labodega, @sede_labodega, 'Pack Parrillero', 'lb-pack-parrillero',
     '2 Cervezas Pilsen Callao 630ml + 1 Papitas Lay''s 200g. El combo perfecto para la parrilla.',
     22.00, 18.90, 14.09, '2026-03-01', '2026-06-30', 1, 1, 1, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM combos WHERE slug = 'lb-pack-parrillero');
 
-INSERT INTO combos (negocio_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
-SELECT @n_labodega, 'Combo Ron + Gaseosa', 'lb-combo-ron-gaseosa',
+INSERT INTO combos (negocio_id, sede_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
+SELECT @n_labodega, @sede_labodega, 'Combo Ron + Gaseosa', 'lb-combo-ron-gaseosa',
     '1 Ron Cartavio Black 750ml + 2 Coca-Cola 1.5L. Listo para la reunión.',
     57.00, 49.90, 12.46, '2026-03-01', '2026-06-30', 1, 1, 0, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM combos WHERE slug = 'lb-combo-ron-gaseosa');
 
 -- ── EL IMPERIO ──
-INSERT INTO combos (negocio_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
-SELECT @n_elimperio, 'Pack Parrillero', 'ei-pack-parrillero',
+INSERT INTO combos (negocio_id, sede_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
+SELECT @n_elimperio, @sede_elimperio, 'Pack Parrillero', 'ei-pack-parrillero',
     '2 Cervezas Pilsen Callao 630ml + 1 Papitas Lay''s 200g. El combo perfecto para la parrilla.',
     22.00, 18.90, 14.09, '2026-03-01', '2026-06-30', 1, 1, 1, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM combos WHERE slug = 'ei-pack-parrillero');
 
-INSERT INTO combos (negocio_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
-SELECT @n_elimperio, 'Combo Ron + Gaseosa', 'ei-combo-ron-gaseosa',
+INSERT INTO combos (negocio_id, sede_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
+SELECT @n_elimperio, @sede_elimperio, 'Combo Ron + Gaseosa', 'ei-combo-ron-gaseosa',
     '1 Ron Cartavio Black 750ml + 2 Coca-Cola 1.5L. Listo para la reunión.',
     57.00, 49.90, 12.46, '2026-03-01', '2026-06-30', 1, 1, 0, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM combos WHERE slug = 'ei-combo-ron-gaseosa');
 
 -- ── PREMIUM WINES ──
-INSERT INTO combos (negocio_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
-SELECT @n_premium, 'Pack Parrillero', 'pw-pack-parrillero',
+INSERT INTO combos (negocio_id, sede_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
+SELECT @n_premium, @sede_premium, 'Pack Parrillero', 'pw-pack-parrillero',
     '2 Cervezas Pilsen Callao 630ml + 1 Papitas Lay''s 200g. El combo perfecto para la parrilla.',
     22.00, 18.90, 14.09, '2026-03-01', '2026-06-30', 1, 1, 1, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM combos WHERE slug = 'pw-pack-parrillero');
 
-INSERT INTO combos (negocio_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
-SELECT @n_premium, 'Combo Ron + Gaseosa', 'pw-combo-ron-gaseosa',
+INSERT INTO combos (negocio_id, sede_id, nombre, slug, descripcion, precio_regular, precio_combo, porcentaje_descuento, fecha_inicio, fecha_fin, visible_pos, visible_tienda_online, es_destacado, esta_activo, creado_en, actualizado_en)
+SELECT @n_premium, @sede_premium, 'Combo Ron + Gaseosa', 'pw-combo-ron-gaseosa',
     '1 Ron Cartavio Black 750ml + 2 Coca-Cola 1.5L. Listo para la reunión.',
     57.00, 49.90, 12.46, '2026-03-01', '2026-06-30', 1, 1, 0, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM combos WHERE slug = 'pw-combo-ron-gaseosa');
@@ -792,71 +792,71 @@ WHERE NOT EXISTS (
 -- ╚══════════════════════════════════════════════════════════════╝
 
 -- ── DON PEPE ──
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_donpepe, 'Descuento en Rones', 'DP-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_donpepe, @sede_donpepe, 'Descuento en Rones', 'DP-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-RON15');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_donpepe, 'Promo Verano Cervezas', 'DP-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_donpepe, @sede_donpepe, 'Promo Verano Cervezas', 'DP-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-CER10');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_donpepe, 'Ahorro en Vinos', 'DP-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_donpepe, @sede_donpepe, 'Ahorro en Vinos', 'DP-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-VIN5');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_donpepe, 'Oferta Ron Cartavio', 'DP-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_donpepe, @sede_donpepe, 'Oferta Ron Cartavio', 'DP-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_donpepe AND codigo = 'DP-CART12');
 
 -- ── LA BODEGA ──
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_labodega, 'Descuento en Rones', 'LB-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_labodega, @sede_labodega, 'Descuento en Rones', 'LB-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-RON15');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_labodega, 'Promo Verano Cervezas', 'LB-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_labodega, @sede_labodega, 'Promo Verano Cervezas', 'LB-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-CER10');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_labodega, 'Ahorro en Vinos', 'LB-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_labodega, @sede_labodega, 'Ahorro en Vinos', 'LB-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-VIN5');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_labodega, 'Oferta Ron Cartavio', 'LB-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_labodega, @sede_labodega, 'Oferta Ron Cartavio', 'LB-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_labodega AND codigo = 'LB-CART12');
 
 -- ── EL IMPERIO ──
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_elimperio, 'Descuento en Rones', 'EI-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_elimperio, @sede_elimperio, 'Descuento en Rones', 'EI-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-RON15');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_elimperio, 'Promo Verano Cervezas', 'EI-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_elimperio, @sede_elimperio, 'Promo Verano Cervezas', 'EI-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-CER10');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_elimperio, 'Ahorro en Vinos', 'EI-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_elimperio, @sede_elimperio, 'Ahorro en Vinos', 'EI-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-VIN5');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_elimperio, 'Oferta Ron Cartavio', 'EI-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_elimperio, @sede_elimperio, 'Oferta Ron Cartavio', 'EI-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_elimperio AND codigo = 'EI-CART12');
 
 -- ── PREMIUM WINES ──
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_premium, 'Descuento en Rones', 'PW-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_premium, @sede_premium, 'Descuento en Rones', 'PW-RON15', 'porcentaje', 15.00, 40.00, 50, 0, 'categoria', '2026-03-01 00:00:00', '2026-06-30 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-RON15');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_premium, 'Promo Verano Cervezas', 'PW-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_premium, @sede_premium, 'Promo Verano Cervezas', 'PW-CER10', 'porcentaje', 10.00, 15.00, 100, 0, 'categoria', '2026-03-01 00:00:00', '2026-04-30 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-CER10');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_premium, 'Ahorro en Vinos', 'PW-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_premium, @sede_premium, 'Ahorro en Vinos', 'PW-VIN5', 'monto_fijo', 5.00, 30.00, 30, 0, 'categoria', '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-VIN5');
 
-INSERT INTO promociones (negocio_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
-SELECT @n_premium, 'Oferta Ron Cartavio', 'PW-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
+INSERT INTO promociones (negocio_id, sede_id, nombre, codigo, tipo_descuento, valor_descuento, monto_minimo_compra, max_usos, usos_actuales, aplica_a, valido_desde, valido_hasta, esta_activo, creado_en, actualizado_en)
+SELECT @n_premium, @sede_premium, 'Oferta Ron Cartavio', 'PW-CART12', 'porcentaje', 12.00, 45.00, 20, 0, 'producto', '2026-03-01 00:00:00', '2026-03-31 23:59:59', 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM promociones WHERE negocio_id = @n_premium AND codigo = 'PW-CART12');
 
 

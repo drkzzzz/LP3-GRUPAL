@@ -26,7 +26,7 @@ const TIPO_BADGE = {
 };
 
 export const PromocionesTab = () => {
-  const { negocioId } = useOutletContext();
+  const { negocioId, sedeId } = useOutletContext();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,10 +50,10 @@ export const PromocionesTab = () => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = usePromociones(negocioId);
+  } = usePromociones(sedeId);
 
   const { categorias } = useCategorias(negocioId);
-  const { productos } = useProductos(negocioId);
+  const { productos } = useProductos(sedeId);
 
   /* ─── Helpers ─── */
   const isPromoActive = (promo) => {
@@ -296,6 +296,7 @@ export const PromocionesTab = () => {
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Nueva Promoción" size="lg">
         <PromocionForm
           negocioId={negocioId}
+          sedeId={sedeId}
           categorias={categorias}
           productos={productos}
           onSubmit={handleCreate}
@@ -310,6 +311,7 @@ export const PromocionesTab = () => {
           <PromocionForm
             initialData={selected}
             negocioId={negocioId}
+            sedeId={sedeId}
             categorias={categorias}
             productos={productos}
             onSubmit={handleUpdate}

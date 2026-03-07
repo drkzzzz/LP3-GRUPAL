@@ -1,20 +1,33 @@
 package DrinkGo.DrinkGo_backend.entity;
 
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
-
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
-import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "combos")
 @SQLDelete(sql = "UPDATE combos SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "negocioId", "nombre", "slug", "descripcion", "urlImagen", "precioRegular",
+@JsonPropertyOrder({ "id", "negocioId", "sedeId", "nombre", "slug", "descripcion", "urlImagen", "precioRegular",
         "precioCombo", "porcentajeDescuento", "fechaInicio", "fechaFin", "visiblePos", "visibleTiendaOnline",
         "esDestacado", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class Combos {
@@ -23,9 +36,23 @@ public class Combos {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "negocio_id", nullable = false)
     private Negocios negocio;
+
+    @Column(name = "negocio_id", insertable = false, updatable = false)
+    private Long negocioId;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sede_id")
+    private Sedes sede;
+
+    @Column(name = "sede_id", insertable = false, updatable = false)
+    private Long sedeId;
 
     @Column(nullable = false, length = 250)
     private String nombre;
@@ -101,6 +128,22 @@ public class Combos {
 
     public void setNegocio(Negocios negocio) {
         this.negocio = negocio;
+    }
+
+    public Long getNegocioId() {
+        return negocioId;
+    }
+
+    public Sedes getSede() {
+        return sede;
+    }
+
+    public void setSede(Sedes sede) {
+        this.sede = sede;
+    }
+
+    public Long getSedeId() {
+        return sedeId;
     }
 
     public String getNombre() {

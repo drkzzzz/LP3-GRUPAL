@@ -12,14 +12,14 @@ import {
 } from '../services/catalogoService';
 import { message } from '@/shared/utils/notifications';
 
-export const usePromociones = (negocioId) => {
+export const usePromociones = (sedeId) => {
   const queryClient = useQueryClient();
 
   /* ─── Queries ─── */
   const promocionesQuery = useQuery({
-    queryKey: ['promociones', negocioId],
-    queryFn: () => promocionesService.getAll(negocioId),
-    enabled: !!negocioId,
+    queryKey: ['promociones', sedeId],
+    queryFn: () => promocionesService.getAll(sedeId),
+    enabled: !!sedeId,
   });
 
   const condicionesQuery = useQuery({
@@ -31,7 +31,7 @@ export const usePromociones = (negocioId) => {
   const createPromocion = useMutation({
     mutationFn: promocionesService.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['promociones', negocioId] });
+      queryClient.invalidateQueries({ queryKey: ['promociones', sedeId] });
       message.success('Promoción creada exitosamente');
     },
     onError: (err) => {
@@ -42,7 +42,7 @@ export const usePromociones = (negocioId) => {
   const updatePromocion = useMutation({
     mutationFn: promocionesService.update,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['promociones', negocioId] });
+      queryClient.invalidateQueries({ queryKey: ['promociones', sedeId] });
       message.success('Promoción actualizada exitosamente');
     },
     onError: (err) => {
@@ -53,7 +53,7 @@ export const usePromociones = (negocioId) => {
   const deletePromocion = useMutation({
     mutationFn: promocionesService.delete,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['promociones', negocioId] });
+      queryClient.invalidateQueries({ queryKey: ['promociones', sedeId] });
       message.success('Promoción eliminada exitosamente');
     },
     onError: (err) => {

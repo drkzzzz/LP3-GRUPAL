@@ -27,6 +27,7 @@ export const ComboForm = ({
   initialDetalles = [],
   productos = [],
   negocioId,
+  sedeId,
   onSubmit,
   onCancel,
   isLoading = false,
@@ -131,6 +132,7 @@ export const ComboForm = ({
     const payload = {
       ...(isEdit && { id: initialData.id }),
       negocio: { id: negocioId },
+      sede: { id: sedeId },
       nombre: formData.nombre,
       slug: formData.slug,
       descripcion: formData.descripcion || null,

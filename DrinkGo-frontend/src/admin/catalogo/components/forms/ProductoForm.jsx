@@ -34,6 +34,7 @@ export const ProductoForm = ({
   marcas = [],
   unidades = [],
   negocioId,
+  sedeId,
   onSubmit,
   onCancel,
   isLoading = false,
@@ -96,6 +97,7 @@ export const ProductoForm = ({
     const payload = {
       ...(isEdit && { id: initialData.id }),
       negocio: { id: negocioId },
+      sede: { id: sedeId },
       nombre: formData.nombre,
       sku: formData.sku,
       slug: formData.slug,

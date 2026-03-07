@@ -5,10 +5,14 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import DrinkGo.DrinkGo_backend.entity.Combos;
 
 public interface CombosRepository extends JpaRepository<Combos, Long> {
 
     @Query("SELECT c FROM Combos c JOIN FETCH c.negocio WHERE c.negocio.id = :negocioId")
     List<Combos> findByNegocioId(@Param("negocioId") Long negocioId);
+
+    @Query("SELECT c FROM Combos c WHERE c.sede.id = :sedeId")
+    List<Combos> findBySedeId(@Param("sedeId") Long sedeId);
 }

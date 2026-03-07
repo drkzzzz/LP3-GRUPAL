@@ -19,7 +19,7 @@ import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { ComboForm } from '../forms/ComboForm';
 
 export const CombosTab = () => {
-  const { negocioId } = useOutletContext();
+  const { negocioId, sedeId } = useOutletContext();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,9 +45,9 @@ export const CombosTab = () => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = useCombos(negocioId);
+  } = useCombos(sedeId, negocioId);
 
-  const { productos } = useProductos(negocioId);
+  const { productos } = useProductos(sedeId);
 
   /* ─── Filtrado ─── */
   const filtered = useMemo(() => {
@@ -324,6 +324,7 @@ export const CombosTab = () => {
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Nuevo Combo" size="lg">
         <ComboForm
           negocioId={negocioId}
+          sedeId={sedeId}
           productos={productos}
           onSubmit={handleCreate}
           onCancel={() => setIsCreateOpen(false)}
@@ -339,6 +340,7 @@ export const CombosTab = () => {
             initialDetalles={getDetallesForCombo(selected.id)}
             productos={productos}
             negocioId={negocioId}
+            sedeId={sedeId}
             onSubmit={handleUpdate}
             onCancel={() => { setIsEditOpen(false); setSelected(null); }}
             isLoading={isUpdating}

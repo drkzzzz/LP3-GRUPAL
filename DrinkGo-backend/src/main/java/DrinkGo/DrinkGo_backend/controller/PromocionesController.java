@@ -35,6 +35,11 @@ public class PromocionesController {
         return promocionesRepository.findByNegocioId(negocioId);
     }
 
+    @GetMapping("/promociones/sede/{sedeId}")
+    public List<Promociones> buscarPorSede(@PathVariable Long sedeId) {
+        return promocionesRepository.findBySedeId(sedeId);
+    }
+
     @PostMapping("/promociones")
     public Promociones guardar(@RequestBody Promociones entity) {
         service.guardar(entity);

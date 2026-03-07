@@ -23,8 +23,8 @@ const toArray = (data) => {
  *  PRODUCTOS
  * ================================================================ */
 export const productosService = {
-  getAll: async (negocioId) => {
-    const url = negocioId ? `/productos/negocio/${negocioId}` : '/productos';
+  getAll: async (sedeId) => {
+    const url = sedeId ? `/productos/sede/${sedeId}` : '/productos';
     const { data } = await adminApi.get(url);
     return toArray(data);
   },
@@ -131,8 +131,8 @@ export const unidadesMedidaService = {
  *  COMBOS
  * ================================================================ */
 export const combosService = {
-  getAll: async (negocioId) => {
-    const url = negocioId ? `/combos/negocio/${negocioId}` : '/combos';
+  getAll: async (sedeId) => {
+    const url = sedeId ? `/combos/sede/${sedeId}` : '/combos';
     const { data } = await adminApi.get(url);
     return toArray(data);
   },
@@ -185,8 +185,8 @@ export const detalleCombosService = {
  *  PROMOCIONES (también cubre "Descuentos")
  * ================================================================ */
 export const promocionesService = {
-  getAll: async (negocioId) => {
-    const url = negocioId ? `/promociones/negocio/${negocioId}` : '/promociones';
+  getAll: async (sedeId) => {
+    const url = sedeId ? `/promociones/sede/${sedeId}` : '/promociones';
     const { data } = await adminApi.get(url);
     return toArray(data);
   },
