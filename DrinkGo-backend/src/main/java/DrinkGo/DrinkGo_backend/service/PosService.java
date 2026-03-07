@@ -244,6 +244,8 @@ public class PosService {
             pagoEntity.setMetodoPago(metodosPagoRepo.getReferenceById(pago.getMetodoPagoId()));
             pagoEntity.setMonto(pago.getMonto());
             pagoEntity.setNumeroReferencia(pago.getNumeroReferencia());
+            pagoEntity.setMontoRecibido(pago.getMontoRecibido());
+            pagoEntity.setMontoCambio(pago.getMontoCambio());
             pagoEntity.setFechaPago(LocalDateTime.now());
             pagosVentaRepo.save(pagoEntity);
         }

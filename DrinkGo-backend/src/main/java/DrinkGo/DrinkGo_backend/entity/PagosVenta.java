@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Table(name = "pagos_venta")
 @SQLDelete(sql = "UPDATE pagos_venta SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "ventaId", "metodoPagoId", "metodoPagoNombre", "monto", "numeroReferencia", "fechaPago", "estaActivo",
+@JsonPropertyOrder({ "id", "ventaId", "metodoPagoId", "metodoPagoNombre", "monto", "montoRecibido", "montoCambio", "numeroReferencia", "fechaPago", "estaActivo",
         "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class PagosVenta {
 
@@ -36,6 +36,12 @@ public class PagosVenta {
 
     @Column(name = "numero_referencia")
     private String numeroReferencia;
+
+    @Column(name = "monto_recibido", precision = 12, scale = 2)
+    private BigDecimal montoRecibido;
+
+    @Column(name = "monto_cambio", precision = 12, scale = 2)
+    private BigDecimal montoCambio;
 
     @Column(name = "fecha_pago", nullable = false)
     private LocalDateTime fechaPago;
@@ -122,6 +128,22 @@ public class PagosVenta {
 
     public void setNumeroReferencia(String numeroReferencia) {
         this.numeroReferencia = numeroReferencia;
+    }
+
+    public BigDecimal getMontoRecibido() {
+        return montoRecibido;
+    }
+
+    public void setMontoRecibido(BigDecimal montoRecibido) {
+        this.montoRecibido = montoRecibido;
+    }
+
+    public BigDecimal getMontoCambio() {
+        return montoCambio;
+    }
+
+    public void setMontoCambio(BigDecimal montoCambio) {
+        this.montoCambio = montoCambio;
     }
 
     public LocalDateTime getFechaPago() {

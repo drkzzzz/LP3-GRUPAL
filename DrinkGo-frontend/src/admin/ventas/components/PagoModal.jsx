@@ -2,7 +2,19 @@
  * PagoModal.jsx
  * ─────────────
  * Modal de cobro: datos del cliente (DNI/RUC), tipo de comprobante,
- * y pagos mixtos (abonos) que deben sumar al menos el total.
+ * y pagos mixtos (abonos).
+ *
+ * Reglas de redondeo (moneda peruana):
+ *  • EFECTIVO: no existen monedas < S/0.10. El monto en efectivo que debe
+ *    cubrir el cliente se redondea al S/0.10 más cercano.
+ *    Ej: S/ 7.43 → S/ 7.40, S/ 7.47 → S/ 7.50
+ *  • DIGITAL (yape, plin, transferencia, tarjeta, qr, etc.):
+ *    monto exacto con céntimos.
+ *  • MIXTO: los métodos digitales cubren su parte exacta, y el saldo
+ *    restante en efectivo se redondea.
+ *
+ * El cajero escribe lo que el cliente ENTREGA (no el total).
+ * Si paga con efectivo de más, se muestra el vuelto a devolver.
  */
 import { useState, useEffect, useMemo } from 'react';
 import { CreditCard, Banknote, Smartphone, QrCode, Plus, X, AlertCircle, Search, Loader2 } from 'lucide-react';
@@ -30,6 +42,18 @@ const COMPROBANTE_OPTIONS = [
   { value: 'boleta', label: 'Boleta' },
   { value: 'factura', label: 'Factura' },
 ];
+
+/** Tipos de método de pago que se consideran "efectivo físico" */
+const CASH_TYPES = new Set(['efectivo']);
+
+/** Redondea al S/ 0.10 más cercano (regla de céntimos peruanos) */
+const redondearEfectivo = (monto) => +(Math.round(monto * 10) / 10).toFixed(2);
+
+/** ¿El tipo de este método de pago es efectivo? */
+const esMetodoEfectivo = (metodosPago, metodoPagoId) => {
+  const m = metodosPago.find((mp) => mp.id === Number(metodoPagoId));
+  return m ? CASH_TYPES.has(m.tipo) : false;
+};
 
 const DOC_TYPES = [
   { value: '', label: 'Sin documento' },
@@ -90,14 +114,16 @@ export const PagoModal = ({
         const efectivo = metodosPago.find(
           (m) => m.tipo === 'efectivo' || m.nombre?.toLowerCase() === 'efectivo',
         );
+        /* Iniciar con método efectivo seleccionado pero monto vacío.
+           El cajero debe ingresar lo que el cliente entrega. */
         setPagos([
-          { metodoPagoId: efectivo?.id || metodosPago[0]?.id, monto: total },
+          { metodoPagoId: efectivo?.id || metodosPago[0]?.id, monto: '' },
         ]);
       } else {
         setPagos([]);
       }
     }
-  }, [isOpen, metodosPago, total]);
+  }, [isOpen, metodosPago]);
 
   /* Forzar tipo documento según comprobante */
   useEffect(() => {
@@ -118,13 +144,43 @@ export const PagoModal = ({
   const esPersonaNatural = docClienteNumero.startsWith('10');
   const tipoContribuyente = esPersonaJuridica ? 'jurídica' : esPersonaNatural ? 'natural' : null;
 
-  /* Calcular totales */
-  const totalPagado = useMemo(
-    () => pagos.reduce((acc, p) => acc + (parseFloat(p.monto) || 0), 0),
-    [pagos],
-  );
-  const pendiente = total - totalPagado;
-  const vuelto = totalPagado > total ? totalPagado - total : 0;
+  /* ── Calcular totales con redondeo de efectivo ── */
+  const { totalDigital, totalEfectivo, hasCashRow, cashCount } = useMemo(() => {
+    let totalDigital = 0, totalEfectivo = 0, hasCashRow = false, cashCount = 0;
+    for (const p of pagos) {
+      const amt = parseFloat(p.monto) || 0;
+      if (esMetodoEfectivo(metodosPago, p.metodoPagoId)) {
+        hasCashRow = true;
+        cashCount++;
+        totalEfectivo += amt;
+      } else {
+        totalDigital += amt;
+      }
+    }
+    return { totalDigital, totalEfectivo, hasCashRow, cashCount };
+  }, [pagos, metodosPago]);
+
+  const totalPagado = +(totalDigital + totalEfectivo).toFixed(2);
+
+  /*
+   * Vuelto SOLO cuando el pago es 100% efectivo (un único método, efectivo).
+   * En pago mixto NUNCA hay vuelto: cada método se limita a completar.
+   */
+  const esPagoUnicoEfectivo = pagos.length === 1 && hasCashRow;
+
+  /* Cobro en efectivo redondeado (solo aplica si hay fila efectivo) */
+  const restoCash = Math.max(0, +(total - totalDigital).toFixed(2));
+  const cobrarEfectivo = hasCashRow && restoCash > 0 ? redondearEfectivo(restoCash) : 0;
+
+  /* Vuelto: SOLO en pago único efectivo */
+  const vuelto = esPagoUnicoEfectivo && totalEfectivo > cobrarEfectivo
+    ? +(totalEfectivo - cobrarEfectivo).toFixed(2)
+    : 0;
+
+  /* Pendiente por pagar */
+  const pendiente = esPagoUnicoEfectivo
+    ? Math.max(0, +(cobrarEfectivo - totalEfectivo).toFixed(2))
+    : Math.max(0, +(total - totalPagado).toFixed(2));
 
   /* Helper: get icon for a method */
   const getMethodInfo = (metodoPagoId) => {
@@ -141,19 +197,44 @@ export const PagoModal = ({
   );
 
   const updatePago = (index, field, value) => {
-    setPagos((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)),
-    );
+    setPagos((prev) => {
+      const isSingleCash = prev.length === 1 && esMetodoEfectivo(metodosPago,
+        field === 'metodoPagoId' && index === 0 ? value : prev[0]?.metodoPagoId);
+      return prev.map((p, i) => {
+        if (i !== index) return p;
+        const updated = { ...p, [field]: value };
+        /* Pago único efectivo → sin tope (genera vuelto) */
+        if (isSingleCash) return updated;
+        /* Mixto: TODOS los métodos tienen tope = total − suma de los demás */
+        if (field === 'monto' || field === 'metodoPagoId') {
+          const numVal = parseFloat(updated.monto);
+          if (!isNaN(numVal) && numVal > 0) {
+            const otherSum = prev.reduce((acc, pp, j) =>
+              j === i ? acc : acc + (parseFloat(pp.monto) || 0), 0);
+            const max = +Math.max(0, total - otherSum).toFixed(2);
+            if (numVal > max) return { ...updated, monto: max };
+          }
+        }
+        return updated;
+      });
+    });
   };
 
   const addPago = () => {
     const nextMethod = metodosPago.find((m) => !usedMethodIds.has(String(m.id)));
-    const remaining = Math.max(0, total - totalPagado);
+    const remaining = +Math.max(0, total - totalPagado).toFixed(2);
     setPagos((prev) => [
       ...prev,
-      { metodoPagoId: nextMethod?.id || metodosPago[0]?.id, monto: remaining > 0 ? remaining : 0 },
+      {
+        metodoPagoId: nextMethod?.id || metodosPago[0]?.id,
+        monto: remaining > 0 ? remaining : '',
+      },
     ]);
   };
+
+  /* ¿Se puede agregar otro método? Solo si falta monto y hay métodos disponibles */
+  const canAddMethod = totalPagado < total - 0.009
+    && metodosPago.some((m) => !usedMethodIds.has(String(m.id)));
 
   const removePago = (index) => {
     if (pagos.length <= 1) return;
@@ -163,11 +244,13 @@ export const PagoModal = ({
   /* Set all amount to single method */
   const setFullAmount = (index) => {
     const otherSum = pagos.reduce(
-      (acc, p, i) => (i !== index ? acc + (parseFloat(p.monto) || 0) : acc),
-      0,
+      (acc, p, i) => (i !== index ? acc + (parseFloat(p.monto) || 0) : acc), 0,
     );
     const remaining = Math.max(0, total - otherSum);
-    updatePago(index, 'monto', remaining);
+    const isCash = esMetodoEfectivo(metodosPago, pagos[index].metodoPagoId);
+    /* Efectivo único → redondeado; mixto → cualquier método toma lo que falta */
+    updatePago(index, 'monto',
+      isCash && pagos.length === 1 ? redondearEfectivo(remaining) : +remaining.toFixed(2));
   };
 
   /* Validation */
@@ -181,19 +264,36 @@ export const PagoModal = ({
       docClienteNumero.length > 0 &&
       docClienteNombre.length > 0 &&
       (!direccionRequerida || docClienteDireccion.length > 0));
-  const isPaymentValid = totalPagado >= total && pagos.some((p) => parseFloat(p.monto) > 0);
+  const isPaymentValid = (() => {
+    const anythingPaid = pagos.some((p) => parseFloat(p.monto) > 0);
+    if (!anythingPaid) return false;
+    if (esPagoUnicoEfectivo) {
+      /* Único efectivo: cubrir el redondeado */
+      return totalEfectivo >= cobrarEfectivo - 0.009;
+    }
+    /* Mixto / 100% digital: la suma debe cubrir el total exacto, sin exceder */
+    return totalPagado >= total - 0.009 && totalPagado <= total + 0.009;
+  })();
   const canConfirm = isPaymentValid && isDocValid && !docError;
 
   const handleConfirm = () => {
     if (!canConfirm) return;
     const cleanPagos = pagos
       .filter((p) => parseFloat(p.monto) > 0)
-      .map((p) => ({
-        metodoPagoId: parseInt(p.metodoPagoId),
-        monto: parseFloat(p.monto),
-        tipoReferencia: getMethodInfo(p.metodoPagoId).tipo,
-        numeroReferencia: null,
-      }));
+      .map((p) => {
+        const isCash = esMetodoEfectivo(metodosPago, p.metodoPagoId);
+        const montoIngresado = parseFloat(p.monto);
+        return {
+          metodoPagoId: parseInt(p.metodoPagoId),
+          monto: esPagoUnicoEfectivo && isCash ? cobrarEfectivo : montoIngresado,
+          tipoReferencia: getMethodInfo(p.metodoPagoId).tipo,
+          numeroReferencia: null,
+          ...(esPagoUnicoEfectivo && isCash && {
+            montoRecibido: montoIngresado,
+            montoCambio: vuelto,
+          }),
+        };
+      });
 
     onConfirm({
       pagos: cleanPagos,
@@ -400,7 +500,7 @@ export const PagoModal = ({
             <h3 className="text-sm font-semibold text-gray-700">
               Métodos de pago
             </h3>
-            <Button variant="outline" size="sm" onClick={addPago}>
+            <Button variant="outline" size="sm" onClick={addPago} disabled={!canAddMethod}>
               <Plus size={14} className="mr-1" />
               Agregar método
             </Button>
@@ -413,69 +513,72 @@ export const PagoModal = ({
             </div>
           )}
 
-          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {pagos.map((pago, index) => {
               const { Icon, nombre } = getMethodInfo(pago.metodoPagoId);
+              const isCashPago = esMetodoEfectivo(metodosPago, pago.metodoPagoId);
               return (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
-                >
-                  {/* Icon */}
-                  <div className="p-2 bg-white rounded-lg border border-gray-100 shrink-0">
-                    <Icon size={18} className="text-gray-600" />
-                  </div>
+                <div key={index} className="space-y-1">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    {/* Icon */}
+                    <div className="p-2 bg-white rounded-lg border border-gray-100 shrink-0">
+                      <Icon size={18} className="text-gray-600" />
+                    </div>
 
-                  {/* Selector de método */}
-                  <select
-                    value={pago.metodoPagoId}
-                    onChange={(e) => updatePago(index, 'metodoPagoId', e.target.value)}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    {metodosPago.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.nombre}
-                      </option>
-                    ))}
-                  </select>
+                    {/* Selector de método */}
+                    <select
+                      value={pago.metodoPagoId}
+                      onChange={(e) => updatePago(index, 'metodoPagoId', e.target.value)}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      {metodosPago.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.nombre}
+                        </option>
+                      ))}
+                    </select>
 
-                  {/* Monto */}
-                  <div className="w-32 relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                      S/
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={pago.monto}
-                      onChange={(e) => updatePago(index, 'monto', e.target.value)}
-                      onFocus={(e) => e.target.select()}
-                      className="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 text-sm text-right font-medium focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
+                    {/* Monto */}
+                    <div className="w-32 relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                        S/
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={isCashPago ? 0.10 : 0.01}
+                        value={pago.monto}
+                        onChange={(e) => updatePago(index, 'monto', e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        placeholder={isCashPago ? 'Recibido' : '0.00'}
+                        className="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 text-sm text-right font-medium focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
 
-                  {/* Quick: set full remaining amount */}
-                  <button
-                    type="button"
-                    title="Poner monto restante"
-                    onClick={() => setFullAmount(index)}
-                    className="text-xs text-green-600 hover:text-green-800 font-medium shrink-0"
-                  >
-                    Todo
-                  </button>
-
-                  {/* Remove */}
-                  {pagos.length > 1 && (
+                    {/* Quick: set full remaining amount */}
                     <button
                       type="button"
-                      title="Quitar"
-                      onClick={() => removePago(index)}
-                      className="text-gray-400 hover:text-red-500 shrink-0"
+                      title={isCashPago ? 'Monto exacto (sin vuelto)' : 'Poner monto restante'}
+                      onClick={() => setFullAmount(index)}
+                      className="text-xs text-green-600 hover:text-green-800 font-medium shrink-0"
                     >
-                      <X size={16} />
+                      Todo
                     </button>
-                  )}
+
+                    {/* Remove */}
+                    {pagos.length > 1 && (
+                      <button
+                        type="button"
+                        title="Quitar"
+                        onClick={() => removePago(index)}
+                        className="text-gray-400 hover:text-red-500 shrink-0"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+
+
                 </div>
               );
             })}
@@ -483,13 +586,16 @@ export const PagoModal = ({
         </div>
 
         {/* ── Resumen de pagos ── */}
-        <div className="border-t border-gray-200 pt-3 space-y-1">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Total pagado</span>
-            <span className={`font-medium ${totalPagado >= total ? 'text-green-700' : 'text-gray-900'}`}>
-              {formatCurrency(totalPagado)}
-            </span>
-          </div>
+        <div className="border-t border-gray-200 pt-3 space-y-1.5">
+          {/* Cobro en efectivo redondeado (solo pago único efectivo) */}
+          {esPagoUnicoEfectivo && cobrarEfectivo > 0 && cobrarEfectivo !== +total.toFixed(2) && (
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>Cobro en efectivo (redondeado)</span>
+              <span>{formatCurrency(cobrarEfectivo)}</span>
+            </div>
+          )}
+
+          {/* Falta */}
           {pendiente > 0.009 && (
             <div className="flex justify-between text-sm">
               <span className="text-red-600 flex items-center gap-1">
@@ -498,10 +604,12 @@ export const PagoModal = ({
               <span className="font-medium text-red-600">{formatCurrency(pendiente)}</span>
             </div>
           )}
+
+          {/* Vuelto — destacado */}
           {vuelto > 0.009 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-green-600">Vuelto</span>
-              <span className="font-bold text-green-600">{formatCurrency(vuelto)}</span>
+            <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-lg p-2.5 -mx-1">
+              <span className="text-green-700 font-semibold text-sm">Vuelto a entregar</span>
+              <span className="font-bold text-green-700 text-lg">{formatCurrency(vuelto)}</span>
             </div>
           )}
         </div>
