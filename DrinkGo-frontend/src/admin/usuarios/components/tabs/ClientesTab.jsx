@@ -5,7 +5,7 @@
  * Incluye búsqueda, paginación, consulta DNI/RUC y validación de mayoría de edad.
  */
 import { useState, useMemo } from 'react';
-import { Plus, Eye, Edit, Trash2, UserCheck } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, UserCheck, RefreshCw } from 'lucide-react';
 import { differenceInYears, parseISO } from 'date-fns';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { useClientes } from '../../hooks/useClientes';
@@ -41,8 +41,8 @@ export const ClientesTab = () => {
   const { negocio } = useAdminAuthStore();
   const negocioId = negocio?.id;
 
-  const { clientes, isLoading, createCliente, updateCliente, deleteCliente, isCreating, isUpdating } =
-    useClientes();
+  const { clientes, isLoading, refetch, createCliente, updateCliente, deleteCliente, isCreating, isUpdating } =
+    useClientes(negocioId);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
@@ -198,10 +198,16 @@ export const ClientesTab = () => {
             placeholder="Buscar por nombre, documento, email o teléfono..."
             className="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full sm:w-96 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <Button onClick={() => setIsCreateOpen(true)} className="shrink-0">
-            <Plus size={16} className="mr-1.5" />
-            Nuevo cliente
-          </Button>
+          <div className="flex gap-2 shrink-0">
+            <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
+              <RefreshCw size={16} className={`mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
+            <Button onClick={() => setIsCreateOpen(true)}>
+              <Plus size={16} className="mr-1.5" />
+              Nuevo cliente
+            </Button>
+          </div>
         </div>
 
         {/* Estadística rápida */}

@@ -238,4 +238,7 @@ export const tiendaOnlineSchema = z.object({
     .max(200, 'Máximo 200 caracteres')
     .optional()
     .or(z.literal('')),
+  colorPrimario: z.string().max(20).optional().or(z.literal('')),
+  colorSecundario: z.string().max(20).optional().or(z.literal('')),
+  mensajeBienvenida: z.string().max(500, 'Máximo 500 caracteres').optional().or(z.literal('')),
 });

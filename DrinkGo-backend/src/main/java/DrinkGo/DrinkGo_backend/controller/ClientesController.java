@@ -29,6 +29,11 @@ public class ClientesController {
         return service.buscarTodos();
     }
 
+    @GetMapping("/clientes/por-negocio/{negocioId}")
+    public List<Clientes> buscarPorNegocio(@PathVariable("negocioId") Long negocioId) {
+        return service.buscarPorNegocio(negocioId);
+    }
+
     @PostMapping("/clientes")
     public Clientes guardar(@RequestBody Clientes entity) {
         if (entity.getPasswordHash() != null && !entity.getPasswordHash().isBlank()) {

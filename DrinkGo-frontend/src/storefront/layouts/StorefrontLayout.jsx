@@ -26,6 +26,26 @@ export const StorefrontLayout = () => {
     if (config?.negocio?.id) setNegocioId(config.negocio.id);
   }, [config, setNegocioId]);
 
+  // Inject brand CSS variables from configVisual
+  useEffect(() => {
+    if (!config?.configVisual) return;
+    try {
+      const cv = typeof config.configVisual === 'string'
+        ? JSON.parse(config.configVisual)
+        : config.configVisual;
+      if (cv?.color_primario) {
+        document.documentElement.style.setProperty('--brand-primary', cv.color_primario);
+      }
+      if (cv?.color_secundario) {
+        document.documentElement.style.setProperty('--brand-secondary', cv.color_secundario);
+      }
+    } catch (_) { /* ignore malformed JSON */ }
+    return () => {
+      document.documentElement.style.removeProperty('--brand-primary');
+      document.documentElement.style.removeProperty('--brand-secondary');
+    };
+  }, [config]);
+
   // Auto-select first sede
   useEffect(() => {
     if (sedes.length > 0 && !selectedSede) {

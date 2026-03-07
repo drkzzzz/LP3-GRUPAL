@@ -15,7 +15,7 @@ export const useTiendaOnline = (negocioId) => {
     queryFn: async () => {
       const all = await tiendaOnlineService.getAll();
       const found = negocioId
-        ? all.find((t) => (t.negocio?.id ?? t.negocioId) === negocioId)
+        ? all.find((t) => Number(t.negocioId) === Number(negocioId))
         : all[0];
       return found || null;
     },

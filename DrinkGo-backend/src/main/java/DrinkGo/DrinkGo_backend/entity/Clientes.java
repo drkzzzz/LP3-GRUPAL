@@ -4,6 +4,7 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -25,9 +26,13 @@ public class Clientes {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "negocio_id", nullable = false)
     private Negocios negocio;
+
+    @Column(name = "negocio_id", insertable = false, updatable = false)
+    private Long negocioId;
 
     @Column(name = "uuid", unique = true, nullable = false, length = 36)
     private String uuid;
@@ -107,12 +112,17 @@ public class Clientes {
         this.id = id;
     }
 
+    @JsonIgnore
     public Negocios getNegocio() {
         return negocio;
     }
 
     public void setNegocio(Negocios negocio) {
         this.negocio = negocio;
+    }
+
+    public Long getNegocioId() {
+        return negocioId;
     }
 
     public String getUuid() {

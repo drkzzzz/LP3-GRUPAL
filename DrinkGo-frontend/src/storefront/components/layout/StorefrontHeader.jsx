@@ -34,7 +34,7 @@ export const StorefrontHeader = ({ config, sedes, selectedSede, onSedeChange, sl
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900 text-white shadow-lg">
+    <header className="sticky top-0 z-40 text-white shadow-lg" style={{ backgroundColor: 'var(--brand-primary, #0f172a)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo / Store name */}
@@ -46,7 +46,7 @@ export const StorefrontHeader = ({ config, sedes, selectedSede, onSedeChange, sl
                 className="h-8 w-8 rounded-full object-cover"
               />
             ) : (
-              <div className="h-8 w-8 rounded-full bg-amber-500 flex items-center justify-center font-bold text-sm">
+              <div className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm" style={{ backgroundColor: 'var(--brand-secondary, #f59e0b)' }}>
                 {storeName.charAt(0).toUpperCase()}
               </div>
             )}
@@ -179,7 +179,8 @@ export const StorefrontHeader = ({ config, sedes, selectedSede, onSedeChange, sl
             ) : (
               <Link
                 to={`/tienda/${slug}/login`}
-                className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-sm font-medium transition-colors"
+                className="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors text-white"
+                style={{ backgroundColor: 'var(--brand-secondary, #f59e0b)' }}
               >
                 Ingresar
               </Link>
@@ -198,7 +199,7 @@ export const StorefrontHeader = ({ config, sedes, selectedSede, onSedeChange, sl
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-700 bg-slate-900">
+        <div className="md:hidden border-t border-white/10" style={{ backgroundColor: 'var(--brand-primary, #0f172a)' }}>
           <div className="px-4 py-3 space-y-1">
             {/* Sede selector (mobile) */}
             {sedes.length > 1 && (
