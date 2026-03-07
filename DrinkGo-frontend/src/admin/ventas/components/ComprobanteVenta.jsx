@@ -85,12 +85,16 @@ export const ComprobanteVenta = ({
   /* Pagos con nombre */
   const pagosResumen = pagos.map((p) => {
     const metodo = metodosPago.find((m) => m.id === p.metodoPagoId);
-    return { nombre: metodo?.nombre || 'Otro', monto: p.monto };
+    return { nombre: metodo?.nombre || 'Otro', monto: p.monto, montoRecibido: p.montoRecibido, montoCambio: p.montoCambio };
   });
 
   const metodoPagoTexto = pagosResumen.length === 1
     ? `${pagosResumen[0].nombre}`
     : `Mixto: ${pagosResumen.map((p) => `${p.nombre} ${formatCurrency(p.monto)}`).join(', ')}`;
+
+  /* Efectivo: recibido y vuelto */
+  const efectivoRecibido = pagos.reduce((acc, p) => acc + (p.montoRecibido || 0), 0);
+  const vueltoTotal = pagos.reduce((acc, p) => acc + (p.montoCambio || 0), 0);
 
   /* Totales */
   const subtotal = venta.subtotal ?? items.reduce((acc, i) => acc + i.producto.precioVenta * i.cantidad, 0);
@@ -338,6 +342,18 @@ export const ComprobanteVenta = ({
                     <span>TOTAL:</span>
                     <span>{formatCurrency(total)}</span>
                   </div>
+                  {efectivoRecibido > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, color: '#555' }}>
+                      <span>Efectivo recibido:</span>
+                      <span>{formatCurrency(efectivoRecibido)}</span>
+                    </div>
+                  )}
+                  {vueltoTotal > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, fontWeight: 600, color: '#16a34a' }}>
+                      <span>Vuelto:</span>
+                      <span>{formatCurrency(vueltoTotal)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

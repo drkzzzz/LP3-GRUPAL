@@ -141,13 +141,18 @@ export const useCartStore = create((set, get) => ({
    * Impuesto (IGV dinámico).
    * Si aplicaIgv es false → 0.
    * Si aplicaIgv es true → base × (porcentajeIgv / 100).
+   *
+   * Se multiplica por el porcentaje entero (ej. 18) y se divide
+   * entre 100 al final para evitar el error de representación
+   * de 0.18 en IEEE 754, que causa discrepancias de 1 céntimo
+   * frente al backend (BigDecimal HALF_UP).
    */
   getImpuesto: () => {
     const { aplicaIgv, porcentajeIgv } = get();
     if (!aplicaIgv) return 0;
     const base = get().getBaseImponible();
-    const rate = (porcentajeIgv ?? 18) / 100;
-    return +(base * rate).toFixed(2);
+    const pct = porcentajeIgv ?? 18;
+    return Math.round(base * pct) / 100;
   },
 
   /** Total a pagar = base imponible + IGV */

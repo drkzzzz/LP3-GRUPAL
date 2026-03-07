@@ -48,6 +48,8 @@ public class CrearVentaPosRequest {
         private Long metodoPagoId;
         private BigDecimal monto;
         private String numeroReferencia;
+        private BigDecimal montoRecibido;
+        private BigDecimal montoCambio;
 
         public Long getMetodoPagoId() { return metodoPagoId; }
         public void setMetodoPagoId(Long metodoPagoId) { this.metodoPagoId = metodoPagoId; }
@@ -55,6 +57,10 @@ public class CrearVentaPosRequest {
         public void setMonto(BigDecimal monto) { this.monto = monto; }
         public String getNumeroReferencia() { return numeroReferencia; }
         public void setNumeroReferencia(String numeroReferencia) { this.numeroReferencia = numeroReferencia; }
+        public BigDecimal getMontoRecibido() { return montoRecibido; }
+        public void setMontoRecibido(BigDecimal montoRecibido) { this.montoRecibido = montoRecibido; }
+        public BigDecimal getMontoCambio() { return montoCambio; }
+        public void setMontoCambio(BigDecimal montoCambio) { this.montoCambio = montoCambio; }
     }
 
     // Getters y Setters
