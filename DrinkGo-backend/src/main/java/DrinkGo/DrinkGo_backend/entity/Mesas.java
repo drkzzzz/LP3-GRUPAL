@@ -1,5 +1,6 @@
 package DrinkGo.DrinkGo_backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -7,14 +8,16 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "mesas")
-@JsonPropertyOrder({ "id", "sedeId", "nombre", "capacidad", "estado", "creadoEn", "actualizadoEn" })
+@JsonPropertyOrder({ "id", "sede", "nombre", "capacidad", "estado", "creadoEn", "actualizadoEn" })
 public class Mesas {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "horarioConfig", "calendarioEspecial",
+            "configuracion" })
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sede_id", nullable = false)
     private Sedes sede;
 

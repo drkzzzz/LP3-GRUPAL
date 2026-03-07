@@ -18,8 +18,8 @@ import java.time.LocalDateTime;
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "negocioId", "codigo", "nombre", "direccion", "ciudad", "departamento", "pais",
         "codigoPostal", "latitud", "longitud", "telefono", "usuarioGerenteId", "esPrincipal", "deliveryHabilitado",
-        "recojoHabilitado", "horarioConfig", "calendarioEspecial", "configuracion", "estaActivo", "creadoEn",
-        "actualizadoEn", "desactivadoEn" })
+        "recojoHabilitado", "tieneMesas", "horarioConfig", "calendarioEspecial", "configuracion", "estaActivo",
+        "creadoEn", "actualizadoEn", "desactivadoEn" })
 public class Sedes {
 
     @Id
@@ -71,6 +71,9 @@ public class Sedes {
 
     @Column(name = "recojo_habilitado")
     private Boolean recojoHabilitado = false;
+
+    @Column(name = "tiene_mesas")
+    private Boolean tieneMesas = false;
 
     @Column(name = "horario_config", columnDefinition = "JSON")
     private String horarioConfig;
@@ -239,6 +242,14 @@ public class Sedes {
 
     public void setRecojoHabilitado(Boolean recojoHabilitado) {
         this.recojoHabilitado = recojoHabilitado;
+    }
+
+    public Boolean getTieneMesas() {
+        return tieneMesas;
+    }
+
+    public void setTieneMesas(Boolean tieneMesas) {
+        this.tieneMesas = tieneMesas;
     }
 
     public String getHorarioConfig() {

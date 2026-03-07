@@ -50,6 +50,7 @@ export const MesasTab = ({ context }) => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [selectedSedeId, setSelectedSedeId] = useState(null);
 
   const { sedes } = useSedesConfig(negocioId);
 
@@ -62,16 +63,22 @@ export const MesasTab = ({ context }) => {
     isCreating,
     isUpdating,
     isDeleting,
-  } = useMesasConfig(negocioId, sedes);
+  } = useMesasConfig(negocioId);
 
-  /* Sedes activas para el Select */
-  const sedesOptions = useMemo(
-    () =>
-      sedes
-        .filter((s) => s.estaActivo !== false)
-        .map((s) => ({ value: String(s.id), label: `${s.nombre} – ${s.ciudad || ''}` })),
+  /* Solo sedes activas que manejan mesas */
+  const sedesConMesas = useMemo(
+    () => sedes.filter((s) => s.estaActivo !== false && s.tieneMesas === true),
     [sedes],
   );
+
+  /* Sede seleccionada actualmente (auto-selecciona la primera) */
+  const activeSede = useMemo(() => {
+    if (selectedSedeId) {
+      const found = sedesConMesas.find((s) => s.id === selectedSedeId);
+      if (found) return found;
+    }
+    return sedesConMesas[0] ?? null;
+  }, [sedesConMesas, selectedSedeId]);
 
   /* Mapa id → sede */
   const sedesMap = useMemo(() => {
@@ -80,30 +87,35 @@ export const MesasTab = ({ context }) => {
     return m;
   }, [sedes]);
 
+  /* ─── Mesas de la sede activa ─── */
+  const mesasDeSede = useMemo(
+    () => (activeSede ? mesas.filter((m) => m.sede?.id === activeSede.id) : []),
+    [mesas, activeSede],
+  );
+
   /* ─── Filtrado ─── */
   const filtered = useMemo(() => {
-    if (!debouncedSearch) return mesas;
+    if (!debouncedSearch) return mesasDeSede;
     const q = debouncedSearch.toLowerCase();
-    return mesas.filter(
+    return mesasDeSede.filter(
       (m) =>
         m.nombre?.toLowerCase().includes(q) ||
-        sedesMap[m.sede?.id]?.nombre?.toLowerCase().includes(q) ||
         m.estado?.toLowerCase().includes(q),
     );
-  }, [mesas, debouncedSearch, sedesMap]);
+  }, [mesasDeSede, debouncedSearch]);
 
   const paginatedData = useMemo(() => {
     const start = (page - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  /* ─── Stats ─── */
+  /* ─── Stats (de la sede activa) ─── */
   const stats = useMemo(() => ({
-    total: mesas.length,
-    disponibles: mesas.filter((m) => m.estado === 'disponible').length,
-    ocupadas: mesas.filter((m) => m.estado === 'ocupada').length,
-    reservadas: mesas.filter((m) => m.estado === 'reservada').length,
-  }), [mesas]);
+    total: mesasDeSede.length,
+    disponibles: mesasDeSede.filter((m) => m.estado === 'disponible').length,
+    ocupadas: mesasDeSede.filter((m) => m.estado === 'ocupada').length,
+    reservadas: mesasDeSede.filter((m) => m.estado === 'reservada').length,
+  }), [mesasDeSede]);
 
   /* ─── Handlers ─── */
   const openCreate = () => { setEditing(null); setIsFormOpen(true); };
@@ -154,19 +166,6 @@ export const MesasTab = ({ context }) => {
       render: (_, row) => <span className="text-sm font-medium text-gray-900">{row.nombre}</span>,
     },
     {
-      key: 'sede',
-      title: 'Sede',
-      width: '200px',
-      render: (_, row) => {
-        const sede = sedesMap[row.sede?.id];
-        return sede ? (
-          <span className="text-sm text-gray-700">{sede.nombre}</span>
-        ) : (
-          <span className="text-sm text-gray-400 italic">Sin sede</span>
-        );
-      },
-    },
-    {
       key: 'capacidad',
       title: 'Capacidad',
       width: '100px',
@@ -208,6 +207,25 @@ export const MesasTab = ({ context }) => {
 
   const isSaving = isCreating || isUpdating;
 
+  /* ─── Sin sedes con mesas configuradas ─── */
+  if (!isLoading && sedesConMesas.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Mesas</h1>
+          <p className="text-gray-600 mt-1">Gestiona las mesas de tus sedes para atención en local</p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-xl border border-dashed border-gray-300">
+          <LayoutGrid size={40} className="text-gray-300 mb-3" />
+          <p className="text-sm font-medium text-gray-600">Ninguna sede tiene mesas habilitadas</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Ve a <strong>Sedes</strong>, edita una sede y activa la opción <strong>"Maneja mesas"</strong>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -216,10 +234,31 @@ export const MesasTab = ({ context }) => {
           <h1 className="text-2xl font-bold text-gray-900">Mesas</h1>
           <p className="text-gray-600 mt-1">Gestiona las mesas de tus sedes para atención en local</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
-          <Plus size={18} /> Nueva Mesa
-        </button>
+        {activeSede && (
+          <button onClick={openCreate} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+            <Plus size={18} /> Nueva Mesa
+          </button>
+        )}
       </div>
+
+      {/* Pestañas de sede */}
+      {sedesConMesas.length > 1 && (
+        <div className="flex gap-2 border-b border-gray-200">
+          {sedesConMesas.map((sede) => (
+            <button
+              key={sede.id}
+              onClick={() => { setSelectedSedeId(sede.id); setPage(1); setSearchTerm(''); }}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                activeSede?.id === sede.id
+                  ? 'border-green-600 text-green-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {sede.nombre}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -248,7 +287,13 @@ export const MesasTab = ({ context }) => {
 
       {/* Modal: Crear / Editar */}
       <Modal isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setEditing(null); }} title={editing ? 'Editar Mesa' : 'Nueva Mesa'} size="md">
-        <MesaForm sedesOptions={sedesOptions} initialData={editing} onSubmit={handleSubmit} onCancel={() => { setIsFormOpen(false); setEditing(null); }} isLoading={isSaving} />
+        <MesaForm
+          sedes={sedesConMesas}
+          initialData={editing ?? (activeSede ? { sedeId: String(activeSede.id) } : null)}
+          onSubmit={handleSubmit}
+          onCancel={() => { setIsFormOpen(false); setEditing(null); }}
+          isLoading={isSaving}
+        />
       </Modal>
 
       {/* Modal: Confirmar eliminación */}

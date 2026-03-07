@@ -7,6 +7,8 @@ import DrinkGo.DrinkGo_backend.entity.Mesas;
 public interface IMesasService {
     List<Mesas> buscarTodos();
 
+    List<Mesas> buscarPorNegocio(Long negocioId);
+
     void guardar(Mesas mesas);
 
     void modificar(Mesas mesas);

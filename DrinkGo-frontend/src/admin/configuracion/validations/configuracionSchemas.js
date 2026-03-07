@@ -104,6 +104,7 @@ export const sedeSchema = z.object({
   esPrincipal: z.boolean().default(false),
   deliveryHabilitado: z.boolean().default(false),
   recojoHabilitado: z.boolean().default(false),
+  tieneMesas: z.boolean().default(false),
 });
 
 /* ================================================================
@@ -185,6 +186,10 @@ export const mesaSchema = z.object({
     .string()
     .min(1, 'Nombre es requerido')
     .max(100, 'Máximo 100 caracteres'),
+  sedeId: z
+    .union([z.string(), z.number()])
+    .refine((v) => v !== '' && v !== null && v !== undefined, { message: 'Sede es requerida' })
+    .transform((v) => Number(v)),
   capacidad: z
     .number({ invalid_type_error: 'Ingrese un número' })
     .int('Debe ser un número entero')

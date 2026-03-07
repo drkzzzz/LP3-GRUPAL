@@ -38,6 +38,7 @@ import {
   RotateCcw,
   Code2,
   ArrowLeft,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -80,6 +81,7 @@ const VENTAS_SUBITEMS = [
   { to: '/admin/ventas/movimientos', label: 'Movimientos de Caja', icon: Receipt, permiso: 'm.ventas.movimientos' },
   { to: '/admin/ventas/historial', label: 'Historial', icon: History, permiso: 'm.ventas.historial' },
   { to: '/admin/ventas/gastos', label: 'Gastos', icon: TrendingDown, permiso: 'm.ventas.gastos' },
+  { to: '/admin/ventas/mesas', label: 'Gestión de Mesas', icon: UtensilsCrossed, permiso: 'm.ventas.mesas' },
 ];
 
 /* ─── Sub-items del menú Facturación ─── */

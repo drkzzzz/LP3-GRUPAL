@@ -7,21 +7,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mesasService } from '../services/configuracionService';
 import { message } from '@/shared/utils/notifications';
 
-export const useMesasConfig = (negocioId, sedes = []) => {
+export const useMesasConfig = (negocioId) => {
   const queryClient = useQueryClient();
-
-  /* IDs de sedes del negocio para filtrar */
-  const sedeIds = sedes.map((s) => s.id);
 
   const mesasQuery = useQuery({
     queryKey: ['mesas-config', negocioId],
-    queryFn: async () => {
-      const all = await mesasService.getAll();
-      return sedeIds.length > 0
-        ? all.filter((m) => sedeIds.includes(m.sede?.id))
-        : all;
-    },
-    enabled: !!negocioId && sedeIds.length > 0,
+    queryFn: () => mesasService.getByNegocioId(negocioId),
+    enabled: !!negocioId,
   });
 
   const createMesa = useMutation({

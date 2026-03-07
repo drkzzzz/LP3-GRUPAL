@@ -164,6 +164,11 @@ export const mesasService = {
     return toArray(data);
   },
 
+  getByNegocioId: async (negocioId) => {
+    const { data } = await adminApi.get(`/mesas/por-negocio/${negocioId}`);
+    return toArray(data);
+  },
+
   getById: async (id) => {
     const { data } = await adminApi.get(`/mesas/${id}`);
     return data;

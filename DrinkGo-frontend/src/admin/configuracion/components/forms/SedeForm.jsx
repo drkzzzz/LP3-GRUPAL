@@ -31,6 +31,7 @@ export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
       esPrincipal: false,
       deliveryHabilitado: false,
       recojoHabilitado: false,
+      tieneMesas: false,
     },
   });
 
@@ -47,6 +48,7 @@ export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
         esPrincipal: initialData.esPrincipal ?? false,
         deliveryHabilitado: initialData.deliveryHabilitado ?? false,
         recojoHabilitado: initialData.recojoHabilitado ?? false,
+        tieneMesas: initialData.tieneMesas ?? false,
       });
     }
   }, [initialData, reset]);
@@ -129,6 +131,14 @@ export const SedeForm = ({ initialData, onSubmit, onCancel, isLoading }) => {
             className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
           />
           Recojo en tienda
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+          <input
+            type="checkbox"
+            {...register('tieneMesas')}
+            className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+          />
+          Maneja mesas
         </label>
       </div>
 

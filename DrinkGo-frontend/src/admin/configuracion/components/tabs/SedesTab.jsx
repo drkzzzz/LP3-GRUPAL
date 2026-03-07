@@ -105,6 +105,7 @@ export const SedesTab = ({ context }) => {
       esPrincipal: formData.esPrincipal,
       deliveryHabilitado: formData.deliveryHabilitado,
       recojoHabilitado: formData.recojoHabilitado,
+      tieneMesas: formData.tieneMesas,
     };
 
     if (editing) {
@@ -236,13 +237,7 @@ export const SedesTab = ({ context }) => {
             Gestiona las sedes y sucursales de tu negocio
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-        >
-          <Plus size={18} />
-          Nueva Sede
-        </button>
+
       </div>
 
       {/* Stats */}

@@ -17,6 +17,10 @@ public class MesasService implements IMesasService {
         return repoMesas.findAll();
     }
 
+    public List<Mesas> buscarPorNegocio(Long negocioId) {
+        return repoMesas.findByNegocioId(negocioId);
+    }
+
     public void guardar(Mesas mesas) {
         repoMesas.save(mesas);
     }

@@ -66,17 +66,36 @@ public class SedesService implements ISedesService {
     }
 
     @Transactional
-    public void modificar(Sedes sedes) {
-        // Si se intenta marcar como principal, verificar que no haya otra
-        if (Boolean.TRUE.equals(sedes.getEsPrincipal()) && sedes.getNegocio() != null) {
+    public void modificar(Sedes updatedSedes) {
+        Sedes existing = repoSedes.findById(updatedSedes.getId())
+                .orElseThrow(() -> new RuntimeException("Sede no encontrada con id: " + updatedSedes.getId()));
+
+        // Validar principal solo si se está marcando como principal
+        if (Boolean.TRUE.equals(updatedSedes.getEsPrincipal())) {
             long otherPrincipal = repoSedes.countOtherPrincipalByNegocioId(
-                    sedes.getNegocio().getId(), sedes.getId());
+                    existing.getNegocio().getId(), existing.getId());
             if (otherPrincipal > 0) {
                 throw new RuntimeException(
                         "Ya existe una sede principal. Primero desmarca la sede principal actual.");
             }
         }
-        repoSedes.save(sedes);
+
+        // Actualizar solo los campos editables (no tocar codigo, negocio, etc.)
+        existing.setNombre(updatedSedes.getNombre());
+        existing.setDireccion(updatedSedes.getDireccion());
+        existing.setCiudad(updatedSedes.getCiudad());
+        existing.setDepartamento(updatedSedes.getDepartamento());
+        existing.setPais(updatedSedes.getPais() != null ? updatedSedes.getPais() : "PE");
+        existing.setCodigoPostal(updatedSedes.getCodigoPostal());
+        existing.setTelefono(updatedSedes.getTelefono());
+        existing.setEsPrincipal(updatedSedes.getEsPrincipal() != null ? updatedSedes.getEsPrincipal() : false);
+        existing.setDeliveryHabilitado(
+                updatedSedes.getDeliveryHabilitado() != null ? updatedSedes.getDeliveryHabilitado() : false);
+        existing.setRecojoHabilitado(
+                updatedSedes.getRecojoHabilitado() != null ? updatedSedes.getRecojoHabilitado() : false);
+        existing.setTieneMesas(updatedSedes.getTieneMesas() != null ? updatedSedes.getTieneMesas() : false);
+
+        repoSedes.save(existing);
     }
 
     public Optional<Sedes> buscarId(Long id) {
