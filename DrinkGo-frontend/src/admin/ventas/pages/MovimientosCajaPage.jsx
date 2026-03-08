@@ -411,6 +411,8 @@ export const MovimientosCajaPage = () => {
       render: (_, row) => {
         const esEgreso = row.tipoMovimiento?.startsWith('egreso');
         if (!esEgreso || row.estadoEgreso === 'devuelto') return null;
+        // No mostrar devolver en egresos por anulación de venta
+        if (row.venta) return null;
         return (
           <button
             onClick={() => {

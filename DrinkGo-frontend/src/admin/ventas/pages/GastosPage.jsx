@@ -28,6 +28,7 @@ import { Input } from '@/admin/components/ui/Input';
 import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { useGastos } from '../hooks/useGastos';
 import { formatCurrency, formatDate } from '@/shared/utils/formatters';
+import { message } from '@/shared/utils/notifications';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
 /* ─────────────────────────────────────────── */
@@ -90,6 +91,26 @@ const hoyLocal = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+/**
+ * Calcula la fecha mínima permitida para fechaFin de un gasto recurrente.
+ * La fecha fin debe ser al menos la fecha del siguiente cobro recurrente.
+ */
+const calcMinFechaFin = (fechaInicio, periodo) => {
+  if (!fechaInicio || !periodo) return fechaInicio || '';
+  const d = new Date(fechaInicio + 'T00:00:00');
+  if (isNaN(d.getTime())) return fechaInicio;
+  switch (periodo) {
+    case 'diario':      d.setDate(d.getDate() + 1); break;
+    case 'semanal':     d.setDate(d.getDate() + 7); break;
+    case 'quincenal':   d.setDate(d.getDate() + 15); break;
+    case 'mensual':     d.setMonth(d.getMonth() + 1); break;
+    case 'trimestral':  d.setMonth(d.getMonth() + 3); break;
+    case 'anual':       d.setFullYear(d.getFullYear() + 1); break;
+    default:            d.setDate(d.getDate() + 1); break;
+  }
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 /* ─────────────────────────────────────────── */
 /*  Modal: Registrar Pago                      */
 /* ─────────────────────────────────────────── */
@@ -100,6 +121,7 @@ const PagoModal = ({ isOpen, onClose, titulo, monto, onConfirm, isLoading }) => 
   const [metodoPago, setMetodoPago] = useState('efectivo');
   const [referencia, setReferencia] = useState('');
   const [archivoComprobante, setArchivoComprobante] = useState(null);
+  const [fileError, setFileError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -110,6 +132,7 @@ const PagoModal = ({ isOpen, onClose, titulo, monto, onConfirm, isLoading }) => 
     setMetodoPago('efectivo');
     setReferencia('');
     setArchivoComprobante(null);
+    setFileError('');
     onClose();
   };
 
@@ -118,8 +141,10 @@ const PagoModal = ({ isOpen, onClose, titulo, monto, onConfirm, isLoading }) => 
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         e.target.value = '';
+        setFileError('El archivo supera el límite de 5 MB');
         return;
       }
+      setFileError('');
       setArchivoComprobante(file);
     }
   };
@@ -190,6 +215,7 @@ const PagoModal = ({ isOpen, onClose, titulo, monto, onConfirm, isLoading }) => 
             </label>
           )}
           <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP o PDF (máx. 5 MB)</p>
+          {fileError && <p className="text-xs text-red-500 mt-1">{fileError}</p>}
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
@@ -239,6 +265,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
     horaGasto: data?.horaGasto ? String(data.horaGasto).slice(0, 5) : '',
     esRecurrente: data?.esRecurrente || false,
     periodoRecurrencia: data?.periodoRecurrencia || 'mensual',
+    fechaFin: data?.fechaFin || '',
     metodoPago: data?.metodoPago || 'efectivo',
     categoriaGastoId: data?.categoriaGasto?.id || '',
   });
@@ -254,11 +281,27 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
 
   const set = (field) => (e) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    setForm((prev) => ({ ...prev, [field]: val }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: val };
+      // Si cambia periodo o fecha inicio, limpiar fechaFin si ya no es válida
+      if ((field === 'periodoRecurrencia' || field === 'fechaGasto') && next.fechaFin) {
+        const minFin = calcMinFechaFin(next.fechaGasto, next.periodoRecurrencia);
+        if (next.fechaFin < minFin) next.fechaFin = '';
+      }
+      return next;
+    });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Validar fechaFin contra mínimo de recurrencia
+    if (form.esRecurrente && form.fechaFin) {
+      const minFin = calcMinFechaFin(form.fechaGasto, form.periodoRecurrencia);
+      if (form.fechaFin < minFin) {
+        message.error('La fecha fin debe ser al menos la fecha del siguiente cobro recurrente');
+        return;
+      }
+    }
     const payload = {
       ...(isEdit ? { id: initialData.id } : {}),
       negocio: { id: negocioId },
@@ -270,6 +313,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
       horaGasto: form.horaGasto || null,
       esRecurrente: form.esRecurrente,
       periodoRecurrencia: form.esRecurrente ? form.periodoRecurrencia : null,
+      fechaFin: form.esRecurrente && form.fechaFin ? form.fechaFin : null,
       metodoPago: form.metodoPago,
       moneda: 'PEN',
       categoriaGasto: form.categoriaGastoId ? { id: Number(form.categoriaGastoId) } : null,
@@ -367,7 +411,7 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
           <Input
             type="number"
             step="0.01"
-            min="0"
+            min="0.01"
             value={form.monto}
             onChange={set('monto')}
             placeholder="0.00"
@@ -445,6 +489,17 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
                     <option key={p.value} value={p.value}>{p.label}</option>
                   ))}
                 </select>
+              </div>
+              <div className="flex items-center gap-3 pl-6">
+                <label className="text-sm text-gray-600 whitespace-nowrap">Fecha fin (opcional)</label>
+                <Input
+                  type="date"
+                  value={form.fechaFin}
+                  onChange={set('fechaFin')}
+                  min={calcMinFechaFin(form.fechaGasto, form.periodoRecurrencia)}
+                  disabled={isRecurrenteExistente}
+                  className="text-sm"
+                />
               </div>
               {isRecurrenteExistente ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700 flex items-start gap-2">
@@ -854,7 +909,17 @@ const TABS = [
 
 export const GastosPage = () => {
   const [activeTab, setActiveTab] = useState('programados');
-  const { negocio } = useAdminAuthStore();
+  const { negocio, hasPermiso } = useAdminAuthStore();
+
+  /* Si no tiene permiso de gastos, mostrar mensaje */
+  if (!hasPermiso('m.ventas.gastos')) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+        <AlertCircle size={40} className="mb-2 opacity-50" />
+        <p className="text-sm">No tienes permiso para acceder a esta sección</p>
+      </div>
+    );
+  }
 
   const {
     negocioId,

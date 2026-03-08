@@ -37,13 +37,21 @@ public class GastosController {
     }
 
     @PostMapping("/gastos")
-    public Gastos guardar(@RequestBody Gastos entity) {
-        return service.guardar(entity);
+    public ResponseEntity<?> guardar(@RequestBody Gastos entity) {
+        if (entity.getMonto() != null && entity.getMonto().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Map.of("error", "El monto debe ser mayor a cero"));
+        }
+        return ResponseEntity.ok(service.guardar(entity));
     }
 
     @PutMapping("/gastos")
-    public Gastos modificar(@RequestBody Gastos entity) {
-        return service.modificar(entity);
+    public ResponseEntity<?> modificar(@RequestBody Gastos entity) {
+        if (entity.getMonto() != null && entity.getMonto().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Map.of("error", "El monto debe ser mayor a cero"));
+        }
+        return ResponseEntity.ok(service.modificar(entity));
     }
 
     @GetMapping("/gastos/{id}")
@@ -76,6 +84,21 @@ public class GastosController {
             @PathVariable("id") Long id,
             @RequestPart("archivo") MultipartFile archivo) {
         try {
+            // Validar tamaño (máx 5 MB)
+            if (archivo.getSize() > 5 * 1024 * 1024) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(java.util.Map.of("error", "El archivo supera el límite de 5 MB"));
+            }
+            // Validar tipo MIME
+            String contentType = archivo.getContentType();
+            if (contentType == null || !(
+                    contentType.equals("image/jpeg") ||
+                    contentType.equals("image/png") ||
+                    contentType.equals("image/webp") ||
+                    contentType.equals("application/pdf"))) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(java.util.Map.of("error", "Tipo de archivo no permitido. Use JPG, PNG, WebP o PDF"));
+            }
             Gastos gasto = service.subirComprobante(id, archivo);
             return ResponseEntity.ok(java.util.Map.of(
                     "message", "Comprobante subido correctamente",

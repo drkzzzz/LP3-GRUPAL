@@ -102,6 +102,9 @@ public class DocumentosFacturacion {
     @Column(name = "codigo_respuesta_sunat", length = 10)
     private String codigoRespuestaSunat;
 
+    @Column(name = "motivo_anulacion", length = 300)
+    private String motivoAnulacion;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuarios usuario;
@@ -374,6 +377,14 @@ public class DocumentosFacturacion {
 
     public void setCodigoRespuestaSunat(String codigoRespuestaSunat) {
         this.codigoRespuestaSunat = codigoRespuestaSunat;
+    }
+
+    public String getMotivoAnulacion() {
+        return motivoAnulacion;
+    }
+
+    public void setMotivoAnulacion(String motivoAnulacion) {
+        this.motivoAnulacion = motivoAnulacion;
     }
 
     @JsonIgnore

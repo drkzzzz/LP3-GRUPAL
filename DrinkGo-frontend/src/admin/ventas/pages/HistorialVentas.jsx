@@ -4,14 +4,13 @@
  * Historial de ventas del negocio con filtro, detalle y anulación.
  */
 import { useState, useMemo } from 'react';
-import { Eye, Ban, Search, Receipt, Banknote, XCircle, Monitor, Gift } from 'lucide-react';
+import { Eye, Ban, Search, Receipt, Banknote, XCircle, Monitor, Gift, Calendar } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
 import { Badge } from '@/admin/components/ui/Badge';
 import { Table } from '@/admin/components/ui/Table';
 import { Modal } from '@/admin/components/ui/Modal';
 import { StatCard } from '@/admin/components/ui/StatCard';
-import { ConfirmDialog } from '@/admin/components/ui/ConfirmDialog';
 import { useVentas, useVentaDetalle, useAnularVenta } from '../hooks/useVentas';
 import { SinCajaAsignada } from '../components/SinCajaAsignada';
 import { formatCurrency, formatDateTime } from '@/shared/utils/formatters';
@@ -38,6 +37,10 @@ export const HistorialVentas = () => {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
+  /* Filtros de fecha */
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+
   /* Detalle modal */
   const [selectedVentaId, setSelectedVentaId] = useState(null);
   const [showDetalle, setShowDetalle] = useState(false);
@@ -46,6 +49,7 @@ export const HistorialVentas = () => {
 
   /* Anulación */
   const [anularTarget, setAnularTarget] = useState(null);
+  const [razonAnulacion, setRazonAnulacion] = useState('');
 
   /* Si es cajero con alcance caja_asignada pero sin caja asignada -> bloquear */
   if (esSoloCaja && !cajaAsignada) {
@@ -54,23 +58,35 @@ export const HistorialVentas = () => {
 
   /* Filtrar ventas */
   const filtered = useMemo(() => {
-    if (!debouncedSearch) return ventas;
-    const q = debouncedSearch.toLowerCase();
-    return ventas.filter(
-      (v) =>
-        (v.numeroVenta || '').toLowerCase().includes(q) ||
-        (v.estado || '').toLowerCase().includes(q) ||
-        (v.tipoComprobante || '').toLowerCase().includes(q),
-    );
-  }, [ventas, debouncedSearch]);
+    let result = ventas;
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      result = result.filter(
+        (v) =>
+          (v.numeroVenta || '').toLowerCase().includes(q) ||
+          (v.estado || '').toLowerCase().includes(q) ||
+          (v.tipoComprobante || '').toLowerCase().includes(q),
+      );
+    }
+    if (fechaDesde) {
+      const desde = new Date(fechaDesde);
+      result = result.filter((v) => new Date(v.creadoEn) >= desde);
+    }
+    if (fechaHasta) {
+      const hasta = new Date(fechaHasta);
+      hasta.setHours(23, 59, 59, 999);
+      result = result.filter((v) => new Date(v.creadoEn) <= hasta);
+    }
+    return result;
+  }, [ventas, debouncedSearch, fechaDesde, fechaHasta]);
 
   /* Paginación del lado del cliente */
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  /* Stats */
-  const totalCompletadas = ventas.filter((v) => v.estado === 'completada').length;
-  const totalAnuladas = ventas.filter((v) => v.estado === 'anulada').length;
-  const montoTotal = ventas
+  /* Stats (basados en las ventas filtradas) */
+  const totalCompletadas = filtered.filter((v) => v.estado === 'completada').length;
+  const totalAnuladas = filtered.filter((v) => v.estado === 'anulada').length;
+  const montoTotal = filtered
     .filter((v) => v.estado === 'completada')
     .reduce((acc, v) => acc + (v.total || 0), 0);
 
@@ -85,9 +101,10 @@ export const HistorialVentas = () => {
     await anularVenta({
       ventaId: anularTarget.id,
       usuarioId: user?.id,
-      razonCancelacion: 'Anulación manual desde historial',
+      razonCancelacion: razonAnulacion.trim() || 'Anulación manual desde historial',
     });
     setAnularTarget(null);
+    setRazonAnulacion('');
     refetch();
   };
 
@@ -143,7 +160,7 @@ export const HistorialVentas = () => {
           >
             <Eye size={16} />
           </button>
-          {row.estado === 'completada' && (
+          {row.estado === 'completada' && row.sesionCaja?.estadoSesion === 'abierta' && (
             <button
               title="Anular"
               onClick={() => setAnularTarget(row)}
@@ -198,8 +215,8 @@ export const HistorialVentas = () => {
 
       {/* Tabla */}
       <Card>
-        <div className="flex justify-between items-center mb-4">
-          <div className="relative w-96">
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search
               size={16}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -214,6 +231,22 @@ export const HistorialVentas = () => {
               placeholder="Buscar por N° venta, estado..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm
                          focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar size={16} className="text-gray-400" />
+            <input
+              type="date"
+              value={fechaDesde}
+              onChange={(e) => { setFechaDesde(e.target.value); setPage(1); }}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <span className="text-gray-400 text-sm">a</span>
+            <input
+              type="date"
+              value={fechaHasta}
+              onChange={(e) => { setFechaHasta(e.target.value); setPage(1); }}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
           <Button variant="outline" size="sm" onClick={refetch}>
@@ -412,16 +445,45 @@ export const HistorialVentas = () => {
         )}
       </Modal>
 
-      {/* Confirmar anulación */}
-      <ConfirmDialog
+      {/* Modal anulación con razón */}
+      <Modal
         isOpen={!!anularTarget}
-        onClose={() => setAnularTarget(null)}
-        onConfirm={handleAnular}
+        onClose={() => { setAnularTarget(null); setRazonAnulacion(''); }}
         title="Anular Venta"
-        message={`¿Está seguro de anular la venta ${anularTarget?.numeroVenta}? Se revertirá el stock y se registrará un egreso en caja.`}
-        confirmText="Anular Venta"
-        isLoading={isAnulando}
-      />
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            {'¿Está seguro de anular la venta '}
+            <strong>{anularTarget?.numeroVenta}</strong>
+            {'? Se revertirá el stock y se registrará un egreso en caja.'}
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Razón de anulación
+            </label>
+            <textarea
+              value={razonAnulacion}
+              onChange={(e) => setRazonAnulacion(e.target.value)}
+              placeholder="Describa el motivo de la anulación..."
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setAnularTarget(null); setRazonAnulacion(''); }}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleAnular}
+              disabled={isAnulando}
+            >
+              {isAnulando ? 'Anulando...' : 'Anular Venta'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

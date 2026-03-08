@@ -97,6 +97,9 @@ public class Gastos {
     @Column(name = "proxima_ejecucion")
     private LocalDate proximaEjecucion;
 
+    @Column(name = "fecha_fin")
+    private LocalDate fechaFin;
+
     @Column(columnDefinition = "TEXT")
     private String notas;
 
@@ -318,6 +321,14 @@ public class Gastos {
 
     public void setProximaEjecucion(LocalDate proximaEjecucion) {
         this.proximaEjecucion = proximaEjecucion;
+    }
+
+    public LocalDate getFechaFin() {
+        return fechaFin;
+    }
+
+    public void setFechaFin(LocalDate fechaFin) {
+        this.fechaFin = fechaFin;
     }
 
     public Boolean getEstaActivo() {

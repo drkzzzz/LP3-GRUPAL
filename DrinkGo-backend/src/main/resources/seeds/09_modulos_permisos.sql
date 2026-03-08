@@ -107,6 +107,10 @@ INSERT IGNORE INTO modulos_sistema (codigo, nombre, descripcion, modulo_padre_id
 SELECT 'ventas.historial', 'Historial de Ventas', 'Historial de ventas realizadas',
     id, 'History', 4, 1 FROM modulos_sistema WHERE codigo = 'ventas';
 
+INSERT IGNORE INTO modulos_sistema (codigo, nombre, descripcion, modulo_padre_id, icono, orden, esta_activo)
+SELECT 'ventas.gastos', 'Gastos', 'Gestión de gastos externos y recurrentes',
+    id, 'TrendingDown', 5, 1 FROM modulos_sistema WHERE codigo = 'ventas';
+
 -- Submódulos de Devoluciones
 INSERT IGNORE INTO modulos_sistema (codigo, nombre, descripcion, modulo_padre_id, icono, orden, esta_activo)
 SELECT 'devoluciones.clientes', 'Clientes', 'Devoluciones de clientes por ventas realizadas',
@@ -153,8 +157,29 @@ CROSS JOIN permisos_sistema p
 WHERE r.nombre = 'Administrador' AND r.es_rol_sistema = 1;
 
 -- ============================================================
+-- 5. CREAR ROL "Cajero" PREDEFINIDO (es_rol_sistema = 1)
+--    Se crea por cada negocio existente, con alcance caja_asignada
+-- ============================================================
+
+INSERT IGNORE INTO roles (negocio_id, nombre, descripcion, es_rol_sistema)
+SELECT id, 'Cajero', 'Cajero con acceso limitado al POS, caja e historial del día', 1
+FROM negocios;
+
+-- Asignar permisos de cajero (alcance caja_asignada)
+-- Módulos: ventas, ventas.pos, ventas.cajas, ventas.movimientos, ventas.historial, facturacion, facturacion.comprobantes
+INSERT IGNORE INTO roles_permisos (rol_id, permiso_id, alcance)
+SELECT r.id, p.id, 'caja_asignada'
+FROM roles r
+JOIN permisos_sistema p ON p.codigo IN (
+    'm.ventas', 'm.ventas.pos', 'm.ventas.cajas',
+    'm.ventas.movimientos', 'm.ventas.historial',
+    'm.facturacion', 'm.facturacion.comprobantes'
+)
+WHERE r.nombre = 'Cajero' AND r.es_rol_sistema = 1;
+
+-- ============================================================
 -- RESULTADO ESPERADO:
---   modulos_sistema: 28 filas (10 padres + 18 hijos)
---   permisos_sistema: 28 permisos (uno por módulo)
---   roles_permisos: N × 28 (donde N = negocios con rol Administrador)
+--   modulos_sistema: 29 filas (11 padres + 18 hijos + ventas.gastos)
+--   permisos_sistema: 29 permisos (uno por módulo)
+--   roles_permisos: Admin tiene todos con 'completo', Cajero tiene 7 con 'caja_asignada'
 -- ============================================================

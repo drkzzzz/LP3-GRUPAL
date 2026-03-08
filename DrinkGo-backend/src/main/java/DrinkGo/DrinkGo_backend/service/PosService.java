@@ -291,6 +291,27 @@ public class PosService {
             throw new IllegalStateException("La venta ya está anulada/cancelada");
         }
 
+        // Solo se puede anular si la sesión de caja sigue abierta
+        if (venta.getSesionCaja() != null
+                && venta.getSesionCaja().getEstadoSesion() != SesionesCaja.EstadoSesion.abierta) {
+            throw new IllegalStateException(
+                    "Solo se puede anular una venta mientras la caja tenga sesión activa");
+        }
+
+        // No se puede anular si algún comprobante PSE ya fue enviado/aceptado por SUNAT
+        List<DocumentosFacturacion> docs = facturacionService.getDocumentosByVentaId(venta.getId());
+        for (DocumentosFacturacion doc : docs) {
+            if (doc.getModoEmision() != DocumentosFacturacion.ModoEmision.PSE) continue;
+            DocumentosFacturacion.EstadoDocumento edo = doc.getEstadoDocumento();
+            if (edo == DocumentosFacturacion.EstadoDocumento.enviado
+                    || edo == DocumentosFacturacion.EstadoDocumento.aceptado
+                    || edo == DocumentosFacturacion.EstadoDocumento.observado) {
+                throw new IllegalStateException(
+                        "No se puede anular: el comprobante " + doc.getNumeroDocumento()
+                                + " ya fue enviado a SUNAT");
+            }
+        }
+
         venta.setEstado(Ventas.Estado.anulada);
         venta.setCanceladoEn(LocalDateTime.now());
         venta.setRazonCancelacion(request.getRazonCancelacion());
@@ -674,6 +695,20 @@ public class PosService {
         }
         if (request.getPagos() == null || request.getPagos().isEmpty()) {
             throw new IllegalArgumentException("Debe incluir al menos un pago");
+        }
+        // Validar que ningún pago tenga monto negativo
+        for (CrearVentaPosRequest.PagoVenta pago : request.getPagos()) {
+            if (pago.getMonto() == null || pago.getMonto().compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("El monto de cada pago debe ser mayor o igual a cero");
+            }
+        }
+        // Validar que la suma de pagos cubra el total calculado
+        BigDecimal sumaPagos = request.getPagos().stream()
+                .map(CrearVentaPosRequest.PagoVenta::getMonto)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (sumaPagos.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("La suma de pagos debe ser mayor a cero");
         }
     }
 

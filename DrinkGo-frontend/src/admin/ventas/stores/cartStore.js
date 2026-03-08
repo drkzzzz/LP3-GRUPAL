@@ -3,12 +3,15 @@
  * ────────────
  * Estado del carrito POS usando Zustand.
  * Soporta productos individuales y combos.
- * NO persiste en localStorage (se limpia al recargar).
+ * Persiste items y descuentos en sessionStorage para sobrevivir recargas accidentales.
  */
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { invalidarCacheProductos, buscarProductos } from '../services/productosAdapter';
 
-export const useCartStore = create((set, get) => ({
+export const useCartStore = create(
+  persist(
+    (set, get) => ({
   /* ═══ ESTADO ═══ */
   items: [],               // [{ producto, cantidad, descuento }]
   descuentoGlobal: 0,      // monto fijo de descuento global
@@ -164,4 +167,15 @@ export const useCartStore = create((set, get) => ({
   getTotalItems: () => {
     return get().items.reduce((acc, i) => acc + i.cantidad, 0);
   },
-}));
+}),
+    {
+      name: 'pos-cart',
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        items: state.items,
+        descuentoGlobal: state.descuentoGlobal,
+        razonDescuento: state.razonDescuento,
+      }),
+    },
+  ),
+);

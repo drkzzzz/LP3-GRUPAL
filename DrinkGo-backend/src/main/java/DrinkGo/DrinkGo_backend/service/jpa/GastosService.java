@@ -3,8 +3,12 @@ package DrinkGo.DrinkGo_backend.service.jpa;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -15,6 +19,8 @@ import DrinkGo.DrinkGo_backend.service.IGastosService;
 
 @Service
 public class GastosService implements IGastosService {
+    private static final Logger logger = LoggerFactory.getLogger(GastosService.class);
+
     @Autowired
     private GastosRepository repoGastos;
 
@@ -196,6 +202,12 @@ public class GastosService implements IGastosService {
                     && generados < 12) {
                 LocalDate fechaPago = template.getProximaEjecucion();
 
+                // Si tiene fecha fin y la siguiente ejecución la supera → detener
+                if (template.getFechaFin() != null && fechaPago.isAfter(template.getFechaFin())) {
+                    template.setProximaEjecucion(null);
+                    break;
+                }
+
                 // Si es hoy y aún no es la hora configurada → esperar
                 if (fechaPago.isEqual(hoy) && template.getHoraGasto() != null
                         && ahora.isBefore(template.getHoraGasto())) {
@@ -241,7 +253,8 @@ public class GastosService implements IGastosService {
             }
             try {
                 ejecutarPago(g, g.getMetodoPago() != null ? g.getMetodoPago().name() : null, "Auto-pago programado");
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                logger.error("Error al auto-pagar gasto pendiente id={}: {}", g.getId(), e.getMessage(), e);
             }
         }
     }
@@ -253,14 +266,24 @@ public class GastosService implements IGastosService {
             case diario -> desde.plusDays(1);
             case semanal -> desde.plusWeeks(1);
             case quincenal -> desde.plusDays(15);
-            case mensual -> desde.plusMonths(1);
-            case trimestral -> desde.plusMonths(3);
+            case mensual -> {
+                // Usar YearMonth para evitar el bug de fin de mes
+                // (ej. 31 enero + 1 mes = 28/29 febrero, no error)
+                YearMonth nextMonth = YearMonth.from(desde).plusMonths(1);
+                int day = Math.min(desde.getDayOfMonth(), nextMonth.lengthOfMonth());
+                yield nextMonth.atDay(day);
+            }
+            case trimestral -> {
+                YearMonth nextQ = YearMonth.from(desde).plusMonths(3);
+                int day = Math.min(desde.getDayOfMonth(), nextQ.lengthOfMonth());
+                yield nextQ.atDay(day);
+            }
             case anual -> desde.plusYears(1);
         };
     }
 
     private String generarNumeroGasto() {
-        return "GAS-" + System.currentTimeMillis();
+        return "GAS-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
     /**
