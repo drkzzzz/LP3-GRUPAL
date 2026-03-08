@@ -476,6 +476,8 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                     ) : (
                       <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 11, color: '#999', borderTop: '1px solid #eee', borderBottom: '1px solid #eee', margin: '12px 0' }}>
                         Detalle de ítems no disponible
+                      </div>
+                    )}
 
                     {costoEnvio > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, color: '#555' }}>
