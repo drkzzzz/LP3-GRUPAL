@@ -9,8 +9,24 @@
 import { useRef, useEffect, useState } from 'react';
 import { Printer, X, Download, Loader2 } from 'lucide-react';
 import { ventasService } from '@/admin/ventas/services/ventasService';
+import { facturacionService } from '@/admin/facturacion/services/facturacionService';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { formatCurrency } from '@/shared/utils/formatters';
+
+const MOTIVOS_NC = {
+  '01': 'ANULACIÓN DE LA OPERACIÓN',
+  '02': 'ANULACIÓN POR ERROR EN EL RUC',
+  '03': 'CORRECCIÓN POR ERROR EN LA DESCRIPCIÓN',
+  '04': 'DESCUENTO GLOBAL',
+  '06': 'DEVOLUCIÓN TOTAL',
+  '07': 'DEVOLUCIÓN POR ÍTEM',
+  '09': 'DISMINUCIÓN EN EL VALOR',
+};
+const MOTIVOS_ND = {
+  '01': 'INTERESES POR MORA',
+  '02': 'AUMENTO EN EL VALOR',
+  '03': 'PENALIDADES / OTROS CONCEPTOS',
+};
 
 /* ─── Constantes ─── */
 const TIPO_LABEL = {
@@ -53,37 +69,40 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
   useEffect(() => {
     if (!doc) return;
 
+    const esNota = doc.tipoDocumento === 'nota_credito' || doc.tipoDocumento === 'nota_debito';
+
     const fetchData = async () => {
       setLoading(true);
       try {
-        const promises = [];
-
-        // Fetch venta detail and pagos if ventaId exists
         const ventaId = doc.ventaId || doc.venta?.id;
-        if (ventaId && negocio?.id) {
-          promises.push(
-            ventasService.getById(ventaId, negocio.id).catch(() => null),
-            ventasService.getDetalle(ventaId).catch(() => []),
-            ventasService.getPagos(ventaId).catch(() => []),
-          );
-        } else {
-          promises.push(Promise.resolve(null), Promise.resolve([]), Promise.resolve([]));
-        }
 
-        // Fetch metodos de pago for label lookup
-        if (negocio?.id) {
-          promises.push(
-            ventasService.getMetodosPago(negocio.id).catch(() => []),
-          );
-        } else {
-          promises.push(Promise.resolve([]));
-        }
+        const [venta, pagosRes, metodos] = await Promise.all([
+          ventaId && negocio?.id
+            ? ventasService.getById(ventaId, negocio.id).catch(() => null)
+            : Promise.resolve(null),
+          ventaId
+            ? ventasService.getPagos(ventaId).catch(() => [])
+            : Promise.resolve([]),
+          negocio?.id
+            ? ventasService.getMetodosPago(negocio.id).catch(() => [])
+            : Promise.resolve([]),
+        ]);
 
-        const [venta, detalle, pagosRes, metodos] = await Promise.all(promises);
         setVentaData(venta);
-        setItems(Array.isArray(detalle) ? detalle : []);
         setPagos(Array.isArray(pagosRes) ? pagosRes : []);
         setMetodosPago(Array.isArray(metodos) ? metodos : []);
+
+        if (esNota) {
+          // Para NC/ND: obtener los ítems propios del documento (detalles de la nota)
+          const notaItems = await facturacionService.getComprobanteItems(doc.id).catch(() => []);
+          setItems(Array.isArray(notaItems) ? notaItems : []);
+        } else {
+          // Para boleta/factura: obtener detalle de la venta
+          const detalle = ventaId
+            ? await ventasService.getDetalle(ventaId).catch(() => [])
+            : [];
+          setItems(Array.isArray(detalle) ? detalle : []);
+        }
       } catch {
         // Silently handle — show what we have
       } finally {
@@ -99,6 +118,16 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
   /* ─── Derivar datos del comprobante ─── */
   const tipoLabel = TIPO_LABEL[doc.tipoDocumento] || 'COMPROBANTE DE VENTA';
   const numeroDocumento = doc.numeroDocumento || '-';
+
+  /* NC/ND detection */
+  const esNota = doc.tipoDocumento === 'nota_credito' || doc.tipoDocumento === 'nota_debito';
+  const esNotaCredito = doc.tipoDocumento === 'nota_credito';
+  const codigoMotivo = doc.codigoMotivoNota || '';
+  const descripcionMotivoSunat = esNotaCredito
+    ? (MOTIVOS_NC[codigoMotivo] || '')
+    : (MOTIVOS_ND[codigoMotivo] || '');
+  const documentoAfectado = doc.documentoReferenciaNumero || '-';
+  const mostrarItemsNota = codigoMotivo === '07';
 
   /* Emisor (negocio + sede de la venta) */
   const sede = ventaData?.sede || null;
@@ -223,24 +252,99 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
           ) : (
             <div ref={printRef}>
               <div style={{ maxWidth: 700, margin: '0 auto' }}>
-                {/* ─── Header: Emisor + Tipo ─── */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid #d97706' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a', marginBottom: 4 }}>
-                      {nombreNegocio}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#555', lineHeight: 1.7 }}>
-                      {direccionNegocio && <>{direccionNegocio}<br /></>}
-                      {telefonoNegocio && <>Teléfono: {telefonoNegocio}<br /></>}
-                      {rucNegocio && <>RUC: {rucNegocio}</>}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right', border: '2px solid #d97706', padding: '10px 16px', borderRadius: 4, minWidth: 220 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#d97706' }}>{tipoLabel}</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#333', marginTop: 2 }}>{numeroDocumento}</div>
-                  </div>
-                </div>
 
+                {esNota ? (
+                  /* ══ NOTA DE CRÉDITO / DÉBITO ══ */
+                  <div style={{ fontFamily: 'Arial, sans-serif', fontSize: 12, color: '#1a1a1a' }}>
+
+                    {/* Cabecera: Emisor + tipo de nota (estilo SUNAT) */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18, paddingBottom: 14, borderBottom: '2px solid #222' }}>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 2 }}>{nombreNegocio}</div>
+                        {rucNegocio && <div style={{ fontSize: 11, color: '#555' }}>RUC: {rucNegocio}</div>}
+                        {direccionNegocio && <div style={{ fontSize: 11, color: '#555' }}>{direccionNegocio}</div>}
+                        <div style={{ fontSize: 11, color: '#555', marginTop: 3 }}>Fecha de Emisión: {fechaStr}</div>
+                      </div>
+                      <div style={{ border: '2px solid #222', padding: '10px 18px', textAlign: 'center', minWidth: 220 }}>
+                        <div style={{ fontWeight: 800, fontSize: 12, letterSpacing: '0.03em' }}>
+                          {esNotaCredito ? 'NOTA DE CRÉDITO ELECTRÓNICA' : 'NOTA DE DÉBITO ELECTRÓNICA'}
+                        </div>
+                        {rucNegocio && <div style={{ fontSize: 11, marginTop: 3 }}>RUC: {rucNegocio}</div>}
+                        <div style={{ fontWeight: 700, fontSize: 14, marginTop: 4, letterSpacing: '0.05em' }}>
+                          {numeroDocumento}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Motivo SUNAT (derecha) */}
+                    {descripcionMotivoSunat && (
+                      <div style={{ textAlign: 'right', fontWeight: 800, fontSize: 13, marginBottom: 14, marginTop: 12 }}>
+                        {descripcionMotivoSunat}
+                      </div>
+                    )}
+
+                    {/* Documento que modifica */}
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontWeight: 700, fontSize: 12, borderBottom: '1px solid #999', paddingBottom: 4, marginBottom: 8 }}>
+                        Documento que modifica:
+                      </div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ width: 150, padding: '3px 0', color: '#555', verticalAlign: 'top' }}>
+                              {esNotaCredito ? 'Boleta / Factura' : 'Documento Original'}
+                            </td>
+                            <td style={{ padding: '3px 0', fontWeight: 700 }}>: {documentoAfectado}</td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '3px 0', color: '#555' }}>Señor(es)</td>
+                            <td style={{ padding: '3px 0', fontWeight: 600 }}>: {clienteNombre}</td>
+                          </tr>
+                          {clienteDoc !== '-' && (
+                            <tr>
+                              <td style={{ padding: '3px 0', color: '#555' }}>Doc. Identidad</td>
+                              <td style={{ padding: '3px 0' }}>: {clienteDoc}</td>
+                            </tr>
+                          )}
+                          <tr>
+                            <td style={{ padding: '3px 0', color: '#555' }}>Tipo de Moneda</td>
+                            <td style={{ padding: '3px 0' }}>: SOLES</td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '6px 0 3px', color: '#555', fontWeight: 700 }}>Motivo o Sustento</td>
+                            <td style={{ padding: '6px 0 3px', fontWeight: 700 }}>
+                              : {(doc.descripcionMotivoNota || '-').toUpperCase()}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Tabla de ítems — solo motivo 07 */}
+                    {mostrarItemsNota && items.length > 0 && (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12, fontSize: 11 }}>
+                        <thead>
+                          <tr style={{ background: '#f3f4f6' }}>
+                            <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'center', width: 60 }}>Cantidad</th>
+                            <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'left' }}>Descripción</th>
+                            <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right', width: 100 }}>Valor Unitario</th>
+                            <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right', width: 100 }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map((item, idx) => (
+                            <tr key={idx}>
+                              <td style={{ border: '1px solid #ccc', padding: '5px 8px', textAlign: 'center' }}>{Number(item.cantidad)}</td>
+                              <td style={{ border: '1px solid #ccc', padding: '5px 8px' }}>
+                                {item.producto?.nombre || getItemName(item)}
+                              </td>
+                              <td style={{ border: '1px solid #ccc', padding: '5px 8px', textAlign: 'right' }}>{formatCurrency(item.precioUnitario)}</td>
+                              <td style={{ border: '1px solid #ccc', padding: '5px 8px', textAlign: 'right' }}>{formatCurrency(item.total || item.precioUnitario * item.cantidad)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                 {/* ─── Datos cliente ─── */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px', fontSize: 11, marginBottom: 12 }}>
                   <div>
@@ -267,57 +371,112 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                   )}
                 </div>
 
-                {/* ─── Tabla de ítems ─── */}
-                {items.length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', margin: '12px 0' }}>
-                    <thead>
-                      <tr>
-                        <th style={{ background: '#f9fafb', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd', padding: '8px 10px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#333', width: 50 }}>
-                          Cant.
-                        </th>
-                        <th style={{ background: '#f9fafb', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd', padding: '8px 10px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#333' }}>
-                          Descripción
-                        </th>
-                        <th style={{ background: '#f9fafb', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd', padding: '8px 10px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: '#333', width: 90 }}>
-                          P. Unit.
-                        </th>
-                        <th style={{ background: '#f9fafb', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd', padding: '8px 10px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: '#333', width: 90 }}>
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
-                            {Number(item.cantidad)}
-                          </td>
-                          <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
-                            {getItemName(item)}
-                          </td>
-                          <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
-                            {formatCurrency(item.precioUnitario)}
-                          </td>
-                          <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
-                            {formatCurrency(item.subtotal || item.precioUnitario * item.cantidad)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 11, color: '#999', borderTop: '1px solid #eee', borderBottom: '1px solid #eee', margin: '12px 0' }}>
-                    Detalle de ítems no disponible
-                  </div>
-                )}
-
-                {/* ─── Totales ─── */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-                  <div style={{ width: 240 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, color: '#555' }}>
-                      <span>Subtotal:</span>
-                      <span>{formatCurrency(subtotal)}</span>
+                    {/* Totales */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <table style={{ borderCollapse: 'collapse', fontSize: 11, width: 260 }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ border: '1px solid #ccc', padding: '4px 10px', color: '#555' }}>Sub Total Ventas</td>
+                            <td style={{ border: '1px solid #ccc', padding: '4px 10px', textAlign: 'right' }}>{formatCurrency(subtotal)}</td>
+                          </tr>
+                          <tr>
+                            <td style={{ border: '1px solid #ccc', padding: '4px 10px', color: '#555' }}>IGV ({negocio?.porcentajeIgv ?? 18}%)</td>
+                            <td style={{ border: '1px solid #ccc', padding: '4px 10px', textAlign: 'right' }}>{formatCurrency(igv)}</td>
+                          </tr>
+                          <tr>
+                            <td style={{ border: '1px solid #ccc', padding: '5px 10px', fontWeight: 700, background: '#f3f4f6' }}>Importe Total</td>
+                            <td style={{ border: '1px solid #ccc', padding: '5px 10px', textAlign: 'right', fontWeight: 700, background: '#f3f4f6' }}>{formatCurrency(total)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
+
+                    {/* Pie */}
+                    <div style={{ marginTop: 20, borderTop: '1px solid #ddd', paddingTop: 10, textAlign: 'center', fontSize: 10, color: '#888', fontStyle: 'italic' }}>
+                      Esta es una representación impresa de la {esNotaCredito ? 'nota de crédito' : 'nota de débito'} electrónica.
+                    </div>
+                  </div>
+                ) : (
+                  /* ══ BOLETA / FACTURA / NOTA DE VENTA ══ */
+                  <>
+                    {/* ─── Header: Emisor + Tipo ─── */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid #d97706' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a', marginBottom: 4 }}>{nombreNegocio}</div>
+                        <div style={{ fontSize: 11, color: '#555', lineHeight: 1.7 }}>
+                          {direccionNegocio && <>{direccionNegocio}<br /></>}
+                          {telefonoNegocio && <>Teléfono: {telefonoNegocio}<br /></>}
+                          {rucNegocio && <>RUC: {rucNegocio}</>}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right', border: '2px solid #d97706', padding: '10px 16px', borderRadius: 4, minWidth: 220 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#d97706' }}>{tipoLabel}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#333', marginTop: 2 }}>{numeroDocumento}</div>
+                      </div>
+                    </div>
+
+                    {/* ─── Datos cliente ─── */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px', fontSize: 11, marginBottom: 12 }}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#333' }}>Cliente: </span>
+                        <span style={{ color: '#555' }}>{clienteNombre}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#333' }}>Fecha: </span>
+                        <span style={{ color: '#555' }}>{fechaStr}{horaStr ? ` ${horaStr}` : ''}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#333' }}>Documento: </span>
+                        <span style={{ color: '#555' }}>{clienteDoc}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#333' }}>Método de Pago: </span>
+                        <span style={{ color: '#555' }}>{metodoPagoTexto}</span>
+                      </div>
+                    </div>
+
+                    {/* ─── Tabla de ítems ─── */}
+                    {items.length > 0 ? (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', margin: '12px 0' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ background: '#f9fafb', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd', padding: '8px 10px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#333', width: 50 }}>
+                              Cant.
+                            </th>
+                            <th style={{ background: '#f9fafb', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd', padding: '8px 10px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#333' }}>
+                              Descripción
+                            </th>
+                            <th style={{ background: '#f9fafb', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd', padding: '8px 10px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: '#333', width: 90 }}>
+                              P. Unit.
+                            </th>
+                            <th style={{ background: '#f9fafb', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd', padding: '8px 10px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: '#333', width: 90 }}>
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map((item, idx) => (
+                            <tr key={idx}>
+                              <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
+                                {Number(item.cantidad)}
+                              </td>
+                              <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
+                                {getItemName(item)}
+                              </td>
+                              <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
+                                {formatCurrency(item.precioUnitario)}
+                              </td>
+                              <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
+                                {formatCurrency(item.subtotal || item.precioUnitario * item.cantidad)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 11, color: '#999', borderTop: '1px solid #eee', borderBottom: '1px solid #eee', margin: '12px 0' }}>
+                        Detalle de ítems no disponible
+
                     {costoEnvio > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, color: '#555' }}>
                         <span>Delivery:</span>
@@ -330,21 +489,37 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                         <span>-{formatCurrency(descuento)}</span>
                       </div>
                     )}
-                    {igv > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, color: '#555' }}>
-                        <span>IGV ({negocio?.porcentajeIgv ?? 18}%):</span>
-                        <span>{formatCurrency(igv)}</span>
+
+                    {/* ─── Totales ─── */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                      <div style={{ width: 240 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, color: '#555' }}>
+                          <span>Subtotal:</span>
+                          <span>{formatCurrency(subtotal)}</span>
+                        </div>
+                        {descuento > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, color: '#dc2626' }}>
+                            <span>Descuento:</span>
+                            <span>-{formatCurrency(descuento)}</span>
+                          </div>
+                        )}
+                        {igv > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, color: '#555' }}>
+                            <span>IGV ({negocio?.porcentajeIgv ?? 18}%):</span>
+                            <span>{formatCurrency(igv)}</span>
+                          </div>
+                        )}
+                        <div style={{
+                          display: 'flex', justifyContent: 'space-between', padding: '6px 0 3px',
+                          fontSize: 13, fontWeight: 700, color: '#1a1a1a', borderTop: '2px solid #333',
+                        }}>
+                          <span>TOTAL:</span>
+                          <span>{formatCurrency(total)}</span>
+                        </div>
                       </div>
-                    )}
-                    <div style={{
-                      display: 'flex', justifyContent: 'space-between', padding: '6px 0 3px',
-                      fontSize: 13, fontWeight: 700, color: '#1a1a1a', borderTop: '2px solid #333',
-                    }}>
-                      <span>TOTAL:</span>
-                      <span>{formatCurrency(total)}</span>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
 
                 {/* ─── Footer ─── */}
                 <div style={{ marginTop: 24, textAlign: 'center', borderTop: '1px dashed #ccc', paddingTop: 12 }}>

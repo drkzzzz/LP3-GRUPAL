@@ -73,7 +73,9 @@ public class MovimientosCaja {
     private LocalDateTime eliminadoEn;
 
     public enum TipoMovimiento {
-        ingreso_venta, ingreso_otro, ingreso_manual, egreso_gasto, egreso_otro, egreso_manual, apertura, cierre
+        ingreso_venta, ingreso_otro, ingreso_manual,
+        egreso_gasto, egreso_otro, egreso_manual, egreso_anulacion,
+        apertura, cierre
     }
 
     public enum EstadoEgreso {

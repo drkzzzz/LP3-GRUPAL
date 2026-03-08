@@ -38,9 +38,9 @@ const ICON_MAP = {
 };
 
 const COMPROBANTE_OPTIONS = [
-  { value: 'nota_venta', label: 'Nota de Venta' },
-  { value: 'boleta', label: 'Boleta' },
-  { value: 'factura', label: 'Factura' },
+  { value: 'nota_venta', label: 'Nota de Venta', seriePrefix: null },
+  { value: 'boleta', label: 'Boleta', seriePrefix: 'B' },
+  { value: 'factura', label: 'Factura', seriePrefix: 'F' },
 ];
 
 /** Tipos de método de pago que se consideran "efectivo físico" */
@@ -85,6 +85,7 @@ export const PagoModal = ({
   onConfirm,
   total,
   metodosPago = [],
+  series = [],
   isLoading = false,
 }) => {
   const [pagos, setPagos] = useState([]);
@@ -138,6 +139,18 @@ export const PagoModal = ({
   useEffect(() => {
     setDocError(validateDocNumber(tipoDocumento, docClienteNumero, tipoComprobante));
   }, [tipoDocumento, docClienteNumero, tipoComprobante]);
+
+  /* Filtrar opciones de comprobante según series disponibles */
+  const comprobanteOptions = useMemo(() => {
+    return COMPROBANTE_OPTIONS.filter((opt) => {
+      // nota_venta siempre disponible (no requiere serie SUNAT)
+      if (!opt.seriePrefix) return true;
+      // Solo mostrar si hay al menos una serie activa con ese prefijo
+      return series.some(
+        (s) => s.estaActivo !== false && s.serie?.toUpperCase().startsWith(opt.seriePrefix),
+      );
+    });
+  }, [series]);
 
   /* Tipo de contribuyente según prefijo RUC */
   const esPersonaJuridica = docClienteNumero.startsWith('20');
@@ -299,7 +312,7 @@ export const PagoModal = ({
       pagos: cleanPagos,
       tipoComprobante,
       docClienteNumero: docClienteNumero || null,
-      docClienteNombre: docClienteNombre || null,
+      docClienteNombre: docClienteNombre || (tipoComprobante !== 'factura' ? 'CLIENTE VARIOS' : null),
       docClienteDireccion: docClienteDireccion || null,
     });
   };
@@ -316,6 +329,11 @@ export const PagoModal = ({
         }
       }
     } else if (tipoDocumento === 'DNI' && /^\d{8}$/.test(docClienteNumero)) {
+      // DNI 00000000 = venta anónima, no consultar API
+      if (docClienteNumero === '00000000') {
+        setDocClienteNombre('CLIENTE VARIOS');
+        return;
+      }
       const resultado = await dniLookup.buscar(docClienteNumero);
       if (resultado) {
         setDocClienteNombre(resultado.nombre_completo || '');
@@ -354,7 +372,7 @@ export const PagoModal = ({
                 onChange={(e) => setTipoComprobante(e.target.value)}
                 className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                {COMPROBANTE_OPTIONS.map((opt) => (
+                {comprobanteOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -544,11 +562,27 @@ export const PagoModal = ({
                         S/
                       </span>
                       <input
-                        type="number"
-                        min={0}
-                        step={isCashPago ? 0.10 : 0.01}
+                        type="text"
+                        inputMode="decimal"
                         value={pago.monto}
-                        onChange={(e) => updatePago(index, 'monto', e.target.value)}
+                        onChange={(e) => {
+                          // Solo permitir dígitos y un punto decimal
+                          const raw = e.target.value;
+                          if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) {
+                            updatePago(index, 'monto', raw);
+                          }
+                        }}
+                        onBlur={() => {
+                          // Efectivo: redondear al 0.10 más cercano
+                          const val = parseFloat(pago.monto);
+                          if (!isNaN(val) && val > 0 && isCashPago) {
+                            updatePago(index, 'monto', String(redondearEfectivo(val)));
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          // Bloquear letras y símbolos no numéricos
+                          if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+                        }}
                         onFocus={(e) => e.target.select()}
                         placeholder={isCashPago ? 'Recibido' : '0.00'}
                         className="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 text-sm text-right font-medium focus:outline-none focus:ring-2 focus:ring-green-500"

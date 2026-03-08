@@ -9,12 +9,27 @@ import { Trash2, Minus, Plus, AlertTriangle, Gift } from 'lucide-react';
 import { useCartStore } from '../stores/cartStore';
 import { formatCurrency } from '@/shared/utils/formatters';
 import { Button } from '@/admin/components/ui/Button';
+import { useState, useEffect } from 'react';
 
 export const CarritoPanel = () => {
   const items = useCartStore((s) => s.items);
   const removeItem = useCartStore((s) => s.removeItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const stockDesactualizado = useCartStore((s) => s.stockDesactualizado);
+  const lastCapped = useCartStore((s) => s._lastCapped);
+
+  /* Aviso breve cuando la cantidad se recortó por stock */
+  const [cappedMsg, setCappedMsg] = useState(null);
+  useEffect(() => {
+    if (lastCapped?.productoId) {
+      const item = items.find((i) => i.producto.id === lastCapped.productoId);
+      if (item) {
+        setCappedMsg(`Stock máximo de "${item.producto.nombre}": ${item.producto.stock ?? 0}`);
+        const t = setTimeout(() => setCappedMsg(null), 2500);
+        return () => clearTimeout(t);
+      }
+    }
+  }, [lastCapped]);
 
   if (items.length === 0) {
     return (
@@ -27,6 +42,14 @@ export const CarritoPanel = () => {
 
   return (
     <div className="flex flex-col">
+      {/* Aviso de cantidad recortada */}
+      {cappedMsg && (
+        <div className="flex items-center gap-2 bg-amber-50 border-b border-amber-200 px-3 py-2">
+          <AlertTriangle size={14} className="text-amber-500 shrink-0" />
+          <p className="text-xs text-amber-600">{cappedMsg}</p>
+        </div>
+      )}
+
       {/* Banner stock desactualizado */}
       {stockDesactualizado && (
         <div className="flex items-center gap-2 bg-red-50 border-b border-red-200 px-3 py-2">
@@ -122,6 +145,7 @@ export const CarritoPanel = () => {
                     type="number"
                     min={1}
                     max={stockReal}
+                    step={1}
                     value={cantidad}
                     onChange={(e) =>
                       updateQuantity(producto.id, parseInt(e.target.value) || 1)

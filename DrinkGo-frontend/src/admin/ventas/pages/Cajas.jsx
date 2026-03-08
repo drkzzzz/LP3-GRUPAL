@@ -134,11 +134,13 @@ export const Cajas = () => {
 
   const handleAbrirCaja = async () => {
     if (!abrirCajaId) return;
+    const monto = parseFloat(montoApertura) || 0;
+    if (monto < 0) return;
     await abrirCaja({
       cajaId: parseInt(abrirCajaId),
       usuarioId: user?.id,
       negocioId: negocio?.id,
-      montoApertura: parseFloat(montoApertura) || 0,
+      montoApertura: monto,
     });
     setShowAbrirModal(false);
     refetchSesion();
@@ -548,7 +550,7 @@ export const Cajas = () => {
             >
               Cancelar
             </Button>
-            <Button onClick={handleAbrirCaja} disabled={!abrirCajaId || isAbriendo}>
+            <Button onClick={handleAbrirCaja} disabled={!abrirCajaId || isAbriendo || parseFloat(montoApertura) < 0}>
               {isAbriendo ? 'Abriendo...' : 'Aperturar Caja'}
             </Button>
           </div>

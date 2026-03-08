@@ -69,6 +69,32 @@ export const useCambiarEstadoComprobante = () => {
   });
 };
 
+/* ═══ NOTAS DE CRÉDITO / DÉBITO ═══ */
+
+export const useEmitirNotaCreditoDebito = ({ onErrorCallback } = {}) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: facturacionService.emitirNotaCreditoDebito,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
+    },
+    onError: (error) => {
+      const msg = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Error al emitir nota';
+      if (onErrorCallback) onErrorCallback(msg);
+    },
+  });
+};
+
+/** Carga ítems, notas existentes y acumulado NC de un comprobante bajo demanda */
+export const useItemsComprobante = (docId) => {
+  return useQuery({
+    queryKey: ['facturacion', 'comprobante-items', docId],
+    queryFn: () => facturacionService.getItemsComprobante(docId),
+    enabled: !!docId,
+    staleTime: 1000 * 30,
+  });
+};
+
 /* ═══ PSE – CONFIGURACIÓN ═══ */
 
 export const useConfiguracionPse = (negocioId) => {

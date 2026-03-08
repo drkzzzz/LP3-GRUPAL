@@ -39,6 +39,7 @@ export const HistorialVentas = () => {
   const { ventas, isLoading, refetch, alcanceHistorial } = useVentas();
   const { anularVenta, isAnulando } = useAnularVenta();
   const esSoloCaja = alcanceHistorial === 'caja_asignada';
+  const esAdmin = getAlcance('m.ventas') === 'completo';
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 400);
@@ -181,7 +182,11 @@ export const HistorialVentas = () => {
           >
             <Eye size={16} />
           </button>
-          {row.estado === 'completada' && row.sesionCaja?.estadoSesion === 'abierta' && (
+          {row.estado === 'completada' && (
+            // Admin: puede anular cualquier venta
+            // Cajero: solo si la sesión de caja sigue abierta
+            esAdmin || row.sesionCaja?.estadoSesion === 'abierta'
+          ) && (
             <button
               title="Anular"
               onClick={() => setAnularTarget(row)}
