@@ -4,6 +4,7 @@ import DrinkGo.DrinkGo_backend.entity.Clientes;
 import DrinkGo.DrinkGo_backend.entity.DetallePedidos;
 import DrinkGo.DrinkGo_backend.entity.Devoluciones;
 import DrinkGo.DrinkGo_backend.entity.MetodosPago;
+import DrinkGo.DrinkGo_backend.entity.PagosPedido;
 import DrinkGo.DrinkGo_backend.entity.Pedidos;
 import DrinkGo.DrinkGo_backend.entity.Productos;
 import DrinkGo.DrinkGo_backend.entity.Sedes;
@@ -12,17 +13,21 @@ import DrinkGo.DrinkGo_backend.repository.ClientesRepository;
 import DrinkGo.DrinkGo_backend.repository.ConfiguracionTiendaOnlineRepository;
 import DrinkGo.DrinkGo_backend.repository.DevolucionesRepository;
 import DrinkGo.DrinkGo_backend.repository.MetodosPagoRepository;
+import DrinkGo.DrinkGo_backend.repository.PagosPedidoRepository;
 import DrinkGo.DrinkGo_backend.repository.PedidosRepository;
 import DrinkGo.DrinkGo_backend.repository.ProductosRepository;
 import DrinkGo.DrinkGo_backend.repository.SedesRepository;
 import DrinkGo.DrinkGo_backend.repository.ZonasDeliveryRepository;
 import DrinkGo.DrinkGo_backend.service.IPedidosService;
+import DrinkGo.DrinkGo_backend.service.jpa.FileStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -65,6 +70,12 @@ public class StorefrontCustomerController {
 
     @Autowired
     private ZonasDeliveryRepository zonasDeliveryRepo;
+
+    @Autowired
+    private PagosPedidoRepository pagosPedidoRepo;
+
+    @Autowired
+    private FileStorageService fileStorageService;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
@@ -375,6 +386,27 @@ public class StorefrontCustomerController {
                     .body(Map.of("message", "Error al crear el pedido: " + e.getMessage()));
         }
 
+        // 12. Crear registro de pagos_pedido automáticamente
+        try {
+            if (metodoPagoIdRaw != null) {
+                Long mpId = Long.parseLong(metodoPagoIdRaw.toString());
+                metodosPagoRepo.findById(mpId).ifPresent(metodo -> {
+                    PagosPedido pago = new PagosPedido();
+                    pago.setPedido(pedido);
+                    pago.setMetodoPago(metodo);
+                    pago.setMonto(pedido.getTotal());
+                    pago.setEstadoPago(PagosPedido.EstadoPago.pendiente);
+                    if (body.get("banco") != null) pago.setBanco(body.get("banco").toString());
+                    if (body.get("ultimosCuatroDigitos") != null) pago.setUltimosCuatroDigitos(body.get("ultimosCuatroDigitos").toString());
+                    if (body.get("nombreTitular") != null) pago.setNombreTitular(body.get("nombreTitular").toString());
+                    if (body.get("numeroReferencia") != null) pago.setNumeroReferencia(body.get("numeroReferencia").toString());
+                    pagosPedidoRepo.save(pago);
+                });
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ No se pudo crear registro de pago para pedido " + pedido.getId() + ": " + e.getMessage());
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "id", pedido.getId(),
                 "numeroPedido", pedido.getNumeroPedido(),
@@ -382,6 +414,63 @@ public class StorefrontCustomerController {
                 "estadoPedido", pedido.getEstadoPedido().name(),
                 "tipoComprobante", pedido.getTipoComprobante(),
                 "message", "Pedido creado exitosamente"));
+    }
+
+    /*
+     * ══════════════════════════════════════════════
+     * GET /restful/tienda/{slug}/pedidos/{pedidoId}/pago
+     * Devuelve el pago registrado del pedido (para el cliente)
+     * ══════════════════════════════════════════════
+     */
+    @GetMapping("/pedidos/{pedidoId}/pago")
+    public ResponseEntity<?> getMiPedidoPago(
+            @PathVariable String slug,
+            @PathVariable Long pedidoId) {
+
+        Long clienteId = getClienteId();
+        Pedidos pedido = pedidosRepo.findById(pedidoId).orElse(null);
+        if (pedido == null || pedido.getCliente() == null || !clienteId.equals(pedido.getCliente().getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Sin acceso"));
+        }
+        List<PagosPedido> pagos = pagosPedidoRepo.findByPedidoId(pedidoId);
+        return ResponseEntity.ok(pagos.isEmpty() ? null : pagos.get(0));
+    }
+
+    /*
+     * ══════════════════════════════════════════════
+     * POST /restful/tienda/{slug}/pedidos/{pedidoId}/comprobante
+     * El cliente sube imagen de Yape/Plin como comprobante
+     * ══════════════════════════════════════════════
+     */
+    @PostMapping(value = "/pedidos/{pedidoId}/comprobante", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> subirComprobante(
+            @PathVariable String slug,
+            @PathVariable Long pedidoId,
+            @RequestPart("archivo") MultipartFile archivo) {
+
+        Long clienteId = getClienteId();
+        Pedidos pedido = pedidosRepo.findById(pedidoId).orElse(null);
+        if (pedido == null || pedido.getCliente() == null || !clienteId.equals(pedido.getCliente().getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Sin acceso"));
+        }
+
+        List<PagosPedido> pagos = pagosPedidoRepo.findByPedidoId(pedidoId);
+        if (pagos.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "No hay registro de pago para este pedido"));
+        }
+
+        try {
+            String path = fileStorageService.guardar(archivo, "comprobantes_pago");
+            PagosPedido pago = pagos.get(0);
+            pago.setUrlComprobante(path);
+            pagosPedidoRepo.save(pago);
+            return ResponseEntity.ok(Map.of("urlComprobante", path, "message", "Comprobante subido correctamente"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Error al subir el comprobante: " + e.getMessage()));
+        }
     }
 
     /*

@@ -129,6 +129,22 @@ export const storefrontService = {
     return data;
   },
 
+  getPedidoPago: async (slug, pedidoId) => {
+    const { data } = await customerApi.get(`/tienda/${slug}/pedidos/${pedidoId}/pago`);
+    return data;
+  },
+
+  subirComprobante: async (slug, pedidoId, archivo) => {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    const { data } = await customerApi.post(
+      `/tienda/${slug}/pedidos/${pedidoId}/comprobante`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return data;
+  },
+
   /* ── Consulta DNI/CE (público) ── */
   consultarDni: async (numero) => {
     const { data } = await publicApi.get('/consulta/dni', { params: { numero } });

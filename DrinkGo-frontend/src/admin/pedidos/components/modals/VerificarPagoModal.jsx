@@ -54,7 +54,13 @@ export function VerificarPagoModal({ pedido, onClose, onConfirmarPedido }) {
 
   const pagoPrincipal = pagos[0] ?? null;
   const yaAprobado = pagoPrincipal?.estadoPago === 'pagado';
-  const tieneComprobante = !!pagoPrincipal?.urlComprobante;
+  const rawUrl = pagoPrincipal?.urlComprobante;
+  const comprobanteUrl = rawUrl
+    ? (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('/'))
+      ? rawUrl
+      : `/uploads/${rawUrl}`
+    : null;
+  const tieneComprobante = !!comprobanteUrl;
   const esDigital = TIPOS_DIGITALES.includes(pagoPrincipal?.metodoPagoTipo);
 
   const handleAprobarYConfirmar = async () => {
@@ -147,10 +153,10 @@ export function VerificarPagoModal({ pedido, onClose, onConfirmarPedido }) {
                   {tieneComprobante ? (
                     <div
                       className="relative cursor-pointer rounded-lg overflow-hidden border border-gray-200 bg-gray-50"
-                      onClick={() => setImagenAmpliada(pagoPrincipal.urlComprobante)}
+                      onClick={() => setImagenAmpliada(comprobanteUrl)}
                     >
                       <img
-                        src={pagoPrincipal.urlComprobante}
+                        src={comprobanteUrl}
                         alt="Comprobante de pago"
                         className="w-full max-h-52 object-contain"
                       />

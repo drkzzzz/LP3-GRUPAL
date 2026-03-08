@@ -15,7 +15,8 @@ import java.time.LocalDateTime;
 @Table(name = "pagos_venta")
 @SQLDelete(sql = "UPDATE pagos_venta SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "ventaId", "metodoPagoId", "metodoPagoNombre", "monto", "montoRecibido", "montoCambio", "numeroReferencia", "fechaPago", "estaActivo",
+@JsonPropertyOrder({ "id", "ventaId", "metodoPagoId", "metodoPagoNombre", "monto", "montoRecibido", "montoCambio",
+        "numeroReferencia", "banco", "ultimosCuatroDigitos", "nombreTitular", "fechaPago", "estaActivo",
         "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class PagosVenta {
 
@@ -42,6 +43,15 @@ public class PagosVenta {
 
     @Column(name = "monto_cambio", precision = 12, scale = 2)
     private BigDecimal montoCambio;
+
+    @Column(name = "banco", length = 50)
+    private String banco;
+
+    @Column(name = "ultimos_cuatro_digitos", length = 4)
+    private String ultimosCuatroDigitos;
+
+    @Column(name = "nombre_titular", length = 100)
+    private String nombreTitular;
 
     @Column(name = "fecha_pago", nullable = false)
     private LocalDateTime fechaPago;
@@ -128,6 +138,30 @@ public class PagosVenta {
 
     public void setNumeroReferencia(String numeroReferencia) {
         this.numeroReferencia = numeroReferencia;
+    }
+
+    public String getBanco() {
+        return banco;
+    }
+
+    public void setBanco(String banco) {
+        this.banco = banco;
+    }
+
+    public String getUltimosCuatroDigitos() {
+        return ultimosCuatroDigitos;
+    }
+
+    public void setUltimosCuatroDigitos(String ultimosCuatroDigitos) {
+        this.ultimosCuatroDigitos = ultimosCuatroDigitos;
+    }
+
+    public String getNombreTitular() {
+        return nombreTitular;
+    }
+
+    public void setNombreTitular(String nombreTitular) {
+        this.nombreTitular = nombreTitular;
     }
 
     public BigDecimal getMontoRecibido() {

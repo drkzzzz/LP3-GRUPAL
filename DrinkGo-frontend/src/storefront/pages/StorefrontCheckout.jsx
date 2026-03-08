@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useOutletContext, Link } from 'react-router-dom';
-import { MapPin, Store, CreditCard, ArrowLeft, Loader2, ShoppingBag, Receipt, User, Search } from 'lucide-react';
+import { MapPin, Store, CreditCard, ArrowLeft, Loader2, ShoppingBag, Receipt, User, Search, CheckCircle, XCircle } from 'lucide-react';
 import { useConsultarRuc } from '@/shared/hooks/useConsultaDocumento';
 import { useCartStore } from '../stores/cartStore';
 import { useStorefrontAuthStore } from '../stores/storefrontAuthStore';
@@ -19,13 +19,18 @@ export const StorefrontCheckout = () => {
 
   const [tipoPedido, setTipoPedido] = useState('recojo_tienda');
   const [metodoPagoId, setMetodoPagoId] = useState(null);
-  const [zonaDeliveryId, setZonaDeliveryId] = useState(null);
   const [direccion, setDireccion] = useState('');
   const [departamento, setDepartamento] = useState('');
   const [provincia, setProvincia] = useState('');
   const [distrito, setDistrito] = useState('');
   const [referencia, setReferencia] = useState('');
   const [observaciones, setObservaciones] = useState('');
+
+  // Campos adicionales por tipo de pago
+  const [banco, setBanco] = useState('');
+  const [ultimosCuatro, setUltimosCuatro] = useState('');
+  const [nombreTitular, setNombreTitular] = useState('');
+  const [numeroReferencia, setNumeroReferencia] = useState('');
 
   // Comprobante
   const rucLookup = useConsultarRuc();
@@ -68,12 +73,39 @@ export const StorefrontCheckout = () => {
   const { data: zonasDelivery = [] } = useQuery({
     queryKey: ['storefront-zonas-delivery', slug, selectedSede?.id],
     queryFn: () => storefrontService.getZonasDelivery(slug, selectedSede?.id),
-    enabled: !!slug && tipoPedido === 'delivery',
+    enabled: !!slug && !!selectedSede?.id,
   });
 
-  const selectedZona = zonasDelivery.find((z) => z.id === zonaDeliveryId);
-  const costoDelivery = tipoPedido === 'delivery' && selectedZona ? selectedZona.tarifaDelivery : 0;
+  // Auto-detectar zona por distrito ingresado (matching client-side)
+  const zonaDetectada = useMemo(() => {
+    if (!distrito.trim() || zonasDelivery.length === 0) return null;
+    const distLower = distrito.trim().toLowerCase();
+    return zonasDelivery.find((zona) => {
+      if (zona.estaActivo === false) return false;
+      let distritosZona = [];
+      if (typeof zona.distritos === 'string') {
+        try { distritosZona = JSON.parse(zona.distritos); } catch { distritosZona = []; }
+      } else if (Array.isArray(zona.distritos)) {
+        distritosZona = zona.distritos;
+      }
+      return distritosZona.some((d) => d.toLowerCase().trim() === distLower);
+    }) || null;
+  }, [distrito, zonasDelivery]);
+
+  const zonaDeliveryId = zonaDetectada?.id ?? null;
+  const costoDelivery = tipoPedido === 'delivery' && zonaDetectada ? parseFloat(zonaDetectada.tarifaDelivery || 0) : 0;
   const total = subtotal + costoDelivery;
+
+  const metodoPagoSeleccionado = metodosPago.find((mp) => mp.id === metodoPagoId);
+  // Detectar tipo usando tipo, nombre o codigo como fallback (por si tipo es null en BD)
+  const tipoPagoSeleccionado = (
+    metodoPagoSeleccionado?.tipo ||
+    metodoPagoSeleccionado?.nombre ||
+    metodoPagoSeleccionado?.codigo ||
+    ''
+  ).toLowerCase();
+  const esTarjeta = tipoPagoSeleccionado.includes('tarjeta');
+  const esTransferencia = tipoPagoSeleccionado.includes('transferencia');
 
   const createPedidoMutation = useMutation({
     mutationFn: (pedido) => storefrontService.createPedido(slug, pedido),
@@ -95,9 +127,20 @@ export const StorefrontCheckout = () => {
       return;
     }
 
-    if (tipoPedido === 'delivery' && !zonaDeliveryId) {
-      toast.error('Selecciona una zona de delivery');
-      return;
+    if (tipoPedido === 'delivery' && zonasDelivery.length > 0) {
+      if (!distrito.trim()) {
+        toast.error('Ingresa tu distrito para verificar cobertura de delivery');
+        return;
+      }
+      if (!zonaDetectada) {
+        toast.error(`No hay cobertura de delivery para "${distrito}". Verifica el nombre del distrito.`);
+        return;
+      }
+      const minimo = parseFloat(zonaDetectada.montoMinimoPedido || 0);
+      if (minimo > 0 && subtotal < minimo) {
+        toast.error(`El pedido mínimo para ${zonaDetectada.nombre} es ${formatCurrency(minimo)}. Tu subtotal es ${formatCurrency(subtotal)}.`);
+        return;
+      }
     }
 
     if (tipoPedido === 'delivery' && !direccion.trim()) {
@@ -126,6 +169,11 @@ export const StorefrontCheckout = () => {
       docClienteNumero: docNumero.trim() || null,
       docClienteNombre: docNombre.trim() || null,
       docClienteDireccion: tipoComprobante === 'factura' ? (docDireccion.trim() || null) : null,
+      // Campos de pago adicionales por tipo
+      banco: banco.trim() || null,
+      ultimosCuatroDigitos: ultimosCuatro.trim() || null,
+      nombreTitular: nombreTitular.trim() || null,
+      numeroReferencia: numeroReferencia.trim() || null,
       detalles: items.map((item) => ({
         productoId: item.product.id,
         cantidad: item.quantity,
@@ -187,8 +235,7 @@ export const StorefrontCheckout = () => {
                   </div>
                 </label>
 
-                {selectedSede?.deliveryHabilitado && (
-                  <label
+                <label
                     className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-colors ${
                       tipoPedido === 'delivery'
                         ? 'border-amber-500 bg-amber-50'
@@ -209,7 +256,6 @@ export const StorefrontCheckout = () => {
                       <p className="text-sm text-gray-500">Recibe en tu dirección</p>
                     </div>
                   </label>
-                )}
               </div>
             </div>
 
@@ -218,48 +264,16 @@ export const StorefrontCheckout = () => {
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-semibold text-gray-900 mb-4">Dirección de Entrega</h2>
 
-                {zonasDelivery.length > 0 && (
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Zona de Delivery <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={zonaDeliveryId || ''}
-                      onChange={(e) => setZonaDeliveryId(Number(e.target.value) || null)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    >
-                      <option value="">Selecciona tu zona</option>
-                      {zonasDelivery.map((z) => (
-                        <option key={z.id} value={z.id}>
-                          {z.nombre} - {formatCurrency(z.tarifaDelivery)}
-                          {z.montoMinimoPedido > 0 && ` (mín. ${formatCurrency(z.montoMinimoPedido)})`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
                 <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Dirección <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={direccion}
-                      onChange={(e) => setDireccion(e.target.value)}
-                      placeholder="Av. Principal 123, Dpto. 4B"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  {/* Departamento + Provincia */}
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
                       <input
                         type="text"
                         value={departamento}
                         onChange={(e) => setDepartamento(e.target.value)}
-                        placeholder="Lima"
+                        placeholder="San Martín"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                       />
                     </div>
@@ -269,21 +283,93 @@ export const StorefrontCheckout = () => {
                         type="text"
                         value={provincia}
                         onChange={(e) => setProvincia(e.target.value)}
-                        placeholder="Lima"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Distrito</label>
-                      <input
-                        type="text"
-                        value={distrito}
-                        onChange={(e) => setDistrito(e.target.value)}
-                        placeholder="Miraflores"
+                        placeholder="San Martín"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                       />
                     </div>
                   </div>
+
+                  {/* Distrito con auto-detección de zona */}
+                  {zonasDelivery.length > 0 ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Distrito <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={distrito}
+                        onChange={(e) => setDistrito(e.target.value)}
+                        placeholder="Escribe tu distrito..."
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                      {distrito.trim() && (
+                        zonaDetectada ? (
+                          <div className={`mt-2 p-3 rounded-lg border flex items-start gap-2 ${
+                            parseFloat(zonaDetectada.montoMinimoPedido || 0) > 0 && subtotal < parseFloat(zonaDetectada.montoMinimoPedido)
+                              ? 'bg-orange-50 border-orange-300'
+                              : 'bg-green-50 border-green-200'
+                          }`}>
+                            <CheckCircle size={16} className={`flex-shrink-0 mt-0.5 ${
+                              parseFloat(zonaDetectada.montoMinimoPedido || 0) > 0 && subtotal < parseFloat(zonaDetectada.montoMinimoPedido)
+                                ? 'text-orange-500' : 'text-green-600'
+                            }`} />
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{zonaDetectada.nombre}</p>
+                              <p className="text-xs text-gray-600">
+                                Costo de delivery: {formatCurrency(zonaDetectada.tarifaDelivery)}
+                                {parseFloat(zonaDetectada.montoMinimoPedido) > 0 &&
+                                  ` · Pedido mínimo: ${formatCurrency(zonaDetectada.montoMinimoPedido)}`}
+                              </p>
+                              {parseFloat(zonaDetectada.montoMinimoPedido || 0) > 0 && subtotal < parseFloat(zonaDetectada.montoMinimoPedido) && (
+                                <p className="text-xs text-orange-700 font-medium mt-0.5">
+                                  ⚠ Tu subtotal ({formatCurrency(subtotal)}) no alcanza el mínimo requerido.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                            <XCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-red-700">
+                              No hay cobertura de delivery para <strong>{distrito}</strong>. Verifica el nombre o elige recojo en tienda.
+                            </p>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Distrito</label>
+                        <input
+                          type="text"
+                          value={distrito}
+                          onChange={(e) => setDistrito(e.target.value)}
+                          placeholder="Tarapoto"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-sm text-amber-700">El costo de delivery se coordinará con el negocio al confirmar el pedido.</p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Dirección (jirón/av) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Dirección <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={direccion}
+                      onChange={(e) => setDireccion(e.target.value)}
+                      placeholder="Jr. Shapaja 456, Dpto. 2A"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  {/* Referencia */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Referencia</label>
                     <input
@@ -319,7 +405,13 @@ export const StorefrontCheckout = () => {
                         name="metodoPago"
                         value={mp.id}
                         checked={metodoPagoId === mp.id}
-                        onChange={() => setMetodoPagoId(mp.id)}
+                        onChange={() => {
+                          setMetodoPagoId(mp.id);
+                          setBanco('');
+                          setUltimosCuatro('');
+                          setNombreTitular('');
+                          setNumeroReferencia('');
+                        }}
                         className="sr-only"
                       />
                       <CreditCard
@@ -329,6 +421,64 @@ export const StorefrontCheckout = () => {
                       <span className="font-medium text-gray-900 text-sm">{mp.nombre}</span>
                     </label>
                   ))}
+                </div>
+              )}
+
+              {/* Campos adicionales por tipo de pago */}
+              {metodoPagoId && (esTarjeta || esTransferencia) && (
+                <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                  <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                    {esTarjeta ? 'Datos de la tarjeta' : 'Datos de la transferencia'}
+                  </p>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {esTarjeta ? 'Banco / Emisor' : 'Banco de origen'}
+                    </label>
+                    <input
+                      type="text"
+                      value={banco}
+                      onChange={(e) => setBanco(e.target.value)}
+                      placeholder={esTarjeta ? 'Ej: BCP, Visa, Mastercard...' : 'Ej: BCP, Interbank, BBVA...'}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                  {esTarjeta && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Últimos 4 dígitos</label>
+                        <input
+                          type="text"
+                          value={ultimosCuatro}
+                          onChange={(e) => setUltimosCuatro(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          placeholder="1234"
+                          maxLength={4}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del titular</label>
+                        <input
+                          type="text"
+                          value={nombreTitular}
+                          onChange={(e) => setNombreTitular(e.target.value)}
+                          placeholder="Como aparece en la tarjeta"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                    </>
+                  )}
+                  {esTransferencia && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Número de operación / referencia</label>
+                      <input
+                        type="text"
+                        value={numeroReferencia}
+                        onChange={(e) => setNumeroReferencia(e.target.value)}
+                        placeholder="Nro. de operación bancaria"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -530,7 +680,7 @@ export const StorefrontCheckout = () => {
                   <div className="flex justify-between text-gray-600">
                     <span>Delivery</span>
                     <span>
-                      {selectedZona ? formatCurrency(costoDelivery) : 'Selecciona zona'}
+                      {zonaDetectada ? formatCurrency(costoDelivery) : 'Escribe tu distrito'}
                     </span>
                   </div>
                 )}

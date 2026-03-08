@@ -38,12 +38,20 @@ export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
   const [observaciones, setObservaciones] = useState('');
   const { metodosPago, isLoading: cargandoMetodos } = useMetodosPago(negocioId);
   const [metodoPago, setMetodoPago] = useState('');
+  const [metodoPagoObj, setMetodoPagoObj] = useState(null);
   const [incluirIGV, setIncluirIGV] = useState(true);
+
+  // Campos adicionales por tipo de pago
+  const [banco, setBanco] = useState('');
+  const [ultimosCuatro, setUltimosCuatro] = useState('');
+  const [nombreTitular, setNombreTitular] = useState('');
+  const [numeroReferencia, setNumeroReferencia] = useState('');
 
   // Efecto para seleccionar el primer método de pago por defecto
   useEffect(() => {
     if (metodosPago.length > 0 && !metodoPago) {
       setMetodoPago(metodosPago[0].nombre);
+      setMetodoPagoObj(metodosPago[0]);
     }
   }, [metodosPago, metodoPago]);
   
@@ -121,6 +129,10 @@ export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
         total,
         observaciones,
         metodoPago,
+        banco: banco.trim() || null,
+        ultimosCuatroDigitos: ultimosCuatro.trim() || null,
+        nombreTitular: nombreTitular.trim() || null,
+        numeroReferencia: numeroReferencia.trim() || null,
       };
       
       // Agregar datos de dirección si es delivery
@@ -148,6 +160,11 @@ export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
       setReferencia('');
       setObservaciones('');
       setMetodoPago('Efectivo');
+      setMetodoPagoObj(null);
+      setBanco('');
+      setUltimosCuatro('');
+      setNombreTitular('');
+      setNumeroReferencia('');
       
       onClose();
     } catch (error) {
@@ -165,6 +182,11 @@ export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
       setReferencia('');
       setObservaciones('');
       setMetodoPago('Efectivo');
+      setMetodoPagoObj(null);
+      setBanco('');
+      setUltimosCuatro('');
+      setNombreTitular('');
+      setNumeroReferencia('');
       onClose();
     }
   };
@@ -296,7 +318,15 @@ export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
                     </label>
                     <select
                       value={metodoPago}
-                      onChange={(e) => setMetodoPago(e.target.value)}
+                      onChange={(e) => {
+                        setMetodoPago(e.target.value);
+                        const found = metodosPago.find(m => m.nombre === e.target.value);
+                        setMetodoPagoObj(found || null);
+                        setBanco('');
+                        setUltimosCuatro('');
+                        setNombreTitular('');
+                        setNumeroReferencia('');
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       disabled={cargandoMetodos}
                     >
@@ -333,7 +363,69 @@ export function CrearPedidoManualModal({ isOpen, onClose, onPedidoCreado }) {
                     </label>
                   </div>
                 </div>
-                
+
+                {/* Campos adicionales por tipo de pago */}
+                {metodoPagoObj && (() => {
+                  const tipo = (metodoPagoObj.tipo || '').toLowerCase();
+                  if (!tipo.includes('tarjeta') && !tipo.includes('transferencia')) return null;
+                  return (
+                    <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+                      <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                        {tipo.includes('tarjeta') ? 'Datos de la tarjeta' : 'Datos de la transferencia'}
+                      </p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {tipo.includes('tarjeta') ? 'Banco / Emisor' : 'Banco de origen'}
+                        </label>
+                        <input
+                          type="text"
+                          value={banco}
+                          onChange={(e) => setBanco(e.target.value)}
+                          placeholder={tipo.includes('tarjeta') ? 'BCP, Visa, Mastercard...' : 'BCP, Interbank, BBVA...'}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      {tipo.includes('tarjeta') && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Últimos 4 dígitos</label>
+                            <input
+                              type="text"
+                              value={ultimosCuatro}
+                              onChange={(e) => setUltimosCuatro(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                              placeholder="1234"
+                              maxLength={4}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del titular</label>
+                            <input
+                              type="text"
+                              value={nombreTitular}
+                              onChange={(e) => setNombreTitular(e.target.value)}
+                              placeholder="Nombre en la tarjeta"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {tipo.includes('transferencia') && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Número de operación</label>
+                          <input
+                            type="text"
+                            value={numeroReferencia}
+                            onChange={(e) => setNumeroReferencia(e.target.value)}
+                            placeholder="Número de referencia bancaria"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Observaciones

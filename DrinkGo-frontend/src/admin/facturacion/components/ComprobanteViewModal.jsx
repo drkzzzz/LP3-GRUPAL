@@ -128,7 +128,14 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
   /* Pagos con nombre de método */
   const pagosResumen = pagos.map((p) => {
     const metodo = metodosPago.find((m) => m.id === (p.metodoPagoId || p.metodoPago?.id));
-    return { nombre: metodo?.nombre || p.metodoPagoNombre || p.metodoPago?.nombre || 'Otro', monto: p.monto };
+    const nombre = metodo?.nombre || p.metodoPagoNombre || p.metodoPago?.nombre || 'Otro';
+    // Construir detalle adicional (banco, últimos 4 dígitos, titular)
+    const partes = [];
+    if (p.banco) partes.push(p.banco);
+    if (p.ultimosCuatroDigitos) partes.push(`****${p.ultimosCuatroDigitos}`);
+    if (p.nombreTitular) partes.push(p.nombreTitular);
+    if (p.numeroReferencia && !p.ultimosCuatroDigitos) partes.push(`Op. ${p.numeroReferencia}`);
+    return { nombre, detalle: partes.join(' · '), monto: p.monto };
   });
 
   const metodoPagoTexto = pagosResumen.length === 0
@@ -141,6 +148,7 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
   const subtotal = doc.subtotal ?? ventaData?.subtotal ?? 0;
   const descuento = ventaData?.montoDescuento ?? 0;
   const igv = doc.impuestos ?? ventaData?.montoImpuesto ?? 0;
+  const costoEnvio = parseFloat(ventaData?.costoEnvio || 0);
   const total = doc.total ?? ventaData?.total ?? 0;
 
   /* ─── Imprimir ─── */
@@ -250,6 +258,12 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                     <span style={{ fontWeight: 600, color: '#333' }}>Método de Pago: </span>
                     <span style={{ color: '#555' }}>{metodoPagoTexto}</span>
                   </div>
+                  {pagosResumen.length === 1 && pagosResumen[0].detalle && (
+                    <div>
+                      <span style={{ fontWeight: 600, color: '#333' }}>Detalle de Pago: </span>
+                      <span style={{ color: '#555' }}>{pagosResumen[0].detalle}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* ─── Tabla de ítems ─── */}
@@ -303,6 +317,12 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                       <span>Subtotal:</span>
                       <span>{formatCurrency(subtotal)}</span>
                     </div>
+                    {costoEnvio > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, color: '#555' }}>
+                        <span>Delivery:</span>
+                        <span>{formatCurrency(costoEnvio)}</span>
+                      </div>
+                    )}
                     {descuento > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11, color: '#dc2626' }}>
                         <span>Descuento:</span>

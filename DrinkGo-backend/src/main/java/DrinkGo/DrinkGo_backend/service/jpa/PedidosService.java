@@ -12,10 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 import DrinkGo.DrinkGo_backend.entity.Almacenes;
 import DrinkGo.DrinkGo_backend.entity.DetallePedidos;
 import DrinkGo.DrinkGo_backend.entity.Pedidos;
+import DrinkGo.DrinkGo_backend.entity.Ventas;
 import DrinkGo.DrinkGo_backend.repository.AlmacenesRepository;
 import DrinkGo.DrinkGo_backend.repository.PedidosRepository;
 import DrinkGo.DrinkGo_backend.service.IPedidosService;
 import DrinkGo.DrinkGo_backend.service.InventarioTransaccionalService;
+import DrinkGo.DrinkGo_backend.service.VentasOnlineService;
 
 @Service
 public class PedidosService implements IPedidosService {
@@ -27,6 +29,9 @@ public class PedidosService implements IPedidosService {
 
     @Autowired
     private AlmacenesRepository almacenesRepo;
+
+    @Autowired
+    private VentasOnlineService ventasOnlineService;
 
     @Transactional(readOnly = true)
     public List<Pedidos> buscarTodos() {
@@ -206,6 +211,19 @@ public class PedidosService implements IPedidosService {
         pedido.setEstadoPedido(estadoNuevo);
         repoPedidos.save(pedido);
         System.out.println("\u2705 Estado pedido " + pedido.getNumeroPedido() + ": " + estadoAnterior + " \u2192 " + estadoNuevo);
+
+        // Crear venta en transacci\u00f3n propia (REQUIRES_NEW) para aislar fallos
+        if (estadoNuevo == Pedidos.EstadoPedido.entregado) {
+            try {
+                Ventas ventaCreada = ventasOnlineService.crearVentaDesdePedido(pedido.getId());
+                if (ventaCreada != null) {
+                    pedido.setVenta(ventaCreada);
+                    repoPedidos.save(pedido);
+                }
+            } catch (Exception e) {
+                System.err.println("\u26a0\ufe0f No se pudo crear venta desde pedido " + pedido.getNumeroPedido() + ": " + e.getMessage());
+            }
+        }
     }
 
     /**

@@ -27,6 +27,14 @@ const ESTADO_MAP = {
   parcialmente_pagada: { label: 'Parcial', variant: 'warning' },
 };
 
+const TIPO_VENTA_MAP = {
+  pos: { label: 'POS', className: 'bg-blue-100 text-blue-700' },
+  tienda_online: { label: 'Tienda Online', className: 'bg-amber-100 text-amber-700' },
+  mesa: { label: 'Mesa', className: 'bg-purple-100 text-purple-700' },
+  telefono: { label: 'Teléfono', className: 'bg-green-100 text-green-700' },
+  otro: { label: 'Otro', className: 'bg-gray-100 text-gray-600' },
+};
+
 export const HistorialVentas = () => {
   const { user, cajaAsignada, getAlcance } = useAdminAuthStore();
   const { ventas, isLoading, refetch, alcanceHistorial } = useVentas();
@@ -60,7 +68,8 @@ export const HistorialVentas = () => {
       (v) =>
         (v.numeroVenta || '').toLowerCase().includes(q) ||
         (v.estado || '').toLowerCase().includes(q) ||
-        (v.tipoComprobante || '').toLowerCase().includes(q),
+        (v.tipoComprobante || '').toLowerCase().includes(q) ||
+        (TIPO_VENTA_MAP[v.tipoVenta]?.label || v.tipoVenta || '').toLowerCase().includes(q),
     );
   }, [ventas, debouncedSearch]);
 
@@ -98,6 +107,18 @@ export const HistorialVentas = () => {
       title: '#',
       width: '60px',
       render: (_, __, i) => (page - 1) * pageSize + i + 1,
+    },
+    {
+      key: 'tipo',
+      title: 'Tipo',
+      render: (_, row) => {
+        const info = TIPO_VENTA_MAP[row.tipoVenta] || { label: row.tipoVenta || '—', className: 'bg-gray-100 text-gray-600' };
+        return (
+          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${info.className}`}>
+            {info.label}
+          </span>
+        );
+      },
     },
     {
       key: 'numero',
@@ -266,15 +287,20 @@ export const HistorialVentas = () => {
                 </Badge>
               </div>
               <div>
+                <span className="text-gray-500">Tipo de venta:</span>{' '}
+                {(() => {
+                  const info = TIPO_VENTA_MAP[ventaDetail?.tipoVenta] || { label: ventaDetail?.tipoVenta || '—', className: 'bg-gray-100 text-gray-600' };
+                  return (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${info.className}`}>
+                      {info.label}
+                    </span>
+                  );
+                })()}
+              </div>
+              <div>
                 <span className="text-gray-500">Comprobante:</span>{' '}
                 <span className="font-medium">
                   {(ventaDetail?.tipoComprobante || '—').replace(/_/g, ' ')}
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-500">Total:</span>{' '}
-                <span className="font-bold text-green-700">
-                  {formatCurrency(ventaDetail?.total)}
                 </span>
               </div>
             </div>
@@ -381,6 +407,27 @@ export const HistorialVentas = () => {
                     })()}
                   </tbody>
                 </table>
+              </div>
+              {/* Subtotales */}
+              <div className="flex justify-end mt-2 pr-1">
+                <div className="w-56 space-y-1 text-sm">
+                  {parseFloat(ventaDetail?.subtotal || 0) > 0 && (
+                    <div className="flex justify-between text-gray-500">
+                      <span>Subtotal</span>
+                      <span>{formatCurrency(ventaDetail.subtotal)}</span>
+                    </div>
+                  )}
+                  {parseFloat(ventaDetail?.costoEnvio || 0) > 0 && (
+                    <div className="flex justify-between text-gray-500">
+                      <span>Delivery</span>
+                      <span>{formatCurrency(ventaDetail.costoEnvio)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-gray-900 border-t pt-1">
+                    <span>Total</span>
+                    <span className="text-green-700">{formatCurrency(ventaDetail?.total)}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
