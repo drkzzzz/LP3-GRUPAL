@@ -172,6 +172,12 @@ export const useCartStore = create(
     return +(get().getBaseImponible() + get().getImpuesto()).toFixed(2);
   },
 
+  /** Total redondeado al 0.10 más cercano (para pagos 100% efectivo) */
+  getTotalEfectivo: () => {
+    const total = get().getTotal();
+    return +(Math.round(total * 10) / 10).toFixed(2);
+  },
+
   /** Cantidad total de unidades */
   getTotalItems: () => {
     return get().items.reduce((acc, i) => acc + i.cantidad, 0);

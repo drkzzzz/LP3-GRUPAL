@@ -167,6 +167,15 @@ public class PosService {
         BigDecimal igv = baseImponible.multiply(igvRate).setScale(2, RoundingMode.HALF_UP);
         BigDecimal total = baseImponible.add(igv);
 
+        // ── 6b. Redondear total a 0.10 si es venta 100% efectivo ──
+        // También ajustar el IGV para mantener consistencia: subtotal + IGV ajustado = total redondeado
+        if (esVenta100Efectivo(request.getPagos())) {
+            BigDecimal totalRedondeado = redondearADecimaDiez(total);
+            BigDecimal diferencia = total.subtract(totalRedondeado);
+            igv = igv.subtract(diferencia);
+            total = totalRedondeado;
+        }
+
         // ── 7. Crear entidad Ventas ──
         Ventas venta = new Ventas();
         venta.setNegocio(negocio);
@@ -953,6 +962,38 @@ public class PosService {
             movInv.setFechaMovimiento(LocalDateTime.now());
             movInventarioRepo.save(movInv);
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  HELPERS PRIVADOS: REDONDEO Y VALIDACIÓN DE PAGOS
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Verifica si la venta es 100% en efectivo.
+     * Una venta es 100% efectivo si TODOS los pagos son del tipo 'efectivo'.
+     */
+    private boolean esVenta100Efectivo(List<CrearVentaPosRequest.PagoVenta> pagos) {
+        if (pagos == null || pagos.isEmpty()) {
+            return false;
+        }
+        for (CrearVentaPosRequest.PagoVenta pago : pagos) {
+            MetodosPago mp = metodosPagoRepo.findById(pago.getMetodoPagoId()).orElse(null);
+            if (mp == null || mp.getTipo() != MetodosPago.TipoMetodoPago.efectivo) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Redondea un monto a la décima más cercana (0.10).
+     * Por ejemplo: 45.14 → 45.10, 45.16 → 45.20, 45.15 → 45.20 (banker's rounding)
+     */
+    private BigDecimal redondearADecimaDiez(BigDecimal monto) {
+        // Dividir entre 0.10, redondear a entero, multiplicar por 0.10
+        return monto.divide(BigDecimal.valueOf(0.10), 0, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(0.10))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     // ═══════════════════════════════════════════════════════════════════
