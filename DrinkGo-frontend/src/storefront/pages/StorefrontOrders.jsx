@@ -116,7 +116,10 @@ const PedidoDetalleModal = ({ pedido, slug, config, onClose }) => {
     const negocio = config?.negocio || {};
     const nombreNegocio = negocio.nombreComercial || negocio.razonSocial || 'Mi Negocio';
     const rucNegocio = negocio.ruc || '';
+    const telefonoNegocio = negocio.telefono || '';
+    const direccionNegocio = [negocio.direccion, negocio.ciudad, negocio.departamento].filter(Boolean).join(', ');
     const tipoLabel = pedido.tipoComprobante === 'factura' ? 'FACTURA ELECTRÓNICA' : 'BOLETA DE VENTA ELECTRÓNICA';
+    const esNotaVenta = !pedido.tipoComprobante || pedido.tipoComprobante === 'nota_venta';
     const numeroDoc = pedido.numeroComprobante || pedido.numeroPedido || String(pedido.id);
     const clienteNombre = pedido.docClienteNombre || pedido.clienteNombre || [pedido.cliente?.nombres, pedido.cliente?.apellidos].filter(Boolean).join(' ') || '—';
     const clienteDoc = pedido.docClienteNumero || pedido.clienteDocumento || '—';
@@ -126,60 +129,100 @@ const PedidoDetalleModal = ({ pedido, slug, config, onClose }) => {
     const total = parseFloat(pedido.total || 0);
     const fecha = pedido.fechaVenta || pedido.creadoEn || '';
     const fechaStr = fecha ? new Date(fecha).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+    const horaStr = fecha ? new Date(fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '';
     const detalles = pedido.detalles || [];
+
+    // Detalle de pago adicional desde pago consultado (banco, últimos 4 dígitos, titular)
+    const pagoDetalle = (() => {
+      if (!pago) return '';
+      const partes = [];
+      if (pago.banco) partes.push(pago.banco);
+      if (pago.ultimosCuatroDigitos) partes.push(`****${pago.ultimosCuatroDigitos}`);
+      if (pago.nombreTitular) partes.push(pago.nombreTitular);
+      if (pago.numeroReferencia && !pago.ultimosCuatroDigitos) partes.push(`Op. ${pago.numeroReferencia}`);
+      return partes.join(' · ');
+    })();
 
     const itemsHtml = detalles.map((d) => {
       const nombre = d.producto?.nombre || d.nombreProducto || `Producto ${d.productoId}`;
       const precioUnit = parseFloat(d.precioUnitario || 0).toFixed(2);
       const subtotalItem = parseFloat(d.subtotal || d.precioUnitario * d.cantidad || 0).toFixed(2);
       return `<tr>
-        <td style="padding:5px 10px;font-size:11px;border-bottom:1px solid #eee;color:#444">${d.cantidad}</td>
-        <td style="padding:5px 10px;font-size:11px;border-bottom:1px solid #eee;color:#444">${nombre}</td>
-        <td style="padding:5px 10px;font-size:11px;border-bottom:1px solid #eee;color:#444;text-align:right">S/ ${precioUnit}</td>
-        <td style="padding:5px 10px;font-size:11px;border-bottom:1px solid #eee;color:#444;text-align:right">S/ ${subtotalItem}</td>
+        <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #eee;color:#444">${d.cantidad}</td>
+        <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #eee;color:#444">${nombre}</td>
+        <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #eee;color:#444;text-align:right">S/ ${precioUnit}</td>
+        <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #eee;color:#444;text-align:right">S/ ${subtotalItem}</td>
       </tr>`;
     }).join('');
 
-    const deliveryRow = costoDelivery > 0
-      ? `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:#555"><span>Delivery:</span><span>S/ ${costoDelivery.toFixed(2)}</span></div>`
-      : '';
-
-    const html = `<!DOCTYPE html><html><head><title>${tipoLabel}</title>
-      <style>@page{size:A4;margin:15mm 20mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;font-size:12px}</style>
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${tipoLabel} ${numeroDoc}</title>
+      <style>
+        @page { size: A4; margin: 15mm 20mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; font-size: 12px; line-height: 1.5; }
+      </style>
       </head><body><div style="max-width:700px;margin:0 auto;padding:20px 0">
+
+        <!-- Header: Emisor + Tipo -->
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #d97706">
-          <div><div style="font-size:18px;font-weight:700;margin-bottom:4px">${nombreNegocio}</div>${rucNegocio ? `<div style="font-size:11px;color:#555">RUC: ${rucNegocio}</div>` : ''}</div>
+          <div style="flex:1">
+            <div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:4px">${nombreNegocio}</div>
+            <div style="font-size:11px;color:#555;line-height:1.7">
+              ${direccionNegocio ? `${direccionNegocio}<br>` : ''}
+              ${telefonoNegocio ? `Teléfono: ${telefonoNegocio}<br>` : ''}
+              ${rucNegocio ? `RUC: ${rucNegocio}` : ''}
+            </div>
+          </div>
           <div style="text-align:right;border:2px solid #d97706;padding:10px 16px;border-radius:4px;min-width:220px">
             <div style="font-size:12px;font-weight:700;color:#d97706">${tipoLabel}</div>
             <div style="font-size:13px;font-weight:600;color:#333;margin-top:2px">${numeroDoc}</div>
           </div>
         </div>
+
+        <!-- Datos cliente -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;font-size:11px;margin-bottom:12px">
-          <div><span style="font-weight:600">Cliente: </span><span style="color:#555">${clienteNombre}</span></div>
-          <div><span style="font-weight:600">Fecha: </span><span style="color:#555">${fechaStr}</span></div>
-          <div><span style="font-weight:600">Documento: </span><span style="color:#555">${clienteDoc}</span></div>
-          <div><span style="font-weight:600">Método de Pago: </span><span style="color:#555">${metodoPago}</span></div>
+          <div><span style="font-weight:600;color:#333">Cliente: </span><span style="color:#555">${clienteNombre}</span></div>
+          <div><span style="font-weight:600;color:#333">Fecha: </span><span style="color:#555">${fechaStr}${horaStr ? ` ${horaStr}` : ''}</span></div>
+          <div><span style="font-weight:600;color:#333">Documento: </span><span style="color:#555">${clienteDoc}</span></div>
+          <div><span style="font-weight:600;color:#333">Método de Pago: </span><span style="color:#555">${metodoPago}</span></div>
+          ${pagoDetalle ? `<div><span style="font-weight:600;color:#333">Detalle de Pago: </span><span style="color:#555">${pagoDetalle}</span></div>` : ''}
         </div>
+
+        <!-- Tabla de ítems -->
         <table style="width:100%;border-collapse:collapse;margin:12px 0">
-          <thead><tr>
-            <th style="background:#f9fafb;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:8px 10px;text-align:left;font-size:11px;width:50px">Cant.</th>
-            <th style="background:#f9fafb;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:8px 10px;text-align:left;font-size:11px">Descripción</th>
-            <th style="background:#f9fafb;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:8px 10px;text-align:right;font-size:11px;width:90px">P. Unit.</th>
-            <th style="background:#f9fafb;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:8px 10px;text-align:right;font-size:11px;width:90px">Total</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th style="background:#f9fafb;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:#333;width:50px">Cant.</th>
+              <th style="background:#f9fafb;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:#333">Descripción</th>
+              <th style="background:#f9fafb;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:8px 10px;text-align:right;font-size:11px;font-weight:600;color:#333;width:90px">P. Unit.</th>
+              <th style="background:#f9fafb;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:8px 10px;text-align:right;font-size:11px;font-weight:600;color:#333;width:90px">Total</th>
+            </tr>
+          </thead>
           <tbody>${itemsHtml}</tbody>
         </table>
+
+        <!-- Totales -->
         <div style="display:flex;justify-content:flex-end;margin-top:4px">
           <div style="width:240px">
-            <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:#555"><span>Subtotal:</span><span>S/ ${subtotal.toFixed(2)}</span></div>
-            ${deliveryRow}
-            <div style="display:flex;justify-content:space-between;padding:6px 0 3px;font-size:13px;font-weight:700;color:#1a1a1a;border-top:2px solid #333"><span>TOTAL:</span><span>S/ ${total.toFixed(2)}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:#555">
+              <span>Subtotal:</span><span>S/ ${subtotal.toFixed(2)}</span>
+            </div>
+            ${costoDelivery > 0 ? `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:#555"><span>Delivery:</span><span>S/ ${costoDelivery.toFixed(2)}</span></div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:6px 0 3px;font-size:13px;font-weight:700;color:#1a1a1a;border-top:2px solid #333">
+              <span>TOTAL:</span><span>S/ ${total.toFixed(2)}</span>
+            </div>
           </div>
         </div>
+
+        <!-- Footer -->
         <div style="margin-top:24px;text-align:center;border-top:1px dashed #ccc;padding-top:12px">
           <p style="font-size:11px;color:#666">¡Gracias por su preferencia!</p>
-          <p style="font-size:10px;color:#888;margin-top:4px">Documento generado para el pedido #${pedido.numeroPedido || pedido.id}</p>
+          ${!esNotaVenta
+            ? `<p style="font-weight:600;font-size:10px;color:#888;margin-top:4px">Este comprobante es válido como documento tributario</p>`
+            : `<p style="font-weight:600;font-size:10px;color:#888;margin-top:4px">Documento interno — No es comprobante tributario</p>`
+          }
         </div>
+
       </div></body></html>`;
 
     const win = window.open('', '_blank', 'width=800,height=600');
