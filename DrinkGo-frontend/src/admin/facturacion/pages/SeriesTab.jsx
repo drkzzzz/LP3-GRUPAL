@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Edit, Trash2, Hash } from 'lucide-react';
+import { Plus, Edit, Trash2, Hash, Info } from 'lucide-react';
 import { useSeries, useCrearSerie, useActualizarSerie, useEliminarSerie } from '../hooks/useFacturacion';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 
@@ -15,6 +15,31 @@ const TIPO_DOC_LABELS = {
   factura: 'Factura',
   nota_credito: 'Nota de Crédito',
   nota_debito: 'Nota de Débito',
+};
+
+/**
+ * Reglas de prefijo SUNAT por tipo de documento:
+ *   boleta       → debe empezar con B (ej: B001)
+ *   factura      → debe empezar con F (ej: F001)
+ *   nota_credito → debe empezar con BC (para boletas) o FC (para facturas)
+ *   nota_debito  → debe empezar con BD (para boletas) o FD (para facturas)
+ */
+const SERIE_PREFIX_RULES = {
+  boleta:       { prefixes: ['B'],          prefixLen: 1, hint: 'B001, B002...' },
+  factura:      { prefixes: ['F'],          prefixLen: 1, hint: 'F001, F002...' },
+  nota_credito: { prefixes: ['BC', 'FC'],   prefixLen: 2, hint: 'BC01 (boleta) o FC01 (factura)' },
+  nota_debito:  { prefixes: ['BD', 'FD'],   prefixLen: 2, hint: 'BD01 (boleta) o FD01 (factura)' },
+};
+
+const validarPrefijo = (serie, tipoDoc) => {
+  if (!serie || serie.length < 4) return 'El código debe tener al menos 4 caracteres';
+  const rule = SERIE_PREFIX_RULES[tipoDoc];
+  if (!rule) return null;
+  const prefix = serie.substring(0, rule.prefixLen).toUpperCase();
+  if (!rule.prefixes.includes(prefix)) {
+    return `Debe empezar con ${rule.prefixes.join(' o ')} (ej: ${rule.hint})`;
+  }
+  return null;
 };
 
 export const SeriesTab = () => {
@@ -34,21 +59,32 @@ export const SeriesTab = () => {
     serie: '',
     esPredeterminada: false,
   });
+  const [serieError, setSerieError] = useState(null);
 
   const resetForm = () => {
     setFormData({ tipoDocumento: 'boleta', serie: '', esPredeterminada: false });
+    setSerieError(null);
     setEditingSerie(null);
     setShowForm(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validar prefijo según tipo de documento
+    if (!editingSerie) {
+      const err = validarPrefijo(formData.serie, formData.tipoDocumento);
+      if (err) {
+        setSerieError(err);
+        return;
+      }
+    }
+    setSerieError(null);
     try {
       if (editingSerie) {
         await actualizarSerie.mutateAsync({
           id: editingSerie.id,
           data: {
-            serie: formData.serie,
+            serie: formData.serie.toUpperCase(),
             esPredeterminada: formData.esPredeterminada,
           },
         });
@@ -57,13 +93,15 @@ export const SeriesTab = () => {
           negocioId,
           sedeId,
           tipoDocumento: formData.tipoDocumento,
-          serie: formData.serie,
+          serie: formData.serie.toUpperCase(),
           esPredeterminada: formData.esPredeterminada,
         });
       }
       resetForm();
     } catch (err) {
-      console.error('Error al guardar serie:', err);
+      // Backend may return additional validation errors
+      const msg = err?.response?.data?.error || err?.message;
+      if (msg) setSerieError(msg);
     }
   };
 
@@ -91,6 +129,24 @@ export const SeriesTab = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Series de Facturación</h1>
         <p className="text-gray-600 mt-1">Administre las series de documentos electrónicos de su negocio</p>
+      </div>
+
+      {/* ─── Guía de prefijos ─── */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800 space-y-1">
+            <p className="font-semibold">Prefijos requeridos según tipo de documento:</p>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-0.5 mt-1">
+              <span><span className="font-mono font-bold">B001</span> — Boleta de venta</span>
+              <span><span className="font-mono font-bold">F001</span> — Factura</span>
+              <span><span className="font-mono font-bold">BC01</span> — Nota de Crédito sobre Boleta</span>
+              <span><span className="font-mono font-bold">FC01</span> — Nota de Crédito sobre Factura</span>
+              <span><span className="font-mono font-bold">BD01</span> — Nota de Débito sobre Boleta</span>
+              <span><span className="font-mono font-bold">FD01</span> — Nota de Débito sobre Factura</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ─── Card ─── */}
@@ -201,7 +257,14 @@ export const SeriesTab = () => {
                 </label>
                 <select
                   value={formData.tipoDocumento}
-                  onChange={(e) => setFormData({ ...formData, tipoDocumento: e.target.value })}
+                  onChange={(e) => {
+                    const newTipo = e.target.value;
+                    const rule = SERIE_PREFIX_RULES[newTipo];
+                    // Pre-fill first prefix chars only if the field is empty or starts with old prefix
+                    const autoPrefix = rule?.prefixLen === 2 && !formData.serie ? rule.prefixes[0] : '';
+                    setFormData({ ...formData, tipoDocumento: newTipo, serie: autoPrefix });
+                    setSerieError(null);
+                  }}
                   disabled={!!editingSerie}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 bg-white"
                 >
@@ -218,13 +281,26 @@ export const SeriesTab = () => {
                 <input
                   type="text"
                   value={formData.serie}
-                  onChange={(e) => setFormData({ ...formData, serie: e.target.value.toUpperCase() })}
-                  placeholder="B001, F001, BC01..."
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setFormData({ ...formData, serie: val });
+                    setSerieError(null);
+                  }}
+                  placeholder={SERIE_PREFIX_RULES[formData.tipoDocumento]?.hint || 'B001, F001...'}
                   maxLength={10}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 ${
+                    serieError ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   required
                 />
-                <p className="text-xs text-gray-400 mt-1">Formato recomendado: B001 (boleta), F001 (factura)</p>
+                {serieError && (
+                  <p className="text-xs text-red-500 mt-1">{serieError}</p>
+                )}
+                {!serieError && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Prefijo requerido: {SERIE_PREFIX_RULES[formData.tipoDocumento]?.prefixes.join(' o ')} — Ej: {SERIE_PREFIX_RULES[formData.tipoDocumento]?.hint}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <input

@@ -50,4 +50,16 @@ public interface DocumentosFacturacionRepository extends JpaRepository<Documento
             + "LEFT JOIN FETCH d.venta "
             + "WHERE d.id = :id AND d.estaActivo = true")
     Optional<DocumentosFacturacion> findByIdWithRelations(@Param("id") Long id);
+
+    /** Busca todas las notas (NC/ND) que referencian un documento original. */
+    @Query("SELECT d FROM DocumentosFacturacion d WHERE d.documentoReferencia.id = :docId AND d.estaActivo = true")
+    List<DocumentosFacturacion> findNotasByDocumentoReferenciaId(@Param("docId") Long docId);
+
+    /** Suma el total de las notas de crédito aceptadas/pendientes sobre un comprobante. */
+    @Query(value = "SELECT COALESCE(SUM(d.total), 0) FROM documentos_facturacion d "
+            + "WHERE d.documento_referencia_id = :docId "
+            + "AND d.tipo_documento = 'nota_credito' "
+            + "AND d.estado_documento <> 'anulado' "
+            + "AND d.esta_activo = 1", nativeQuery = true)
+    java.math.BigDecimal sumTotalNotasCreditoByDocumentoReferenciaId(@Param("docId") Long docId);
 }

@@ -67,7 +67,6 @@ export const MovimientoCajaModal = ({
           onChange={(e) => setMonto(e.target.value)}
           placeholder="0.00"
         />
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Descripción <span className="text-red-500">*</span>
@@ -88,7 +87,7 @@ export const MovimientoCajaModal = ({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!monto || parseFloat(monto) <= 0 || !descripcion.trim() || isLoading}
+            disabled={!monto || parseFloat(monto) <= 0 || !descripcion.trim() || isLoading || egresoExcedido}
           >
             {isLoading ? 'Registrando...' : 'Registrar'}
           </Button>

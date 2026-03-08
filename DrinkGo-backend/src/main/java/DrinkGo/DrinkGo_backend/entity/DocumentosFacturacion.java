@@ -105,6 +105,36 @@ public class DocumentosFacturacion {
     @Column(name = "motivo_anulacion", length = 300)
     private String motivoAnulacion;
 
+    // ═══ Campos para Notas de Crédito / Débito ═══
+
+    /** Documento original al que referencia esta NC/ND. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "documento_referencia_id")
+    private DocumentosFacturacion documentoReferencia;
+
+    /**
+     * Código de motivo SUNAT para Nota de Crédito:
+     *   01 = Anulación de la operación
+     *   02 = Anulación por error en el RUC
+     *   03 = Corrección por error en la descripción
+     *   04 = Descuento global
+     *   05 = Descuento por ítem
+     *   06 = Devolución total
+     *   07 = Devolución por ítem
+     *   08 = Bonificación
+     *   09 = Disminución en el valor
+     * Para Nota de Débito:
+     *   01 = Intereses por mora
+     *   02 = Aumento en el valor
+     *   03 = Penalidades / otros conceptos
+     */
+    @Column(name = "codigo_motivo_nota", length = 5)
+    private String codigoMotivoNota;
+
+    /** Descripción del motivo (texto libre). */
+    @Column(name = "descripcion_motivo_nota", length = 500)
+    private String descripcionMotivoNota;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuarios usuario;
@@ -385,6 +415,43 @@ public class DocumentosFacturacion {
 
     public void setMotivoAnulacion(String motivoAnulacion) {
         this.motivoAnulacion = motivoAnulacion;
+    }
+
+    // ═══ Getters/Setters para Notas de Crédito / Débito ═══
+
+    @JsonIgnore
+    public DocumentosFacturacion getDocumentoReferencia() {
+        return documentoReferencia;
+    }
+
+    public void setDocumentoReferencia(DocumentosFacturacion documentoReferencia) {
+        this.documentoReferencia = documentoReferencia;
+    }
+
+    @JsonProperty("documentoReferenciaId")
+    public Long getDocumentoReferenciaId() {
+        return documentoReferencia != null ? documentoReferencia.getId() : null;
+    }
+
+    @JsonProperty("documentoReferenciaNumero")
+    public String getDocumentoReferenciaNumero() {
+        return documentoReferencia != null ? documentoReferencia.getNumeroDocumento() : null;
+    }
+
+    public String getCodigoMotivoNota() {
+        return codigoMotivoNota;
+    }
+
+    public void setCodigoMotivoNota(String codigoMotivoNota) {
+        this.codigoMotivoNota = codigoMotivoNota;
+    }
+
+    public String getDescripcionMotivoNota() {
+        return descripcionMotivoNota;
+    }
+
+    public void setDescripcionMotivoNota(String descripcionMotivoNota) {
+        this.descripcionMotivoNota = descripcionMotivoNota;
     }
 
     @JsonIgnore

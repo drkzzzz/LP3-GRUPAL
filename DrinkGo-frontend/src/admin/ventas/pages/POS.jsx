@@ -427,6 +427,7 @@ export const POS = () => {
         onConfirm={handlePago}
         total={total}
         metodosPago={metodosPago}
+        series={series}
         isLoading={isCreating}
       />
 

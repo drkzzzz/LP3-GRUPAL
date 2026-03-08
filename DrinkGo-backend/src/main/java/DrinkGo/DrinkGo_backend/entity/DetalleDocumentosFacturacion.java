@@ -3,6 +3,8 @@ package DrinkGo.DrinkGo_backend.entity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.persistence.*;
@@ -83,6 +85,7 @@ public class DetalleDocumentosFacturacion {
         this.id = id;
     }
 
+    @JsonIgnore
     public DocumentosFacturacion getDocumentoFacturacion() {
         return documentoFacturacion;
     }
@@ -91,6 +94,12 @@ public class DetalleDocumentosFacturacion {
         this.documentoFacturacion = documentoFacturacion;
     }
 
+    @JsonProperty("documentoFacturacionId")
+    public Long getDocumentoFacturacionId() {
+        return documentoFacturacion != null ? documentoFacturacion.getId() : null;
+    }
+
+    @JsonIgnore
     public Productos getProducto() {
         return producto;
     }
@@ -99,12 +108,33 @@ public class DetalleDocumentosFacturacion {
         this.producto = producto;
     }
 
+    @JsonProperty("productoId")
+    public Long getProductoId() {
+        return producto != null ? producto.getId() : null;
+    }
+
+    @JsonProperty("nombreProducto")
+    public String getNombreProducto() {
+        return producto != null ? producto.getNombre() : null;
+    }
+
+    @JsonIgnore
     public Combos getCombo() {
         return combo;
     }
 
     public void setCombo(Combos combo) {
         this.combo = combo;
+    }
+
+    @JsonProperty("comboId")
+    public Long getComboId() {
+        return combo != null ? combo.getId() : null;
+    }
+
+    @JsonProperty("nombreCombo")
+    public String getNombreCombo() {
+        return combo != null ? combo.getNombre() : null;
     }
 
     public BigDecimal getCantidad() {

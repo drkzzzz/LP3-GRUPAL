@@ -17,6 +17,7 @@ export const useCartStore = create(
   descuentoGlobal: 0,      // monto fijo de descuento global
   razonDescuento: '',
   stockDesactualizado: false, // true cuando se detectó error de stock
+  _lastCapped: null,         // productoId si la última actualización recortó cantidad por stock
 
   /* ═══ ACCIONES ═══ */
 
@@ -47,13 +48,21 @@ export const useCartStore = create(
   },
 
   updateQuantity: (productoId, cantidad) => {
-    if (cantidad < 1) return;
+    const qty = Math.floor(cantidad); // solo enteros
+    if (qty < 1) return;
+    const { items } = get();
+    const item = items.find((i) => i.producto.id === productoId);
+    if (!item) return;
+    const maxStock = item.producto.stock ?? 0;
+    const capped = Math.min(qty, maxStock);
     set({
-      items: get().items.map((i) =>
+      items: items.map((i) =>
         i.producto.id === productoId
-          ? { ...i, cantidad: Math.min(cantidad, i.producto.stock ?? 0) }
+          ? { ...i, cantidad: capped }
           : i,
       ),
+      // Señalizar si se recortó la cantidad (objeto nuevo cada vez para forzar re-render)
+      _lastCapped: capped < qty ? { productoId, _ts: Date.now() } : null,
     });
   },
 
@@ -176,6 +185,18 @@ export const useCartStore = create(
         descuentoGlobal: state.descuentoGlobal,
         razonDescuento: state.razonDescuento,
       }),
+      // Validar datos rehidratados: si la estructura es inválida, descartar
+      merge: (persisted, current) => {
+        if (
+          !persisted ||
+          typeof persisted !== 'object' ||
+          !Array.isArray(persisted.items) ||
+          persisted.items.some((i) => !i?.producto?.id || typeof i.cantidad !== 'number')
+        ) {
+          return current; // datos corruptos, usar estado limpio
+        }
+        return { ...current, ...persisted };
+      },
     },
   ),
 );

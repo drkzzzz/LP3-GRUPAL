@@ -46,6 +46,21 @@ export const devolucionesService = {
     const { data } = await adminApi.delete(`/devoluciones/${id}`);
     return data;
   },
+
+  /** Aprobar devolución (solo admin) */
+  aprobar: async (id, usuarioId) => {
+    const { data } = await adminApi.patch(`/devoluciones/${id}/aprobar?usuarioId=${usuarioId}`);
+    return data;
+  },
+
+  /** Rechazar devolución (solo admin) */
+  rechazar: async (id, usuarioId, razon) => {
+    const { data } = await adminApi.patch(
+      `/devoluciones/${id}/rechazar?usuarioId=${usuarioId}`,
+      { razon },
+    );
+    return data;
+  },
 };
 
 /* ================================================================

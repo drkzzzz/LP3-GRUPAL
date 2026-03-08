@@ -56,6 +56,8 @@ public class PosService {
 
     @Autowired private FacturacionService facturacionService;
 
+    @Autowired private UsuariosRolesRepository usuariosRolesRepo;
+
     // ═══════════════════════════════════════════════════════════════════
     //  PRODUCTOS POS (enriquecidos con stock)
     // ═══════════════════════════════════════════════════════════════════
@@ -250,15 +252,26 @@ public class PosService {
             pagosVentaRepo.save(pagoEntity);
         }
 
-        // ── 10. Movimiento de caja (ingreso por venta) ──
-        MovimientosCaja movimiento = new MovimientosCaja();
-        movimiento.setSesionCaja(sesion);
-        movimiento.setTipoMovimiento(MovimientosCaja.TipoMovimiento.ingreso_venta);
-        movimiento.setMonto(total);
-        movimiento.setDescripcion("Venta POS " + numeroVenta);
-        movimiento.setVenta(venta);
-        movimiento.setFechaMovimiento(LocalDateTime.now());
-        movimientosRepo.save(movimiento);
+        // ── 10. Movimiento de caja (ingreso por venta — solo monto efectivo) ──
+        // El movimiento de caja refleja el dinero físico que entra/sale de la caja.
+        // Solo el monto pagado en efectivo (ya redondeado por el frontend) cuenta.
+        BigDecimal montoEfectivoVenta = BigDecimal.ZERO;
+        for (CrearVentaPosRequest.PagoVenta pago : request.getPagos()) {
+            MetodosPago mp = metodosPagoRepo.findById(pago.getMetodoPagoId()).orElse(null);
+            if (mp != null && mp.getTipo() == MetodosPago.TipoMetodoPago.efectivo) {
+                montoEfectivoVenta = montoEfectivoVenta.add(pago.getMonto());
+            }
+        }
+        if (montoEfectivoVenta.compareTo(BigDecimal.ZERO) > 0) {
+            MovimientosCaja movimiento = new MovimientosCaja();
+            movimiento.setSesionCaja(sesion);
+            movimiento.setTipoMovimiento(MovimientosCaja.TipoMovimiento.ingreso_venta);
+            movimiento.setMonto(montoEfectivoVenta);
+            movimiento.setDescripcion("Venta POS " + numeroVenta);
+            movimiento.setVenta(venta);
+            movimiento.setFechaMovimiento(LocalDateTime.now());
+            movimientosRepo.save(movimiento);
+        }
 
         // ── 11. Deducir stock del inventario (en TODOS los almacenes del negocio) ──
         deducirStockVenta(request.getItems(), almacenDefault, negocio, usuario, venta.getNumeroVenta());
@@ -291,11 +304,32 @@ public class PosService {
             throw new IllegalStateException("La venta ya está anulada/cancelada");
         }
 
-        // Solo se puede anular si la sesión de caja sigue abierta
-        if (venta.getSesionCaja() != null
-                && venta.getSesionCaja().getEstadoSesion() != SesionesCaja.EstadoSesion.abierta) {
-            throw new IllegalStateException(
-                    "Solo se puede anular una venta mientras la caja tenga sesión activa");
+        // ── Determinar si el usuario es admin (alcance completo en ventas) ──
+        boolean esAdmin = tieneAlcanceCompleto(request.getUsuarioId(), "m.ventas");
+
+        if (esAdmin) {
+            // Admin puede anular cualquier venta (sesión abierta o cerrada).
+            // Si la sesión de caja está cerrada, el movimiento de egreso se omite
+            // (la caja ya fue cuadrada).
+        } else {
+            // Cajero: solo puede anular si la caja de la venta sigue abierta
+            // Y la venta pertenece a SU sesión activa
+            if (venta.getSesionCaja() == null) {
+                throw new IllegalStateException(
+                        "No se puede anular esta venta sin sesión de caja asociada");
+            }
+            if (venta.getSesionCaja().getEstadoSesion() != SesionesCaja.EstadoSesion.abierta) {
+                throw new IllegalStateException(
+                        "Solo se puede anular una venta mientras tu caja tenga sesión activa. " +
+                        "Contacta a un administrador para anulaciones con caja cerrada.");
+            }
+            // Verificar que la sesión de la venta pertenece al cajero que solicita
+            Long sesionUserId = venta.getSesionCaja().getUsuario().getId();
+            if (!sesionUserId.equals(request.getUsuarioId())) {
+                throw new IllegalStateException(
+                        "Solo puedes anular ventas registradas en tu propia sesión de caja. " +
+                        "Contacta a un administrador.");
+            }
         }
 
         // No se puede anular si algún comprobante PSE ya fue enviado/aceptado por SUNAT
@@ -308,7 +342,7 @@ public class PosService {
                     || edo == DocumentosFacturacion.EstadoDocumento.observado) {
                 throw new IllegalStateException(
                         "No se puede anular: el comprobante " + doc.getNumeroDocumento()
-                                + " ya fue enviado a SUNAT");
+                                + " ya fue enviado a SUNAT. Se requiere una Nota de Crédito.");
             }
         }
 
@@ -320,16 +354,30 @@ public class PosService {
         }
         ventasRepo.save(venta);
 
-        // Movimiento de caja (egreso por anulación)
-        if (venta.getSesionCaja() != null) {
-            MovimientosCaja movimiento = new MovimientosCaja();
-            movimiento.setSesionCaja(venta.getSesionCaja());
-            movimiento.setTipoMovimiento(MovimientosCaja.TipoMovimiento.egreso_otro);
-            movimiento.setMonto(venta.getTotal());
-            movimiento.setDescripcion("Anulación de venta " + venta.getNumeroVenta());
-            movimiento.setVenta(venta);
-            movimiento.setFechaMovimiento(LocalDateTime.now());
-            movimientosRepo.save(movimiento);
+        // Movimiento de caja (egreso por anulación) — solo el monto en efectivo
+        // porque es lo que realmente sale de la caja
+        if (venta.getSesionCaja() != null
+                && venta.getSesionCaja().getEstadoSesion() == SesionesCaja.EstadoSesion.abierta) {
+            BigDecimal montoEfectivoAnulado = BigDecimal.ZERO;
+            List<PagosVenta> pagosVenta = pagosVentaRepo.findByVentaId(venta.getId());
+            for (PagosVenta pago : pagosVenta) {
+                MetodosPago mp = pago.getMetodoPago();
+                if (mp != null && mp.getTipo() == MetodosPago.TipoMetodoPago.efectivo) {
+                    montoEfectivoAnulado = montoEfectivoAnulado.add(
+                            pago.getMonto() != null ? pago.getMonto() : BigDecimal.ZERO);
+                }
+            }
+            if (montoEfectivoAnulado.compareTo(BigDecimal.ZERO) > 0) {
+                MovimientosCaja movimiento = new MovimientosCaja();
+                movimiento.setSesionCaja(venta.getSesionCaja());
+                movimiento.setTipoMovimiento(MovimientosCaja.TipoMovimiento.egreso_anulacion);
+                movimiento.setMonto(montoEfectivoAnulado);
+                movimiento.setDescripcion("Anulación de venta " + venta.getNumeroVenta()
+                        + (esAdmin ? " (por administrador)" : ""));
+                movimiento.setVenta(venta);
+                movimiento.setFechaMovimiento(LocalDateTime.now());
+                movimientosRepo.save(movimiento);
+            }
         }
 
         // Restaurar stock
@@ -347,9 +395,14 @@ public class PosService {
 
     @Transactional
     public SesionesCaja abrirCaja(AbrirCajaRequest request) {
-        // Verificar que el usuario no tenga sesión abierta
+        // Validar monto de apertura >= 0
+        if (request.getMontoApertura() != null && request.getMontoApertura().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El monto de apertura no puede ser negativo");
+        }
+
+        // Bloqueo pesimista: evitar que doble-click cree 2 sesiones
         Optional<SesionesCaja> existente = sesionesRepo
-                .findFirstByUsuarioIdAndEstadoSesion(request.getUsuarioId(), SesionesCaja.EstadoSesion.abierta);
+                .findByUsuarioIdAndEstadoForUpdate(request.getUsuarioId(), SesionesCaja.EstadoSesion.abierta.name());
         if (existente.isPresent()) {
             throw new IllegalStateException("El usuario ya tiene una sesión de caja abierta");
         }
@@ -357,9 +410,9 @@ public class PosService {
         CajasRegistradoras caja = cajasRepo.findById(request.getCajaId())
                 .orElseThrow(() -> new IllegalArgumentException("Caja no encontrada"));
 
-        // Verificar que la caja no tenga ya una sesión activa abierta por otro usuario
+        // Bloqueo pesimista: verificar que la caja no tenga sesión activa de otro usuario
         Optional<SesionesCaja> sesionActivaCaja = sesionesRepo
-                .findFirstByCajaIdAndEstadoSesion(request.getCajaId(), SesionesCaja.EstadoSesion.abierta);
+                .findByCajaIdAndEstadoForUpdate(request.getCajaId(), SesionesCaja.EstadoSesion.abierta.name());
         if (sesionActivaCaja.isPresent()
                 && !sesionActivaCaja.get().getUsuario().getId().equals(request.getUsuarioId())) {
             throw new IllegalStateException(
@@ -398,6 +451,17 @@ public class PosService {
             throw new IllegalStateException("La sesión no está abierta");
         }
 
+        // Validar que quien cierra sea el propietario de la sesión o un administrador
+        Long solicitanteId = request.getUsuarioId();
+        Long propietarioId = sesion.getUsuario().getId();
+        if (solicitanteId != null && !solicitanteId.equals(propietarioId)) {
+            boolean esAdmin = tieneAlcanceCompleto(solicitanteId, "m.ventas");
+            if (!esAdmin) {
+                throw new IllegalStateException(
+                        "Solo el cajero que abrió esta caja o un administrador puede cerrarla");
+            }
+        }
+
         // Calcular totales desde movimientos
         List<MovimientosCaja> movimientos = movimientosRepo
                 .findBySesionCajaIdOrderByFechaMovimientoDesc(sesion.getId());
@@ -425,9 +489,11 @@ public class PosService {
         // Diferencia esperado vs real
         BigDecimal esperado = sesion.getMontoApertura().add(totalIngresos).subtract(totalEgresos);
         BigDecimal diferencia = sesion.getMontoCierre().subtract(esperado);
-        sesion.setDiferenciaEsperadoReal(diferencia);
+        // Tolerancia de ±0.05 para evitar falsos positivos por redondeo de céntimos
+        boolean sinDiferencia = diferencia.abs().compareTo(new BigDecimal("0.05")) <= 0;
+        sesion.setDiferenciaEsperadoReal(sinDiferencia ? BigDecimal.ZERO : diferencia);
 
-        sesion.setEstadoSesion(diferencia.compareTo(BigDecimal.ZERO) == 0
+        sesion.setEstadoSesion(sinDiferencia
                 ? SesionesCaja.EstadoSesion.cerrada
                 : SesionesCaja.EstadoSesion.con_diferencia);
 
@@ -518,7 +584,11 @@ public class PosService {
             }
         }
 
-        // ── Movimientos manuales (sin apertura, cierre ni ingreso_venta) ──
+        // ── Movimientos manuales (sin apertura, cierre, ingreso_venta ni egreso_anulacion) ──
+        // egreso_anulacion is excluded here because it pairs with ingreso_venta and both
+        // net to zero — they are already excluded from the efectivo display (annulled sales
+        // are not in totalEfectivo). Including egreso_anulacion here would cause a mismatch.
+        // Backward compat: also skip egreso_otro that is linked to a venta (old annulment records).
         BigDecimal totalIngresosManuales = BigDecimal.ZERO;
         BigDecimal totalEgresosManuales = BigDecimal.ZERO;
         for (MovimientosCaja mov : movimientos) {
@@ -529,9 +599,17 @@ public class PosService {
                     totalIngresosManuales = totalIngresosManuales.add(monto);
                     break;
                 case egreso_gasto:
-                case egreso_otro:
                 case egreso_manual:
                     totalEgresosManuales = totalEgresosManuales.add(monto);
+                    break;
+                case egreso_otro:
+                    // Only count genuine "other" egresos — skip those linked to a venta (= old annulment records)
+                    if (mov.getVenta() == null) {
+                        totalEgresosManuales = totalEgresosManuales.add(monto);
+                    }
+                    break;
+                case egreso_anulacion:
+                    // Intentionally excluded from display totals — pairs with ingreso_venta
                     break;
                 default:
                     break;
@@ -875,5 +953,29 @@ public class PosService {
             movInv.setFechaMovimiento(LocalDateTime.now());
             movInventarioRepo.save(movInv);
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  HELPERS DE PERMISOS
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Verifica si un usuario tiene alcance 'completo' sobre un módulo.
+     * Soporta herencia: si tiene 'completo' en 'm.ventas', también aplica a 'm.ventas.pos'.
+     */
+    private boolean tieneAlcanceCompleto(Long usuarioId, String codigoModulo) {
+        if (usuarioId == null) return false;
+        List<Object[]> permisos = usuariosRolesRepo.findPermisosConAlcanceByUsuarioId(usuarioId);
+        for (Object[] row : permisos) {
+            String codigo = (String) row[0];
+            String alcance = (String) row[1];
+            if ("completo".equalsIgnoreCase(alcance)) {
+                // Coincidencia exacta o padre jerárquico
+                if (codigoModulo.equals(codigo) || codigoModulo.startsWith(codigo + ".")) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

@@ -70,6 +70,31 @@ export const useDevoluciones = (negocioId, origen = 'todos') => {
     },
   });
 
+  /* ─── Mutation: aprobar devolución (solo admin) ─── */
+  const aprobarDevolucion = useMutation({
+    mutationFn: ({ id, usuarioId }) => devolucionesService.aprobar(id, usuarioId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devoluciones'] });
+      message.success('Devolución aprobada exitosamente');
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.error || 'Error al aprobar devolución');
+    },
+  });
+
+  /* ─── Mutation: rechazar devolución (solo admin) ─── */
+  const rechazarDevolucion = useMutation({
+    mutationFn: ({ id, usuarioId, razon }) =>
+      devolucionesService.rechazar(id, usuarioId, razon),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devoluciones'] });
+      message.success('Devolución rechazada');
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.error || 'Error al rechazar devolución');
+    },
+  });
+
   return {
     devoluciones: devolucionesQuery.data || [],
     isLoading: devolucionesQuery.isLoading,
@@ -85,5 +110,11 @@ export const useDevoluciones = (negocioId, origen = 'todos') => {
 
     deleteDevolucion: deleteDevolucion.mutateAsync,
     isDeleting: deleteDevolucion.isPending,
+
+    aprobarDevolucion: aprobarDevolucion.mutateAsync,
+    isAprobando: aprobarDevolucion.isPending,
+
+    rechazarDevolucion: rechazarDevolucion.mutateAsync,
+    isRechazando: rechazarDevolucion.isPending,
   };
 };

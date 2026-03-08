@@ -60,6 +60,19 @@ export const facturacionService = {
     return data;
   },
 
+  /* ═══ NOTAS DE CRÉDITO / DÉBITO ═══ */
+
+  emitirNotaCreditoDebito: async (payload) => {
+    const { data } = await adminApi.post('/admin/facturacion/comprobantes/nota-credito-debito', payload);
+    return data;
+  },
+
+  /** Obtiene ítems, notas existentes y acumulado NC para un comprobante */
+  getItemsComprobante: async (id) => {
+    const { data } = await adminApi.get(`/admin/facturacion/comprobantes/${id}/items`);
+    return data;
+  },
+
   /* ═══ PSE (Proveedor de Servicios Electrónicos) ═══ */
 
   getConfiguracionPse: async (negocioId) => {

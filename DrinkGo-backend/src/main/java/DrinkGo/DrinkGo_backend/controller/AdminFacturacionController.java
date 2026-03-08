@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import DrinkGo.DrinkGo_backend.dto.facturacion.CrearNotaCreditoRequest;
 import DrinkGo.DrinkGo_backend.dto.facturacion.CrearSerieRequest;
 import DrinkGo.DrinkGo_backend.entity.DocumentosFacturacion;
 import DrinkGo.DrinkGo_backend.entity.MetodosPago;
@@ -17,6 +18,8 @@ import DrinkGo.DrinkGo_backend.entity.Negocios;
 import DrinkGo.DrinkGo_backend.entity.SeriesFacturacion;
 import DrinkGo.DrinkGo_backend.entity.ConfiguracionPse;
 import DrinkGo.DrinkGo_backend.entity.HistorialPse;
+import DrinkGo.DrinkGo_backend.repository.DetalleDocumentosFacturacionRepository;
+import DrinkGo.DrinkGo_backend.repository.DetalleVentasRepository;
 import DrinkGo.DrinkGo_backend.repository.DocumentosFacturacionRepository;
 import DrinkGo.DrinkGo_backend.repository.MetodosPagoRepository;
 import DrinkGo.DrinkGo_backend.repository.NegociosRepository;
@@ -38,6 +41,8 @@ public class AdminFacturacionController {
 
     @Autowired private SeriesFacturacionRepository seriesRepo;
     @Autowired private DocumentosFacturacionRepository documentosRepo;
+    @Autowired private DetalleDocumentosFacturacionRepository detalleDocRepo;
+    @Autowired private DetalleVentasRepository detalleVentasRepo;
     @Autowired private MetodosPagoRepository metodosPagoRepo;
     @Autowired private NegociosRepository negociosRepo;
     @Autowired private SedesRepository sedesRepo;
@@ -86,8 +91,16 @@ public class AdminFacturacionController {
                         .body(Map.of("error", "negocioId, sedeId, tipoDocumento y serie son requeridos"));
             }
 
+            // Validar formato de serie según SUNAT
+            String serieCode = request.getSerie().toUpperCase();
+            String tipoDoc = request.getTipoDocumento();
+            String prefixError = validarPrefijoSerie(serieCode, tipoDoc);
+            if (prefixError != null) {
+                return ResponseEntity.badRequest().body(Map.of("error", prefixError));
+            }
+
             // Check duplicate serie code
-            if (seriesRepo.existsByNegocioIdAndSerie(request.getNegocioId(), request.getSerie())) {
+            if (seriesRepo.existsByNegocioIdAndSerie(request.getNegocioId(), serieCode)) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "Ya existe una serie con ese código para este negocio"));
             }
@@ -95,8 +108,8 @@ public class AdminFacturacionController {
             SeriesFacturacion serie = new SeriesFacturacion();
             serie.setNegocio(negociosRepo.getReferenceById(request.getNegocioId()));
             serie.setSede(sedesRepo.getReferenceById(request.getSedeId()));
-            serie.setTipoDocumento(SeriesFacturacion.TipoDocumento.valueOf(request.getTipoDocumento()));
-            serie.setSerie(request.getSerie());
+            serie.setTipoDocumento(SeriesFacturacion.TipoDocumento.valueOf(tipoDoc));
+            serie.setSerie(serieCode);
             serie.setNumeroActual(1);
             serie.setEsPredeterminada(request.getEsPredeterminada() != null ? request.getEsPredeterminada() : false);
             serie.setEstaActivo(true);
@@ -212,6 +225,84 @@ public class AdminFacturacionController {
             }
             documentosRepo.save(doc);
             return ResponseEntity.ok(doc);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  NOTAS DE CRÉDITO / DÉBITO
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Obtiene los ítems de un comprobante para la UI de NC/ND.
+     * Busca en DetalleDocumentosFacturacion; si vacío, cae a DetalleVentas.
+     * También incluye las notas (NC/ND) ya emitidas sobre este comprobante
+     * y el monto acumulado de NC.
+     */
+    @GetMapping("/comprobantes/{id}/items")
+    public ResponseEntity<?> getItemsComprobante(@PathVariable Long id) {
+        try {
+            var docOpt = documentosRepo.findById(id);
+            if (docOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Comprobante no encontrado"));
+            }
+            var doc = docOpt.get();
+
+            // Obtener ítems
+            var items = detalleDocRepo.findByDocumentoFacturacionId(id);
+
+            // Si no hay detalles de facturación, obtener de la venta
+            java.util.List<?> itemsResult;
+            if (items.isEmpty() && doc.getVenta() != null) {
+                itemsResult = detalleVentasRepo.findByVentaId(doc.getVenta().getId());
+            } else {
+                itemsResult = items;
+            }
+
+            // Notas existentes sobre este comprobante
+            var notasExistentes = documentosRepo.findNotasByDocumentoReferenciaId(id);
+
+            // Monto acumulado de NC
+            java.math.BigDecimal totalNcAcumulado = documentosRepo
+                    .sumTotalNotasCreditoByDocumentoReferenciaId(id);
+
+            return ResponseEntity.ok(Map.of(
+                    "items", itemsResult,
+                    "notasExistentes", notasExistentes,
+                    "totalNcAcumulado", totalNcAcumulado,
+                    "totalComprobante", doc.getTotal()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/comprobantes/nota-credito-debito")
+    @Transactional
+    public ResponseEntity<?> emitirNotaCreditoDebito(
+            @RequestBody CrearNotaCreditoRequest request) {
+        try {
+            if (request.getDocumentoReferenciaId() == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "documentoReferenciaId es requerido"));
+            }
+            if (request.getTipoNota() == null || request.getTipoNota().isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "tipoNota es requerido (nota_credito o nota_debito)"));
+            }
+            if (request.getCodigoMotivo() == null || request.getCodigoMotivo().isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "codigoMotivo es requerido"));
+            }
+
+            DocumentosFacturacion doc = facturacionService.emitirNotaCreditoDebito(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(doc);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
@@ -577,6 +668,42 @@ public class AdminFacturacionController {
             case observado -> to == DocumentosFacturacion.EstadoDocumento.aceptado
                     || to == DocumentosFacturacion.EstadoDocumento.anulado;
             case aceptado, anulado -> false; // terminal states
+        };
+    }
+
+    /**
+     * Valida que el prefijo de serie corresponda al tipo de documento según SUNAT.
+     * <p>
+     * Reglas:
+     *   boleta       → debe empezar con "B" (ej: B001, B002)
+     *   factura      → debe empezar con "F" (ej: F001, F002)
+     *   nota_credito → debe empezar con "B" o "F" seguido de "C" o "N" (ej: BC01, FC01, BN01, FN01)
+     *                   o simplemente "B" o "F" (prefijo corto)
+     *   nota_debito  → debe empezar con "B" o "F" seguido de "D" (ej: BD01, FD01)
+     *                   o simplemente "B" o "F" (prefijo corto)
+     *
+     * @return null si es válido, o mensaje de error si no cumple
+     */
+    private String validarPrefijoSerie(String serie, String tipoDocumento) {
+        if (serie == null || serie.isBlank()) {
+            return "El código de serie no puede estar vacío";
+        }
+        // Debe tener al menos 4 caracteres (ej: B001)
+        if (serie.length() < 4) {
+            return "El código de serie debe tener al menos 4 caracteres (ej: B001, F001)";
+        }
+
+        char firstChar = serie.charAt(0);
+        return switch (tipoDocumento) {
+            case "boleta" -> firstChar == 'B' ? null
+                    : "Las series de boleta deben empezar con 'B' (ej: B001)";
+            case "factura" -> firstChar == 'F' ? null
+                    : "Las series de factura deben empezar con 'F' (ej: F001)";
+            case "nota_credito" -> (firstChar == 'B' || firstChar == 'F') ? null
+                    : "Las series de nota de crédito deben empezar con 'B' o 'F' (ej: BC01, FC01)";
+            case "nota_debito" -> (firstChar == 'B' || firstChar == 'F') ? null
+                    : "Las series de nota de débito deben empezar con 'B' o 'F' (ej: BD01, FD01)";
+            default -> "Tipo de documento no reconocido: " + tipoDocumento;
         };
     }
 }
