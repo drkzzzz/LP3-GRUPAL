@@ -193,7 +193,7 @@ export const UsuarioForm = ({
         />
       )}
 
-      {/* Contraseña */}}
+      {/* Contraseña */}
       <div className="border-t border-gray-100 pt-4">
         <p className="text-sm font-medium text-gray-700 mb-3">
           {isEdit ? 'Nueva contraseña (dejar en blanco para no cambiar)' : 'Contraseña'}

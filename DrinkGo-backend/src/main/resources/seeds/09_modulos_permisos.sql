@@ -112,6 +112,7 @@ SELECT 'ventas.historial', 'Historial de Ventas', 'Historial de ventas realizada
     id, 'History', 4, 1 FROM modulos_sistema WHERE codigo = 'ventas';
 
 INSERT IGNORE INTO modulos_sistema (codigo, nombre, descripcion, modulo_padre_id, icono, orden, esta_activo)
+
 SELECT 'ventas.gastos', 'Gastos', 'Registro de gastos operativos por sede',
     id, 'TrendingDown', 5, 1 FROM modulos_sistema WHERE codigo = 'ventas';
 
@@ -221,7 +222,29 @@ CROSS JOIN permisos_sistema p
 WHERE r.nombre = 'Administrador' AND r.es_rol_sistema = 1;
 
 -- ============================================================
+-- 5. CREAR ROL "Cajero" PREDEFINIDO (es_rol_sistema = 1)
+--    Se crea por cada negocio existente, con alcance caja_asignada
+-- ============================================================
+
+INSERT IGNORE INTO roles (negocio_id, nombre, descripcion, es_rol_sistema)
+SELECT id, 'Cajero', 'Cajero con acceso limitado al POS, caja e historial del día', 1
+FROM negocios;
+
+-- Asignar permisos de cajero (alcance caja_asignada)
+-- Módulos: ventas, ventas.pos, ventas.cajas, ventas.movimientos, ventas.historial, facturacion, facturacion.comprobantes
+INSERT IGNORE INTO roles_permisos (rol_id, permiso_id, alcance)
+SELECT r.id, p.id, 'caja_asignada'
+FROM roles r
+JOIN permisos_sistema p ON p.codigo IN (
+    'm.ventas', 'm.ventas.pos', 'm.ventas.cajas',
+    'm.ventas.movimientos', 'm.ventas.historial',
+    'm.facturacion', 'm.facturacion.comprobantes'
+)
+WHERE r.nombre = 'Cajero' AND r.es_rol_sistema = 1;
+
+-- ============================================================
 -- RESULTADO ESPERADO:
+
 --   modulos_sistema: 46 filas (11 padres + 20 hijos + 15 sub-hijos de tabs)
 --   permisos_sistema: 46 permisos (uno por módulo)
 --   roles_permisos: N × 46 (donde N = negocios con rol Administrador)

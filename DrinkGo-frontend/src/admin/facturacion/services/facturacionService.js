@@ -53,8 +53,10 @@ export const facturacionService = {
     return data;
   },
 
-  cambiarEstadoComprobante: async (id, estado) => {
-    const { data } = await adminApi.patch(`/admin/facturacion/comprobantes/${id}/estado`, { estado });
+  cambiarEstadoComprobante: async (id, estado, motivoAnulacion) => {
+    const payload = { estado };
+    if (motivoAnulacion) payload.motivoAnulacion = motivoAnulacion;
+    const { data } = await adminApi.patch(`/admin/facturacion/comprobantes/${id}/estado`, payload);
     return data;
   },
 

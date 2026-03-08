@@ -100,13 +100,14 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
   const tipoLabel = TIPO_LABEL[doc.tipoDocumento] || 'COMPROBANTE DE VENTA';
   const numeroDocumento = doc.numeroDocumento || '-';
 
-  /* Emisor (negocio) */
+  /* Emisor (negocio + sede de la venta) */
+  const sede = ventaData?.sede || null;
   const nombreNegocio = negocio?.nombreComercial || negocio?.razonSocial || 'Mi Negocio';
   const rucNegocio = negocio?.ruc || '';
-  const telefonoNegocio = negocio?.telefono || '';
-  const direccionNegocio = [negocio?.direccion, negocio?.ciudad, negocio?.departamento]
-    .filter(Boolean)
-    .join(', ');
+  const telefonoNegocio = sede?.telefono || negocio?.telefono || '';
+  const direccionNegocio = sede?.direccion
+    ? [sede.direccion, sede.ciudad, sede.departamento].filter(Boolean).join(', ')
+    : [negocio?.direccion, negocio?.ciudad, negocio?.departamento].filter(Boolean).join(', ');
 
   /* Receptor (cliente) — prefer flat fields from entity, fallback to venta */
   const clienteNombre =

@@ -4,7 +4,7 @@
  * Página principal del Punto de Venta.
  * Si no hay turno abierto redirige a Cajas para aperturar.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Banknote, Power, ArrowDownUp, ShoppingBag, AlertCircle, LogIn, Settings, FileText } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
@@ -56,6 +56,37 @@ export const POS = () => {
 
   /* ─── Estado del comprobante ─── */
   const [receiptData, setReceiptData] = useState(null);
+
+  /* ─── Valores derivados (antes de early returns para no romper hooks) ─── */
+  const faltaMetodosPago = !loadingMetodos && metodosPago.length === 0;
+  const faltaSeries = !loadingSeries && series.length === 0;
+  const faltaConfiguracion = faltaMetodosPago || faltaSeries;
+  const total = getTotal();
+
+  /* ─── Atajos de teclado ─── */
+  const handleKeyDown = useCallback((e) => {
+    // ESC → cerrar modales
+    if (e.key === 'Escape') {
+      if (receiptData) { setReceiptData(null); return; }
+      if (showPagoModal) { setShowPagoModal(false); return; }
+      if (showMovimientoModal) { setShowMovimientoModal(false); return; }
+    }
+    // F1 → abrir modal de pago (si hay ítems)
+    if (e.key === 'F1' && items.length > 0 && !faltaConfiguracion && !isCreating) {
+      e.preventDefault();
+      setShowPagoModal(true);
+    }
+    // F2 → enfocar buscador de productos
+    if (e.key === 'F2') {
+      e.preventDefault();
+      document.querySelector('[data-pos-search]')?.focus();
+    }
+  }, [receiptData, showPagoModal, showMovimientoModal, items.length, faltaConfiguracion, isCreating]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   /* Si es cajero con alcance caja_asignada pero sin caja asignada -> bloquear */
   if (esSoloCaja && !cajaAsignada) {
@@ -163,8 +194,7 @@ export const POS = () => {
 
       setShowPagoModal(false);
       clearCart();
-    } catch {
-      // Error manejado por onError de la mutation (refreshStock + toast).
+    } catch (err) {
       // Cerrar modal de pago para que el cajero vea el carrito actualizado.
       setShowPagoModal(false);
     }
@@ -218,13 +248,6 @@ export const POS = () => {
       </div>
     );
   }
-
-  /* ─── Validación de configuración requerida ─── */
-  const faltaMetodosPago = !loadingMetodos && metodosPago.length === 0;
-  const faltaSeries = !loadingSeries && series.length === 0;
-  const faltaConfiguracion = faltaMetodosPago || faltaSeries;
-
-  const total = getTotal();
 
   return (
     <div className="space-y-4">
@@ -349,11 +372,12 @@ export const POS = () => {
               <Button
                 className="w-full py-3 text-base"
                 onClick={() => setShowPagoModal(true)}
-                disabled={items.length === 0 || faltaConfiguracion}
+                disabled={items.length === 0 || faltaConfiguracion || isCreating}
                 title={faltaConfiguracion ? 'Debe configurar métodos de pago y series de comprobantes antes de vender' : undefined}
               >
                 <Banknote size={20} className="mr-2" />
                 Cobrar {formatCurrency(total)}
+                <kbd className="ml-2 text-xs opacity-70 bg-white/20 px-1.5 py-0.5 rounded">F1</kbd>
               </Button>
               {faltaConfiguracion && items.length > 0 && (
                 <p className="text-xs text-amber-600 mt-2 text-center flex items-center justify-center gap-1">

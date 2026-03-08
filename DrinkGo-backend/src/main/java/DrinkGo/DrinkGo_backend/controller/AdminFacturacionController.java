@@ -206,6 +206,10 @@ public class AdminFacturacionController {
             }
 
             doc.setEstadoDocumento(estadoNuevo);
+            if (estadoNuevo == DocumentosFacturacion.EstadoDocumento.anulado) {
+                String motivo = body.get("motivoAnulacion");
+                doc.setMotivoAnulacion(motivo != null ? motivo.trim() : null);
+            }
             documentosRepo.save(doc);
             return ResponseEntity.ok(doc);
         } catch (Exception e) {

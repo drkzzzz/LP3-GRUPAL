@@ -135,6 +135,14 @@ public class FacturacionService {
     // ═══════════════════════════════════════════════════════════════════
 
     /**
+     * Obtiene los comprobantes asociados a una venta (lectura).
+     */
+    @Transactional(readOnly = true)
+    public List<DocumentosFacturacion> getDocumentosByVentaId(Long ventaId) {
+        return documentosRepo.findByVentaId(ventaId);
+    }
+
+    /**
      * Anula todos los comprobantes asociados a una venta.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)

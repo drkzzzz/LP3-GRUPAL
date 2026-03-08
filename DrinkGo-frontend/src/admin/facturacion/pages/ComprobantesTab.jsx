@@ -13,6 +13,8 @@ import { useComprobantes, useCambiarEstadoComprobante } from '../hooks/useFactur
 import { ComprobanteViewModal } from '../components/ComprobanteViewModal';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { SinCajaAsignada } from '@/admin/ventas/components/SinCajaAsignada';
+import { Modal } from '@/admin/components/ui/Modal';
+import { Button } from '@/admin/components/ui/Button';
 
 /* ─── Mapeo de estados internos a etiquetas locales ─── */
 const getEstadoLocal = (estadoDocumento) => {
@@ -78,6 +80,10 @@ export const ComprobantesTab = () => {
   /* ─── Modal detalle ─── */
   const [selectedDoc, setSelectedDoc] = useState(null);
 
+  /* ─── Modal anulación ─── */
+  const [anularTarget, setAnularTarget] = useState(null);
+  const [razonAnulacion, setRazonAnulacion] = useState('');
+
   /* Si es cajero con alcance caja_asignada pero sin caja asignada -> bloquear */
   if (esSoloCaja && !cajaAsignada) {
     return <SinCajaAsignada titulo="Comprobantes Electrónicos" />;
@@ -129,11 +135,19 @@ export const ComprobantesTab = () => {
   const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
   /* ─── Acciones ─── */
-  const handleAnular = async (id) => {
+  const handleConfirmAnular = async () => {
+    if (!anularTarget) return;
     try {
-      await cambiarEstado.mutateAsync({ id, estado: 'anulado' });
+      await cambiarEstado.mutateAsync({
+        id: anularTarget.id,
+        estado: 'anulado',
+        motivoAnulacion: razonAnulacion.trim() || 'Anulación manual',
+      });
     } catch {
       // Error manejado por mutation
+    } finally {
+      setAnularTarget(null);
+      setRazonAnulacion('');
     }
   };
 
@@ -268,8 +282,8 @@ export const ComprobantesTab = () => {
                           <button title="Ver detalles" onClick={() => setSelectedDoc(doc)} className="text-blue-500 hover:text-blue-700">
                             <Eye size={16} />
                           </button>
-                          {!esAnulado && (
-                            <button title="Anular" onClick={() => handleAnular(doc.id)} className="text-red-500 hover:text-red-700">
+                          {!esAnulado && !(doc.modoEmision === 'PSE' && ['enviado', 'aceptado', 'observado'].includes(doc.estadoDocumento)) && (
+                            <button title="Anular" onClick={() => setAnularTarget(doc)} className="text-red-500 hover:text-red-700">
                               <XCircle size={16} />
                             </button>
                           )}
@@ -323,6 +337,42 @@ export const ComprobantesTab = () => {
           onClose={() => setSelectedDoc(null)}
         />
       )}
+
+      {/* ─── Modal anulación con razón ─── */}
+      <Modal
+        isOpen={!!anularTarget}
+        onClose={() => { setAnularTarget(null); setRazonAnulacion(''); }}
+        title="Anular Comprobante"
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => { setAnularTarget(null); setRazonAnulacion(''); }}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleConfirmAnular} disabled={cambiarEstado.isPending}>
+              {cambiarEstado.isPending ? 'Anulando...' : 'Confirmar Anulación'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            ¿Está seguro de anular el comprobante <strong>{anularTarget?.numeroDocumento}</strong>?
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Motivo de anulación
+            </label>
+            <textarea
+              value={razonAnulacion}
+              onChange={(e) => setRazonAnulacion(e.target.value)}
+              placeholder="Ingrese el motivo de la anulación..."
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

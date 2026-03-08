@@ -62,7 +62,7 @@ export const useComprobantes = (negocioId) => {
 export const useCambiarEstadoComprobante = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, estado }) => facturacionService.cambiarEstadoComprobante(id, estado),
+    mutationFn: ({ id, estado, motivoAnulacion }) => facturacionService.cambiarEstadoComprobante(id, estado, motivoAnulacion),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
     },

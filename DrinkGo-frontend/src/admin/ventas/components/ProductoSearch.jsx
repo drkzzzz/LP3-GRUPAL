@@ -78,10 +78,11 @@ export const ProductoSearch = () => {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar producto por nombre, SKU o categoría..."
+          placeholder="Buscar producto por nombre, SKU o categoría... (F2)"
           className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm
                      focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           autoComplete="off"
+          data-pos-search
         />
         {isSearching && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
