@@ -353,8 +353,11 @@ export const PagoModal = ({
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
           <p className="text-sm text-green-700">Total a pagar</p>
           <p className="text-3xl font-bold text-green-800">
-            {formatCurrency(total)}
+            {formatCurrency(esPagoUnicoEfectivo && cobrarEfectivo > 0 ? cobrarEfectivo : total)}
           </p>
+          {esPagoUnicoEfectivo && cobrarEfectivo > 0 && cobrarEfectivo !== total && (
+            <p className="text-xs text-green-600 mt-0.5">redondeado al S/ 0.10 más cercano</p>
+          )}
         </div>
 
         {/* ── Comprobante + Documento ── */}
