@@ -4,19 +4,42 @@
  * RF-VTA-012 / 013: Panel lateral de gestión de una cuenta abierta.
  * - Buscar y agregar productos
  * - Remover productos (soft delete)
- * - Acciones: Cerrar cuenta, Transferir
+ * - Cobrar: redirige al POS con los ítems cargados
+ * - Cobrar por partes: selección de ítems por persona
+ * - Cerrar sin cobrar (directamente)
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Trash2, X, CreditCard, ArrowRightLeft, Clock, Users } from 'lucide-react';
+import { Search, Trash2, X, CreditCard, ArrowRightLeft, Clock, Users, ChevronDown, CheckSquare, Square } from 'lucide-react';
 import { useCuentaDetalle, useCuentasMesaMutations } from '../hooks/useCuentasMesa';
 import { buscarProductos } from '../services/productosAdapter';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { Button } from '@/admin/components/ui/Button';
 import { formatCurrency } from '@/shared/utils/formatters';
 
-export const CuentaDetailPanel = ({ cuenta, sedeId, onClose, onCerrar, onTransferir }) => {
+export const CuentaDetailPanel = ({ cuenta, sedeId, onClose, onCobrar, onCerrarSinCobrar, onTransferir }) => {
   const { detalles, isLoading } = useCuentaDetalle(cuenta?.id);
   const { agregarProducto, removerProducto } = useCuentasMesaMutations(sedeId);
+
+  /* ── Modo split por personas ── */
+  const [splitMode, setSplitMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === detalles.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(detalles.map((d) => d.id)));
+  };
+
+  const selectedDetalles = detalles.filter((d) => selectedIds.has(d.id));
+  const selectedTotal = selectedDetalles.reduce((s, d) => s + Number(d.subtotal ?? d.total ?? 0), 0);
+  const liveTotal = detalles.reduce((s, d) => s + Number(d.subtotal ?? d.total ?? 0), 0);
 
   /* ── Búsqueda de productos ── */
   const [query, setQuery] = useState('');
@@ -155,8 +178,13 @@ export const CuentaDetailPanel = ({ cuenta, sedeId, onClose, onCerrar, onTransfe
           <ul className="divide-y divide-gray-100">
             {detalles.map((d) => (
               <li key={d.id} className="flex items-center gap-2 py-2">
+                {splitMode && (
+                  <button onClick={() => toggleSelect(d.id)} className="text-green-600">
+                    {selectedIds.has(d.id) ? <CheckSquare size={16} /> : <Square size={16} className="text-gray-400" />}
+                  </button>
+                )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{d.nombreProductoSnapshot}</p>
+                  <p className="text-sm font-medium text-gray-800 truncate">{d.nombreProducto}</p>
                   <p className="text-xs text-gray-500">
                     {d.cantidad} × {formatCurrency(d.precioUnitario)}
                   </p>
@@ -178,23 +206,83 @@ export const CuentaDetailPanel = ({ cuenta, sedeId, onClose, onCerrar, onTransfe
         )}
       </div>
 
-      {/* ── Total ── */}
-      <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-sm text-gray-600">Total</span>
-          <span className="text-xl font-bold text-gray-900">{formatCurrency(cuenta.total ?? 0)}</span>
+      {/* ── Total + acciones ── */}
+      <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 space-y-2">
+        {/* Totales */}
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600">
+            {splitMode && selectedIds.size > 0 ? `Selección (${selectedIds.size})` : 'Total'}
+          </span>
+          <span className="text-xl font-bold text-gray-900">
+            {formatCurrency(splitMode && selectedIds.size > 0 ? selectedTotal : liveTotal)}
+          </span>
         </div>
 
-        {/* ── Acciones ── */}
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onTransferir} className="flex-1 flex items-center gap-1 justify-center">
-            <ArrowRightLeft size={14} />
-            Transferir
-          </Button>
-          <Button variant="primary" size="sm" onClick={onCerrar} className="flex-1 flex items-center gap-1 justify-center">
-            <CreditCard size={14} />
-            Cerrar cuenta
-          </Button>
+        {/* Modo split: barra de selección */}
+        {splitMode && detalles.length > 0 && (
+          <button
+            onClick={toggleAll}
+            className="text-xs text-green-700 underline w-full text-left"
+          >
+            {selectedIds.size === detalles.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+          </button>
+        )}
+
+        {/* Botones principales */}
+        {!splitMode ? (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={onTransferir} className="flex-1 flex items-center gap-1 justify-center">
+              <ArrowRightLeft size={14} />
+              Transferir
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!detalles.length}
+              onClick={() => onCobrar?.(detalles, { closeOnSuccess: true })}
+              className="flex-1 flex items-center gap-1 justify-center"
+            >
+              <CreditCard size={14} />
+              Cobrar
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setSplitMode(false); setSelectedIds(new Set()); }} className="flex-1">
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!selectedIds.size}
+              onClick={() => {
+                const isLast = selectedIds.size === detalles.length;
+                onCobrar?.(selectedDetalles, { closeOnSuccess: isLast });
+              }}
+              className="flex-1 flex items-center gap-1 justify-center"
+            >
+              <CreditCard size={14} />
+              Cobrar selección
+            </Button>
+          </div>
+        )}
+
+        {/* Opciones secundarias */}
+        <div className="flex gap-3 justify-center pt-0.5">
+          {!splitMode && detalles.length > 1 && (
+            <button
+              onClick={() => setSplitMode(true)}
+              className="text-xs text-gray-500 hover:text-green-700 flex items-center gap-1"
+            >
+              <Users size={12} /> Cobrar por partes
+            </button>
+          )}
+          <button
+            onClick={onCerrarSinCobrar}
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
+            Cerrar sin cobrar
+          </button>
         </div>
       </div>
     </div>

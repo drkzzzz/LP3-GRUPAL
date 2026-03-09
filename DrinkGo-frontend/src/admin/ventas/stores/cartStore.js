@@ -82,6 +82,41 @@ export const useCartStore = create(
     set({ items: [], descuentoGlobal: 0, razonDescuento: '', stockDesactualizado: false });
   },
 
+  /* ═══ CONTEXTO DE MESA ═══ */
+  mesaContext: null, // { cuentaId, numeroCuenta, mesaNombre, detalleIds, closeOnSuccess }
+
+  setMesaContext: (ctx) => set({ mesaContext: ctx }),
+  clearMesaContext: () => set({ mesaContext: null }),
+
+  /**
+   * Carga los ítems de una cuenta de mesa en el carrito y
+   * guarda el contexto de la mesa (para cerrarla/limpiar detalles después del pago).
+   * @param {Array} detalles  - array de DetalleCuentaMesa
+   * @param {Object} ctx      - { cuentaId, numeroCuenta, mesaNombre, detalleIds, closeOnSuccess }
+   */
+  loadFromMesa: (detalles, ctx) => {
+    const items = detalles.map((d) => ({
+      producto: {
+        id: d.productoId ?? `mesa-item-${d.id}`,
+        nombre: d.nombreProducto,
+        precioVenta: Number(d.precioUnitario ?? 0),
+        stock: 99999, // sin límite de stock en cobro de mesa
+        _tipo: 'producto',
+        _fromMesa: true,
+        _detalleId: d.id,
+      },
+      cantidad: Number(d.cantidad ?? 1),
+      descuento: 0,
+    }));
+    set({
+      items,
+      descuentoGlobal: 0,
+      razonDescuento: '',
+      stockDesactualizado: false,
+      mesaContext: ctx ?? null,
+    });
+  },
+
   /**
    * Re-obtiene el stock real del backend y actualiza cada ítem del carrito.
    * Si la cantidad seleccionada supera el stock nuevo, se marca stockDesactualizado.

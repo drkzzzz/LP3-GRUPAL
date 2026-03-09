@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useSedesConfig } from '@/admin/configuracion/hooks/useSedesConfig';
 
 /* ─── Sub-items del menú Configuración ─── */
 const CONFIGURACION_SUBITEMS = [
@@ -81,7 +82,7 @@ const VENTAS_SUBITEMS = [
   { to: '/admin/ventas/movimientos', label: 'Movimientos de Caja', icon: Receipt, permiso: 'm.ventas.movimientos' },
   { to: '/admin/ventas/historial', label: 'Historial', icon: History, permiso: 'm.ventas.historial' },
   { to: '/admin/ventas/gastos', label: 'Gastos', icon: TrendingDown, permiso: 'm.ventas.gastos' },
-  { to: '/admin/ventas/mesas', label: 'Gestión de Mesas', icon: UtensilsCrossed, permiso: 'm.ventas.mesas' },
+  { to: '/admin/ventas/mesas', label: 'Gestión de Mesas', icon: UtensilsCrossed, permiso: 'm.ventas.mesas', requiresMesas: true },
 ];
 
 /* ─── Sub-items del menú Facturación ─── */
@@ -174,6 +175,8 @@ export const AdminLayout = () => {
   const location = useLocation();
   const { user, negocio, sede, logout, hasPermiso, permisos, esProgramador } = useAdminAuthStore();
   const { logout: superadminLogout } = useAuthStore();
+  const { sedes } = useSedesConfig(negocio?.id);
+  const tieneMesasActivo = sedes.some((s) => s.tieneMesas);
 
 
   /**
@@ -182,7 +185,11 @@ export const AdminLayout = () => {
    */
   const navItems = NAV_ITEMS.map((item) => {
       if (item.children) {
-        const childrenFiltrados = item.children.filter((s) => hasPermiso(s.permiso));
+        const childrenFiltrados = item.children.filter((s) => {
+          if (!hasPermiso(s.permiso)) return false;
+          if (s.requiresMesas && !tieneMesasActivo) return false;
+          return true;
+        });
         // Mostrar el padre solo si al menos un hijo es accesible O tiene permiso propio
         if (childrenFiltrados.length === 0 && !hasPermiso(item.permiso)) return null;
         return { ...item, children: childrenFiltrados };

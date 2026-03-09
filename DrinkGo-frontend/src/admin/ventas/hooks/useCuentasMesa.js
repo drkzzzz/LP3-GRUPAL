@@ -50,6 +50,7 @@ export const useCuentasMesaMutations = (sedeId) => {
 
   const invalidar = () => {
     qc.invalidateQueries({ queryKey: ['cuentas-mesa-abiertas', sedeId] });
+    qc.invalidateQueries({ queryKey: ['mesas-config'] });
   };
 
   const invalidarDetalle = (cuentaId) => {

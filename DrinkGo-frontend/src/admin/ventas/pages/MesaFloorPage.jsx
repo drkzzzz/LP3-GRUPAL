@@ -9,7 +9,9 @@
  */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { RefreshCw, Grid3x3, Info } from 'lucide-react';
+import { useCartStore } from '../stores/cartStore';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { useSedesConfig } from '@/admin/configuracion/hooks/useSedesConfig';
 import { useMesasConfig } from '@/admin/configuracion/hooks/useMesasConfig';
@@ -50,6 +52,8 @@ const ESTADO_STYLES = {
 };
 
 export const MesaFloorPage = () => {
+  const navigate = useNavigate();
+  const loadFromMesa = useCartStore((s) => s.loadFromMesa);
   const { negocio, sede: sedeAuth, user } = useAdminAuthStore();
   const negocioId = negocio?.id;
 
@@ -144,6 +148,24 @@ export const MesaFloorPage = () => {
         },
       },
     );
+  };
+
+  /**
+   * Carga los ítems de la cuenta en el carrito del POS y navega al POS.
+   * @param {Array}   detalles        - ítems de la cuenta
+   * @param {boolean} closeOnSuccess  - si el POS debe cerrar la cuenta tras cobrar
+   */
+  const handleCobrar = (detalles, { closeOnSuccess = true } = {}) => {
+    if (!detalles?.length || !cuentaDetalle) return;
+    loadFromMesa(detalles, {
+      cuentaId: cuentaDetalle.id,
+      numeroCuenta: cuentaDetalle.numeroCuenta,
+      mesaNombre: cuentaDetalle.mesa?.nombre,
+      sedeId: sedeActual,
+      detalleIds: detalles.map((d) => d.id),
+      closeOnSuccess,
+    });
+    navigate('/admin/ventas/pos');
   };
 
   const handleTransferirMesa = ({ cuentaId, nuevaMesaId }) => {
@@ -273,10 +295,12 @@ export const MesaFloorPage = () => {
       {/* ══ Panel de detalle de cuenta ══ */}
       {cuentaDetalle && (
         <CuentaDetailPanel
+          key={cuentaDetalle.id}
           cuenta={cuentaDetalle}
           sedeId={sedeActual}
           onClose={() => setCuentaDetalle(null)}
-          onCerrar={() => setShowCerrarModal(true)}
+          onCobrar={handleCobrar}
+          onCerrarSinCobrar={() => setShowCerrarModal(true)}
           onTransferir={() => setShowTransferirModal(true)}
         />
       )}
