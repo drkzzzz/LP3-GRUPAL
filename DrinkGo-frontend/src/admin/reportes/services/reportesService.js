@@ -57,6 +57,12 @@ export const reportesService = {
     return toArray(data);
   },
 
+  /* ═══ DETALLE VENTAS POR NEGOCIO (para reporte productos) ═══ */
+  getDetalleVentasByNegocio: async (negocioId) => {
+    const { data } = await adminApi.get(`/pos/ventas/negocio/${negocioId}/detalles`);
+    return toArray(data);
+  },
+
   /* ═══ PRODUCTOS (para cruzar con ventas) ═══ */
   getProductos: async () => {
     const { data } = await adminApi.get('/productos');

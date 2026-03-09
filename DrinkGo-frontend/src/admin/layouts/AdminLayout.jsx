@@ -92,15 +92,7 @@ const FACTURACION_SUBITEMS = [
   { to: '/admin/facturacion/pse', label: 'PSE Electrónico', icon: Zap, permiso: 'm.facturacion.pse', requiresPse: true },
 ];
 
-/* ─── Sub-items del menú Reportes ─── */
-const REPORTES_SUBITEMS = [
-  { to: '/admin/reportes/ventas', label: 'Ventas', icon: CreditCard, permiso: 'm.reportes' },
-  { to: '/admin/reportes/productos', label: 'Productos', icon: Package, permiso: 'm.reportes' },
-  { to: '/admin/reportes/inventario', label: 'Inventario', icon: Warehouse, permiso: 'm.reportes' },
-  { to: '/admin/reportes/compras-gastos', label: 'Compras y Gastos', icon: Truck, permiso: 'm.reportes' },
-  { to: '/admin/reportes/comprobantes', label: 'Comprobantes', icon: FileText, permiso: 'm.reportes' },
-  { to: '/admin/reportes/movimientos', label: 'Movimientos', icon: History, permiso: 'm.reportes' },
-];
+
 
 const NAV_ITEMS = [
   {
@@ -170,11 +162,10 @@ const NAV_ITEMS = [
     children: FACTURACION_SUBITEMS,
   },
   {
-    key: 'reportes',
+    to: '/admin/reportes',
     icon: BarChart3,
     label: 'Reportes',
     permiso: 'm.reportes',
-    children: REPORTES_SUBITEMS,
   },
 ];
 

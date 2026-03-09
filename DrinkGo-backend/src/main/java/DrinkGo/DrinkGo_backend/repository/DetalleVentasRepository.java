@@ -10,4 +10,7 @@ public interface DetalleVentasRepository extends JpaRepository<DetalleVentas, Lo
 
     @Query("SELECT d FROM DetalleVentas d WHERE d.venta.id = :ventaId")
     List<DetalleVentas> findByVentaId(@Param("ventaId") Long ventaId);
+
+    @Query("SELECT d FROM DetalleVentas d JOIN FETCH d.venta v WHERE v.negocio.id = :negocioId ORDER BY v.creadoEn DESC")
+    List<DetalleVentas> findByVentaNegocioId(@Param("negocioId") Long negocioId);
 }

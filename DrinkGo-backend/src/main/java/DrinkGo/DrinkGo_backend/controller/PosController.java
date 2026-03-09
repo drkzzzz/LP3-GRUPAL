@@ -1,4 +1,4 @@
-                                                    package DrinkGo.DrinkGo_backend.controller;
+package DrinkGo.DrinkGo_backend.controller;
 
 import java.util.List;
 import java.util.Map;
@@ -60,21 +60,35 @@ import DrinkGo.DrinkGo_backend.service.PosService;
 @RequestMapping("/restful/pos")
 public class PosController {
 
-    @Autowired private PosService posService;
-    @Autowired private FacturacionService facturacionService;
+    @Autowired
+    private PosService posService;
+    @Autowired
+    private FacturacionService facturacionService;
 
-    @Autowired private VentasRepository ventasRepo;
-    @Autowired private DetalleVentasRepository detalleVentasRepo;
-    @Autowired private PagosVentaRepository pagosVentaRepo;
-    @Autowired private CajasRegistradorasRepository cajasRepo;
-    @Autowired private SesionesCajaRepository sesionesRepo;
-    @Autowired private MovimientosCajaRepository movimientosRepo;
-    @Autowired private MetodosPagoRepository metodosPagoRepo;
-    @Autowired private DocumentosFacturacionRepository documentosRepo;
-    @Autowired private NegociosRepository negociosRepo;
-    @Autowired private SedesRepository sedesRepo;
-    @Autowired private CategoriasGastoRepository categoriasGastoRepo;
-    @Autowired private UsuariosRepository usuariosRepo;
+    @Autowired
+    private VentasRepository ventasRepo;
+    @Autowired
+    private DetalleVentasRepository detalleVentasRepo;
+    @Autowired
+    private PagosVentaRepository pagosVentaRepo;
+    @Autowired
+    private CajasRegistradorasRepository cajasRepo;
+    @Autowired
+    private SesionesCajaRepository sesionesRepo;
+    @Autowired
+    private MovimientosCajaRepository movimientosRepo;
+    @Autowired
+    private MetodosPagoRepository metodosPagoRepo;
+    @Autowired
+    private DocumentosFacturacionRepository documentosRepo;
+    @Autowired
+    private NegociosRepository negociosRepo;
+    @Autowired
+    private SedesRepository sedesRepo;
+    @Autowired
+    private CategoriasGastoRepository categoriasGastoRepo;
+    @Autowired
+    private UsuariosRepository usuariosRepo;
 
     // PRODUCTOS POS (enriquecidos con stock y precio)
 
@@ -133,6 +147,17 @@ public class PosController {
         try {
             List<DetalleVentas> detalle = detalleVentasRepo.findByVentaId(ventaId);
             return ResponseEntity.ok(detalle);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/ventas/negocio/{negocioId}/detalles")
+    public ResponseEntity<?> getDetalleVentasByNegocio(@PathVariable Long negocioId) {
+        try {
+            List<DetalleVentas> detalles = detalleVentasRepo.findByVentaNegocioId(negocioId);
+            return ResponseEntity.ok(detalles);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
@@ -312,7 +337,8 @@ public class PosController {
                 if (!cajasDelUsuario.isEmpty()) {
                     String nombreCajaExistente = cajasDelUsuario.get(0).getNombreCaja();
                     return ResponseEntity.badRequest()
-                            .body(Map.of("error", "Este usuario ya está asignado a la caja '" + nombreCajaExistente + "'. Un usuario solo puede estar asignado a una caja."));
+                            .body(Map.of("error", "Este usuario ya está asignado a la caja '" + nombreCajaExistente
+                                    + "'. Un usuario solo puede estar asignado a una caja."));
                 }
                 caja.setUsuarioAsignado(usuariosRepo.findById(uId).orElse(null));
             }
@@ -335,8 +361,10 @@ public class PosController {
             CajasRegistradoras caja = cajasRepo.findById(cajaId)
                     .orElseThrow(() -> new RuntimeException("Caja no encontrada"));
 
-            if (body.containsKey("nombreCaja")) caja.setNombreCaja(body.get("nombreCaja").toString());
-            if (body.containsKey("codigo")) caja.setCodigo(body.get("codigo").toString());
+            if (body.containsKey("nombreCaja"))
+                caja.setNombreCaja(body.get("nombreCaja").toString());
+            if (body.containsKey("codigo"))
+                caja.setCodigo(body.get("codigo").toString());
 
             // Actualizar usuario asignado (null para desasignar)
             if (body.containsKey("usuarioAsignadoId")) {
@@ -352,7 +380,8 @@ public class PosController {
                                 .filter(c -> !c.getId().equals(cajaId))
                                 .findFirst().map(CajasRegistradoras::getNombreCaja).orElse("");
                         return ResponseEntity.badRequest()
-                                .body(Map.of("error", "Este usuario ya está asignado a la caja '" + nombreCajaExistente + "'. Un usuario solo puede estar asignado a una caja."));
+                                .body(Map.of("error", "Este usuario ya está asignado a la caja '" + nombreCajaExistente
+                                        + "'. Un usuario solo puede estar asignado a una caja."));
                     }
                     caja.setUsuarioAsignado(usuariosRepo.findById(uId).orElse(null));
                 } else {
@@ -430,7 +459,8 @@ public class PosController {
     @GetMapping("/sesiones/activa/usuario/{usuarioId}")
     public ResponseEntity<?> getSesionActiva(@PathVariable Long usuarioId) {
         try {
-            // findFirstBy evita error si hay más de una sesión abierta para el mismo usuario
+            // findFirstBy evita error si hay más de una sesión abierta para el mismo
+            // usuario
             Optional<SesionesCaja> sesion = sesionesRepo
                     .findFirstByUsuarioIdAndEstadoSesion(usuarioId, SesionesCaja.EstadoSesion.abierta);
             if (sesion.isEmpty()) {
@@ -510,7 +540,8 @@ public class PosController {
         try {
             java.math.BigDecimal monto = new java.math.BigDecimal(body.get("monto").toString());
             String motivo = body.containsKey("motivo") && body.get("motivo") != null
-                    ? body.get("motivo").toString() : null;
+                    ? body.get("motivo").toString()
+                    : null;
             MovimientosCaja devolucion = posService.devolverEgreso(id, monto, motivo);
             return ResponseEntity.status(HttpStatus.CREATED).body(devolucion);
         } catch (IllegalArgumentException e) {
@@ -601,8 +632,10 @@ public class PosController {
             CategoriasGasto cat = categoriasGastoRepo.findById(id)
                     .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
-            if (body.containsKey("nombre")) cat.setNombre(body.get("nombre").toString());
-            if (body.containsKey("codigo")) cat.setCodigo(body.get("codigo").toString());
+            if (body.containsKey("nombre"))
+                cat.setNombre(body.get("nombre").toString());
+            if (body.containsKey("codigo"))
+                cat.setCodigo(body.get("codigo").toString());
             if (body.containsKey("tipo") && body.get("tipo") != null) {
                 cat.setTipo(CategoriasGasto.TipoCategoria.valueOf(body.get("tipo").toString()));
             }
