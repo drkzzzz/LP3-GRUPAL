@@ -34,6 +34,7 @@ import DrinkGo.DrinkGo_backend.entity.UsuariosRoles;
 import DrinkGo.DrinkGo_backend.entity.UsuariosSedes;
 import DrinkGo.DrinkGo_backend.repository.CajasRegistradorasRepository;
 import DrinkGo.DrinkGo_backend.repository.SuscripcionesRepository;
+import DrinkGo.DrinkGo_backend.repository.UsuariosRepository;
 import DrinkGo.DrinkGo_backend.repository.UsuariosRolesRepository;
 import DrinkGo.DrinkGo_backend.repository.UsuariosSedesRepository;
 import DrinkGo.DrinkGo_backend.security.JwtUtil;
@@ -62,6 +63,9 @@ public class UsuariosController {
 
     @Autowired
     private CajasRegistradorasRepository cajasRepo;
+
+    @Autowired
+    private UsuariosRepository usuariosRepo;
 
     @GetMapping("/usuarios/{id}/permisos")
     public List<String> obtenerPermisos(@PathVariable Long id) {
@@ -314,7 +318,21 @@ public class UsuariosController {
 
         Usuarios usuario = usuarioOpt.get();
 
+        // Verificar si el usuario está bloqueado
+        if (usuario.getBloqueadoHasta() != null && usuario.getBloqueadoHasta().isAfter(LocalDateTime.now())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Usuario bloqueado temporalmente. Intente de nuevo más tarde."));
+        }
+
         if (!passwordEncoder.matches(contrasena, usuario.getHashContrasena())) {
+            // Incrementar intentos fallidos (null-safe)
+            int intentos = usuario.getIntentosFallidosAcceso() != null ? usuario.getIntentosFallidosAcceso() : 0;
+            usuario.setIntentosFallidosAcceso(intentos + 1);
+            // Bloquear si supera 5 intentos
+            if (usuario.getIntentosFallidosAcceso() >= 5) {
+                usuario.setBloqueadoHasta(LocalDateTime.now().plusMinutes(15));
+            }
+            service.modificar(usuario);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Credenciales inválidas"));
         }
@@ -357,8 +375,10 @@ public class UsuariosController {
             }
         }
 
-        // Actualizar último acceso
+        // Login exitoso - actualizar último acceso y reiniciar intentos fallidos
         usuario.setUltimoAccesoEn(LocalDateTime.now());
+        usuario.setIntentosFallidosAcceso(0);
+        usuario.setBloqueadoHasta(null);
         service.modificar(usuario);
 
         String token = jwtUtil.generarToken(email);
@@ -507,5 +527,20 @@ public class UsuariosController {
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    // ── Desbloquear usuario admin de negocio (solo superadmin) ────────────────
+
+    @PatchMapping("/superadmin/usuarios/{id}/desbloquear")
+    public ResponseEntity<?> desbloquearUsuario(@PathVariable Long id) {
+        Optional<Usuarios> opt = usuariosRepo.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Usuario no encontrado"));
+        }
+        Usuarios usuario = opt.get();
+        usuario.setIntentosFallidosAcceso(0);
+        usuario.setBloqueadoHasta(null);
+        service.modificar(usuario);
+        return ResponseEntity.ok(Map.of("message", "Usuario desbloqueado exitosamente"));
     }
 }

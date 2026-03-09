@@ -1,12 +1,10 @@
 -- ============================================================
 -- SEED 10: USUARIOS PROGRAMADORES DEMO
--- Base de datos: licores_drinkgo (o drinkgo_db según entorno)
+-- Base de datos: drinkgo_db
 -- Tabla: usuarios_plataforma
 -- ============================================================
 -- Contraseñas (todas hasheadas con BCrypt):
--- anggelo@drinkgo.dev  = Admin123!
--- programador2@drinkgo.dev = Admin123!
--- programador3@drinkgo.dev = Admin123!
+-- Todas = Admin123!
 -- ============================================================
 -- Los módulos asignados siguen el formato del permiso del frontend
 -- (con prefijo "m."): m.catalogo, m.inventario, m.ventas, etc.
@@ -29,7 +27,7 @@ INSERT IGNORE INTO usuarios_plataforma (
     esta_activo,
     contrasena_cambiada_en
 ) VALUES
--- Programador 1: módulo Catálogo + Devoluciones (ventas)
+-- Anggelo: Catálogo + Devoluciones
 (
     UUID(),
     'anggelo@drinkgo.dev',
@@ -38,33 +36,59 @@ INSERT IGNORE INTO usuarios_plataforma (
     'Programador',
     NULL,
     'programador',
-    JSON_ARRAY('m.catalogo', 'm.ventas'),
+    JSON_ARRAY('m.catalogo', 'm.devoluciones'),
     1,
     NOW()
 ),
--- Programador 2: módulo Inventario + Compras
+-- Santiago: Inventario + Proveedores/Compras + Pedidos
 (
     UUID(),
-    'programador.inventario@drinkgo.dev',
+    'santiago@drinkgo.dev',
     '$2a$10$nb74QxjneuyJQDzt3uBCt.ZRGdqT1O5P6aIvSyCqUh1cD4bzyrlpC', -- Admin123!
-    'Demo',
-    'Inventario',
+    'Santiago',
+    'Programador',
     NULL,
     'programador',
-    JSON_ARRAY('m.inventario', 'm.compras'),
+    JSON_ARRAY('m.inventario', 'm.compras', 'm.pedidos'),
     1,
     NOW()
 ),
--- Programador 3: módulo Facturación + Reportes
+-- Willy: Facturación + Ventas/POS
 (
     UUID(),
-    'programador.facturacion@drinkgo.dev',
+    'willy@drinkgo.dev',
     '$2a$10$nb74QxjneuyJQDzt3uBCt.ZRGdqT1O5P6aIvSyCqUh1cD4bzyrlpC', -- Admin123!
-    'Demo',
-    'Facturacion',
+    'Willy',
+    'Programador',
     NULL,
     'programador',
-    JSON_ARRAY('m.facturacion', 'm.reportes'),
+    JSON_ARRAY('m.facturacion', 'm.ventas'),
+    1,
+    NOW()
+),
+-- Chavez: Reportes + Usuarios/Clientes
+(
+    UUID(),
+    'chavez@drinkgo.dev',
+    '$2a$10$nb74QxjneuyJQDzt3uBCt.ZRGdqT1O5P6aIvSyCqUh1cD4bzyrlpC', -- Admin123!
+    'Chavez',
+    'Programador',
+    NULL,
+    'programador',
+    JSON_ARRAY('m.reportes', 'm.usuarios'),
+    1,
+    NOW()
+),
+-- Carlos: Configuración + Dashboard
+(
+    UUID(),
+    'carlos@drinkgo.dev',
+    '$2a$10$nb74QxjneuyJQDzt3uBCt.ZRGdqT1O5P6aIvSyCqUh1cD4bzyrlpC', -- Admin123!
+    'Carlos',
+    'Programador',
+    NULL,
+    'programador',
+    JSON_ARRAY('m.configuracion', 'm.dashboard', 'm.ventas.mesas'),
     1,
     NOW()
 );
@@ -88,13 +112,21 @@ ORDER BY creado_en DESC;
 -- ============================================================
 -- Email: anggelo@drinkgo.dev
 -- Password: Admin123!
--- Módulos: Catálogo, Ventas/POS
+-- Módulos: Catálogo, Devoluciones
 -- ============================================================
--- Email: programador.inventario@drinkgo.dev
+-- Email: santiago@drinkgo.dev
 -- Password: Admin123!
--- Módulos: Inventario, Compras
+-- Módulos: Inventario, Proveedores/Compras, Pedidos
 -- ============================================================
--- Email: programador.facturacion@drinkgo.dev
+-- Email: willy@drinkgo.dev
 -- Password: Admin123!
--- Módulos: Facturación, Reportes
+-- Módulos: Facturación, Ventas/POS
+-- ============================================================
+-- Email: chavez@drinkgo.dev
+-- Password: Admin123!
+-- Módulos: Reportes, Usuarios y Clientes
+-- ============================================================
+-- Email: carlos@drinkgo.dev
+-- Password: Admin123!
+-- Módulos: Configuración, Dashboard, Gestión de Mesas
 -- ============================================================

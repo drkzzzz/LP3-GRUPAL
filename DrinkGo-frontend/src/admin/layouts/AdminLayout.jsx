@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -176,6 +176,12 @@ export const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, negocio, sede, logout, hasPermiso, permisos, esProgramador } = useAdminAuthStore();
+
+  useEffect(() => {
+    const nombre = negocio?.nombreComercial || negocio?.razonSocial || 'Admin';
+    document.title = `Admin | ${nombre}`;
+    return () => { document.title = 'DrinkGo'; };
+  }, [negocio]);
   const { logout: superadminLogout } = useAuthStore();
   const { sedes } = useSedesConfig(negocio?.id);
   const tieneMesasActivo = sedes.some((s) => s.tieneMesas);

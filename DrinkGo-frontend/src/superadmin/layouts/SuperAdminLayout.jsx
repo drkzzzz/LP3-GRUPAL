@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   BarChart3,
   UserCircle,
+  LockOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -53,6 +54,11 @@ const NAV_ITEMS = [
     icon: Shield,
     label: 'Auditoría',
   },
+  {
+    to: '/superadmin/usuarios-bloqueados',
+    icon: LockOpen,
+    label: 'Usuarios Bloqueados',
+  },
 ];
 
 export const SuperAdminLayout = () => {
@@ -60,6 +66,11 @@ export const SuperAdminLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+
+  useEffect(() => {
+    document.title = 'SuperAdmin | DrinkGo';
+    return () => { document.title = 'DrinkGo'; };
+  }, []);
 
   const handleLogout = () => {
     logout();

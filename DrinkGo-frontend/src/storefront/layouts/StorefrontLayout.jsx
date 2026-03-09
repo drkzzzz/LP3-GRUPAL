@@ -60,6 +60,14 @@ export const StorefrontLayout = () => {
     }
   }, [slug, selectedSede, setCartContext]);
 
+  // Page title
+  useEffect(() => {
+    if (!config?.negocio) return;
+    const nombre = config.negocio.nombreComercial || config.negocio.razonSocial || 'Tienda';
+    document.title = nombre;
+    return () => { document.title = 'DrinkGo'; };
+  }, [config]);
+
   if (isLoading || sedesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">

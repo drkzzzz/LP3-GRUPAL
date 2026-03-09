@@ -2,11 +2,14 @@ package DrinkGo.DrinkGo_backend.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import DrinkGo.DrinkGo_backend.entity.Usuarios;
 import DrinkGo.DrinkGo_backend.entity.Negocios;
 import DrinkGo.DrinkGo_backend.entity.Sedes;
 import DrinkGo.DrinkGo_backend.entity.UsuariosPlataforma;
 import DrinkGo.DrinkGo_backend.repository.NegociosRepository;
 import DrinkGo.DrinkGo_backend.repository.SedesRepository;
+import DrinkGo.DrinkGo_backend.repository.UsuariosPlataformaRepository;
+import DrinkGo.DrinkGo_backend.repository.UsuariosRepository;
 import DrinkGo.DrinkGo_backend.security.JwtUtil;
 import DrinkGo.DrinkGo_backend.service.IUsuariosPlataformaService;
 import java.security.Principal;
@@ -46,6 +49,12 @@ public class UsuariosPlataformaController {
 
     @Autowired
     private SedesRepository sedesRepository;
+
+    @Autowired
+    private UsuariosRepository usuariosRepository;
+
+    @Autowired
+    private UsuariosPlataformaRepository usuariosPlataformaRepository;
 
     @GetMapping("/usuarios-plataforma")
     public List<UsuariosPlataforma> buscarTodos() {
@@ -386,5 +395,122 @@ public class UsuariosPlataformaController {
         service.modificar(usuario);
 
         return ResponseEntity.ok(Map.of("message", "Contraseña actualizada exitosamente"));
+    }
+
+    // ── Usuarios bloqueados (todos los tipos) ──────────────────────────────────
+
+    @GetMapping("/superadmin/usuarios-bloqueados")
+    public ResponseEntity<?> getUsuariosBloqueados() {
+        LocalDateTime ahora = LocalDateTime.now();
+        List<Map<String, Object>> resultado = new ArrayList<>();
+
+        // Usuarios de plataforma bloqueados
+        List<UsuariosPlataforma> plataformaBloqueados = usuariosPlataformaRepository.findByBloqueadoHastaAfter(ahora);
+        for (UsuariosPlataforma u : plataformaBloqueados) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("tipo", "plataforma");
+            item.put("id", u.getId());
+            item.put("email", u.getEmail());
+            item.put("nombres", u.getNombres());
+            item.put("apellidos", u.getApellidos());
+            item.put("rol", u.getRol().toString());
+            item.put("negocio", null);
+            item.put("intentosFallidos", u.getIntentosFallidosAcceso());
+            item.put("bloqueadoHasta", u.getBloqueadoHasta());
+            resultado.add(item);
+        }
+
+        // Usuarios admin de negocios bloqueados
+        List<Usuarios> adminsBloqueados = usuariosRepository.findBloqueados(ahora);
+        for (Usuarios u : adminsBloqueados) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("tipo", "admin");
+            item.put("id", u.getId());
+            item.put("email", u.getEmail());
+            item.put("nombres", u.getNombres());
+            item.put("apellidos", u.getApellidos());
+            item.put("rol", "admin");
+            if (u.getNegocio() != null) {
+                Map<String, Object> neg = new LinkedHashMap<>();
+                neg.put("id", u.getNegocio().getId());
+                neg.put("nombreComercial", u.getNegocio().getNombreComercial());
+                neg.put("razonSocial", u.getNegocio().getRazonSocial());
+                item.put("negocio", neg);
+            } else {
+                item.put("negocio", null);
+            }
+            item.put("intentosFallidos", u.getIntentosFallidosAcceso());
+            item.put("bloqueadoHasta", u.getBloqueadoHasta());
+            resultado.add(item);
+        }
+
+        return ResponseEntity.ok(resultado);
+    }
+
+    @PatchMapping("/superadmin/usuarios-plataforma/{id}/desbloquear")
+    public ResponseEntity<?> desbloquearPlataforma(@PathVariable Long id) {
+        Optional<UsuariosPlataforma> opt = service.buscarId(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Usuario no encontrado"));
+        }
+        UsuariosPlataforma usuario = opt.get();
+        usuario.setIntentosFallidosAcceso(0);
+        usuario.setBloqueadoHasta(null);
+        service.modificar(usuario);
+        return ResponseEntity.ok(Map.of("message", "Usuario desbloqueado exitosamente"));
+    }
+
+    // ── Todos los usuarios (plataforma + admin negocios) ──────────────────────
+
+    @GetMapping("/superadmin/todos-usuarios")
+    public ResponseEntity<?> getTodosUsuarios() {
+        LocalDateTime ahora = LocalDateTime.now();
+        List<Map<String, Object>> resultado = new ArrayList<>();
+
+        // Usuarios de plataforma
+        List<UsuariosPlataforma> plataforma = service.buscarTodos();
+        for (UsuariosPlataforma u : plataforma) {
+            boolean bloqueado = u.getBloqueadoHasta() != null && u.getBloqueadoHasta().isAfter(ahora);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("tipo", "plataforma");
+            item.put("id", u.getId());
+            item.put("email", u.getEmail());
+            item.put("nombres", u.getNombres());
+            item.put("apellidos", u.getApellidos());
+            item.put("rol", u.getRol().toString());
+            item.put("negocio", null);
+            item.put("intentosFallidos", u.getIntentosFallidosAcceso() != null ? u.getIntentosFallidosAcceso() : 0);
+            item.put("bloqueadoHasta", u.getBloqueadoHasta());
+            item.put("bloqueado", bloqueado);
+            resultado.add(item);
+        }
+
+        // Usuarios admin de negocios
+        List<Usuarios> admins = usuariosRepository.findAllWithNegocio();
+        for (Usuarios u : admins) {
+            boolean bloqueado = u.getBloqueadoHasta() != null && u.getBloqueadoHasta().isAfter(ahora);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("tipo", "admin");
+            item.put("id", u.getId());
+            item.put("email", u.getEmail());
+            item.put("nombres", u.getNombres());
+            item.put("apellidos", u.getApellidos());
+            item.put("rol", "admin");
+            if (u.getNegocio() != null) {
+                Map<String, Object> neg = new LinkedHashMap<>();
+                neg.put("id", u.getNegocio().getId());
+                neg.put("nombreComercial", u.getNegocio().getNombreComercial());
+                neg.put("razonSocial", u.getNegocio().getRazonSocial());
+                item.put("negocio", neg);
+            } else {
+                item.put("negocio", null);
+            }
+            item.put("intentosFallidos", u.getIntentosFallidosAcceso() != null ? u.getIntentosFallidosAcceso() : 0);
+            item.put("bloqueadoHasta", u.getBloqueadoHasta());
+            item.put("bloqueado", bloqueado);
+            resultado.add(item);
+        }
+
+        return ResponseEntity.ok(resultado);
     }
 }

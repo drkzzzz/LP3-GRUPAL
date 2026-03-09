@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +17,11 @@ export const Login = () => {
   const navigate = useNavigate();
   const login = useAdminAuthStore((s) => s.login);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Admin | DrinkGo';
+    return () => { document.title = 'DrinkGo'; };
+  }, []);
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -34,7 +39,7 @@ export const Login = () => {
       const data = await adminAuthService.login(formData.email, formData.password);
       login(data.usuario, data.token, data.negocio, data.permisos || [], data.sede || null, data.cajaAsignada || null);
       message.success('Bienvenido al panel de administración');
-      navigate('/admin/dashboard', { replace: true });
+      navigate('/admin', { replace: true });
     } catch (error) {
       const errorMsg =
         error.response?.data?.error || 'Credenciales incorrectas. Intente de nuevo.';

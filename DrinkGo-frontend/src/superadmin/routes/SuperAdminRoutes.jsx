@@ -10,6 +10,7 @@ import { AuditoriaLogs } from '../pages/AuditoriaLogs';
 import { Reportes } from '../pages/Reportes';
 import { MiPerfil } from '../pages/MiPerfil';
 import { ProgramadorNegocios } from '../pages/ProgramadorNegocios';
+import { UsuariosBloqueados } from '../pages/UsuariosBloqueados';
 import { useAuthStore } from '@/stores/authStore';
 
 const ProtectedRoute = ({ children }) => {
@@ -67,6 +68,7 @@ export const SuperAdminRoutes = () => {
         <Route path="reportes" element={<Reportes />} />
         <Route path="configuracion" element={<ConfiguracionGlobal />} />
         <Route path="auditoria" element={<AuditoriaLogs />} />
+        <Route path="usuarios-bloqueados" element={<UsuariosBloqueados />} />
         <Route path="perfil" element={<MiPerfil />} />
       </Route>
     </Routes>

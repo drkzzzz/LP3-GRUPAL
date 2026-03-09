@@ -67,6 +67,12 @@ public class Usuarios {
     @Column(name = "eliminado_en")
     private LocalDateTime eliminadoEn;
 
+    @Column(name = "intentos_fallidos_acceso")
+    private Integer intentosFallidosAcceso = 0;
+
+    @Column(name = "bloqueado_hasta")
+    private LocalDateTime bloqueadoHasta;
+
     public enum TipoDocumento {
         DNI, CE, PASAPORTE, OTRO
     }
@@ -204,6 +210,22 @@ public class Usuarios {
 
     public void setEliminadoEn(LocalDateTime eliminadoEn) {
         this.eliminadoEn = eliminadoEn;
+    }
+
+    public Integer getIntentosFallidosAcceso() {
+        return intentosFallidosAcceso;
+    }
+
+    public void setIntentosFallidosAcceso(Integer intentosFallidosAcceso) {
+        this.intentosFallidosAcceso = intentosFallidosAcceso;
+    }
+
+    public LocalDateTime getBloqueadoHasta() {
+        return bloqueadoHasta;
+    }
+
+    public void setBloqueadoHasta(LocalDateTime bloqueadoHasta) {
+        this.bloqueadoHasta = bloqueadoHasta;
     }
 
     @Override

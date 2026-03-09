@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +17,11 @@ export const Login = () => {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    document.title = 'SuperAdmin | DrinkGo';
+    return () => { document.title = 'DrinkGo'; };
+  }, []);
   const [isLoading, setIsLoading] = useState(false);
 
   const {
