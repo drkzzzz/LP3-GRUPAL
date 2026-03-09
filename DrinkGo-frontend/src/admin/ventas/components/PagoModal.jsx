@@ -17,7 +17,7 @@
  * Si paga con efectivo de más, se muestra el vuelto a devolver.
  */
 import { useState, useEffect, useMemo } from 'react';
-import { CreditCard, Banknote, Smartphone, QrCode, Plus, X, AlertCircle, Search, Loader2 } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, QrCode, Plus, X, AlertCircle, Search, Loader2, Pause } from 'lucide-react';
 import { Modal } from '@/admin/components/ui/Modal';
 import { Button } from '@/admin/components/ui/Button';
 import { Input } from '@/admin/components/ui/Input';
@@ -38,7 +38,6 @@ const ICON_MAP = {
 };
 
 const COMPROBANTE_OPTIONS = [
-  { value: 'nota_venta', label: 'Nota de Venta', seriePrefix: null },
   { value: 'boleta', label: 'Boleta', seriePrefix: 'B' },
   { value: 'factura', label: 'Factura', seriePrefix: 'F' },
 ];
@@ -83,13 +82,14 @@ export const PagoModal = ({
   isOpen,
   onClose,
   onConfirm,
+  onSuspend,
   total,
   metodosPago = [],
   series = [],
   isLoading = false,
 }) => {
   const [pagos, setPagos] = useState([]);
-  const [tipoComprobante, setTipoComprobante] = useState('nota_venta');
+  const [tipoComprobante, setTipoComprobante] = useState('boleta');
   const [tipoDocumento, setTipoDocumento] = useState('');
   const [docClienteNumero, setDocClienteNumero] = useState('');
   const [docClienteNombre, setDocClienteNombre] = useState('');
@@ -102,7 +102,7 @@ export const PagoModal = ({
   /* Inicializar al abrir */
   useEffect(() => {
     if (isOpen) {
-      setTipoComprobante('nota_venta');
+      setTipoComprobante('boleta');
       setTipoDocumento('');
       setDocClienteNumero('');
       setDocClienteNombre('');
@@ -143,8 +143,6 @@ export const PagoModal = ({
   /* Filtrar opciones de comprobante según series disponibles */
   const comprobanteOptions = useMemo(() => {
     return COMPROBANTE_OPTIONS.filter((opt) => {
-      // nota_venta siempre disponible (no requiere serie SUNAT)
-      if (!opt.seriePrefix) return true;
       // Solo mostrar si hay al menos una serie activa con ese prefijo
       return series.some(
         (s) => s.estaActivo !== false && s.serie?.toUpperCase().startsWith(opt.seriePrefix),
@@ -653,13 +651,27 @@ export const PagoModal = ({
       </div>
 
       {/* Footer */}
-      <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 mt-4">
-        <Button variant="outline" onClick={onClose} disabled={isLoading}>
-          Cancelar
-        </Button>
-        <Button onClick={handleConfirm} disabled={!canConfirm || isLoading}>
-          {isLoading ? 'Procesando...' : `Confirmar Venta ${formatCurrency(total)}`}
-        </Button>
+      <div className="flex justify-between gap-2 pt-4 border-t border-gray-200 mt-4">
+        {onSuspend ? (
+          <Button
+            variant="outline"
+            onClick={() => { onSuspend(); onClose(); }}
+            disabled={isLoading}
+          >
+            <Pause size={16} className="mr-1" />
+            Suspender
+          </Button>
+        ) : (
+          <div />
+        )}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirm} disabled={!canConfirm || isLoading}>
+            {isLoading ? 'Procesando...' : `Confirmar Venta ${formatCurrency(total)}`}
+          </Button>
+        </div>
       </div>
     </Modal>
   );

@@ -15,7 +15,7 @@ public class CrearVentaPosRequest {
     private Long clienteId;
     private BigDecimal descuentoGlobal;
     private String razonDescuento;
-    private String tipoComprobante; // boleta | factura | nota_venta
+    private String tipoComprobante; // boleta | factura
     private String docClienteNumero;
     private String docClienteNombre;
     private String docClienteDireccion;

@@ -81,11 +81,6 @@ public class FacturacionService {
      * @return El documento creado, o null si no hay serie configurada
      */
     public DocumentosFacturacion emitirComprobanteDesdeVenta(Ventas venta, Usuarios usuario) {
-        // Nota de venta es un documento interno — no genera comprobante SUNAT
-        if (venta.getTipoComprobante() == Ventas.TipoComprobante.nota_venta) {
-            return null;
-        }
-
         // 1. Determinar tipo de documento
         SeriesFacturacion.TipoDocumento tipoDoc;
         if (venta.getTipoComprobante() == Ventas.TipoComprobante.factura) {

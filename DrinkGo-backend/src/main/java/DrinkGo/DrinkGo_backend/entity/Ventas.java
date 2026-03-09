@@ -136,7 +136,7 @@ public class Ventas {
     }
 
     public enum TipoComprobante {
-        boleta, factura, nota_venta
+        boleta, factura
     }
 
     @PrePersist

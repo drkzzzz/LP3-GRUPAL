@@ -126,10 +126,11 @@ public class PosService {
         // ── 4. Validar stock de cada ítem (en TODOS los almacenes del negocio) ──
         validarStockItems(request.getItems(), request.getNegocioId());
 
-        // ── 5. Generar número de venta (secuencia propia por sede para evitar duplicados) ──
-        long count = ventasRepo.countBySedeId(request.getSedeId());
+        // ── 5. Generar número de venta (secuencia por sede+fecha para evitar duplicados) ──
         String fechaStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String numeroVenta = "VTA-" + fechaStr + "-" + String.format("%04d", count + 1);
+        String prefix = "VTA-" + fechaStr + "-";
+        Integer maxSeq = ventasRepo.findMaxSequenceBySedAndPrefix(request.getSedeId(), prefix);
+        String numeroVenta = prefix + String.format("%04d", (maxSeq != null ? maxSeq : 0) + 1);
 
         // ── 6. Calcular totales ──
         BigDecimal subtotal = BigDecimal.ZERO;

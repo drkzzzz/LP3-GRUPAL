@@ -6,10 +6,11 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Banknote, Power, ArrowDownUp, ShoppingBag, AlertCircle, LogIn, Settings, FileText } from 'lucide-react';
+import { Banknote, Power, ArrowDownUp, ShoppingBag, AlertCircle, LogIn, Settings, FileText, Pause, Play, X } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
 import { Badge } from '@/admin/components/ui/Badge';
+import { Modal } from '@/admin/components/ui/Modal';
 import { ProductoSearch } from '../components/ProductoSearch';
 import { CarritoPanel } from '../components/CarritoPanel';
 import { ResumenVenta } from '../components/ResumenVenta';
@@ -43,6 +44,10 @@ export const POS = () => {
   const descuentoGlobal = useCartStore((s) => s.descuentoGlobal);
   const razonDescuento = useCartStore((s) => s.razonDescuento);
   const setIgvConfig = useCartStore((s) => s.setIgvConfig);
+  const suspendedCart = useCartStore((s) => s.suspendedCart);
+  const suspendCart = useCartStore((s) => s.suspendCart);
+  const recoverCart = useCartStore((s) => s.recoverCart);
+  const discardSuspendedCart = useCartStore((s) => s.discardSuspendedCart);
 
   /* ─── Sincronizar config IGV del negocio al carrito ─── */
   useEffect(() => {
@@ -53,6 +58,7 @@ export const POS = () => {
 
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [showMovimientoModal, setShowMovimientoModal] = useState(false);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   /* ─── Estado del comprobante ─── */
   const [receiptData, setReceiptData] = useState(null);
@@ -97,6 +103,20 @@ export const POS = () => {
   const handleMovimiento = async (data) => {
     await registrarMovimiento(data);
     setShowMovimientoModal(false);
+  };
+
+  /* ─── Suspender / Recuperar venta ─── */
+  const handleSuspend = () => {
+    suspendCart();
+  };
+
+  const handleRecover = () => {
+    recoverCart();
+  };
+
+  const handleDiscard = () => {
+    discardSuspendedCart();
+    setShowDiscardModal(false);
   };
 
   /* ─── Procesar venta ─── */
@@ -360,6 +380,41 @@ export const POS = () => {
               <CarritoPanel />
             )}
           </Card>
+
+          {/* Panel de venta suspendida (debajo del carrito) */}
+          {suspendedCart && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                  <Pause size={20} className="text-amber-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-amber-800">Venta suspendida</p>
+                  <p className="text-sm text-amber-600">
+                    {suspendedCart.items.length} {suspendedCart.items.length === 1 ? 'producto' : 'productos'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRecover}
+                  className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                >
+                  <Play size={16} className="mr-1" />
+                  Recuperar
+                </Button>
+                <button
+                  onClick={() => setShowDiscardModal(true)}
+                  className="p-1.5 text-amber-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Descartar venta suspendida"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Columna derecha: resumen + pagar */}
@@ -425,6 +480,7 @@ export const POS = () => {
         isOpen={showPagoModal}
         onClose={() => setShowPagoModal(false)}
         onConfirm={handlePago}
+        onSuspend={!suspendedCart ? handleSuspend : undefined}
         total={total}
         metodosPago={metodosPago}
         series={series}
@@ -452,6 +508,40 @@ export const POS = () => {
           onClose={() => setReceiptData(null)}
         />
       )}
+
+      {/* Modal de confirmación para descartar venta suspendida */}
+      <Modal
+        isOpen={showDiscardModal}
+        onClose={() => setShowDiscardModal(false)}
+        title="Descartar venta suspendida"
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setShowDiscardModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleDiscard}
+            >
+              Sí, descartar
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-gray-700">
+            Se eliminará el carrito suspendido con{' '}
+            <strong>
+              {suspendedCart?.items.length}{' '}
+              {suspendedCart?.items.length === 1 ? 'producto' : 'productos'}
+            </strong>.
+          </p>
+          <p className="text-sm text-gray-500">
+            Esta acción no se puede deshacer.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 };

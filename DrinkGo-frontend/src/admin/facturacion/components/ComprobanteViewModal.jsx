@@ -34,7 +34,6 @@ const TIPO_LABEL = {
   factura: 'FACTURA ELECTRÓNICA',
   nota_credito: 'NOTA DE CRÉDITO ELECTRÓNICA',
   nota_debito: 'NOTA DE DÉBITO ELECTRÓNICA',
-  nota_venta: 'NOTA DE VENTA',
 };
 
 const formatDate = (dateStr) => {
@@ -399,7 +398,7 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                     </div>
                   </div>
                 ) : (
-                  /* ══ BOLETA / FACTURA / NOTA DE VENTA ══ */
+                  /* ══ BOLETA / FACTURA ══ */
                   <>
                     {/* ─── Header: Emisor + Tipo ─── */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid #d97706' }}>
@@ -529,15 +528,9 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                 {!esNota && (
                 <div style={{ marginTop: 24, textAlign: 'center', borderTop: '1px dashed #ccc', paddingTop: 12 }}>
                   <p style={{ fontSize: 11, color: '#666' }}>¡Gracias por su preferencia!</p>
-                  {doc.tipoDocumento !== 'nota_venta' ? (
-                    <p style={{ fontWeight: 600, fontSize: 10, color: '#888', marginTop: 4 }}>
-                      Este comprobante es válido como documento tributario
-                    </p>
-                  ) : (
-                    <p style={{ fontWeight: 600, fontSize: 10, color: '#888', marginTop: 4 }}>
-                      Documento interno — No es comprobante tributario
-                    </p>
-                  )}
+                  <p style={{ fontWeight: 600, fontSize: 10, color: '#888', marginTop: 4 }}>
+                    Este comprobante es válido como documento tributario
+                  </p>
                 </div>
                 )}
               </div>

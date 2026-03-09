@@ -17,4 +17,7 @@ public interface VentasRepository extends JpaRepository<Ventas, Long> {
 
     @Query("SELECT COUNT(v) FROM Ventas v WHERE v.sede.id = :sedeId")
     long countBySedeId(@Param("sedeId") Long sedeId);
+
+    @Query(value = "SELECT MAX(CAST(SUBSTRING(v.numero_venta, LENGTH(:prefix) + 1) AS UNSIGNED)) FROM ventas v WHERE v.sede_id = :sedeId AND v.numero_venta LIKE CONCAT(:prefix, '%')", nativeQuery = true)
+    Integer findMaxSequenceBySedAndPrefix(@Param("sedeId") Long sedeId, @Param("prefix") String prefix);
 }

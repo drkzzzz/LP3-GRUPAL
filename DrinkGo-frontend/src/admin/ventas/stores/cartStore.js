@@ -18,6 +18,7 @@ export const useCartStore = create(
   razonDescuento: '',
   stockDesactualizado: false, // true cuando se detectó error de stock
   _lastCapped: null,         // productoId si la última actualización recortó cantidad por stock
+  suspendedCart: null,        // { items, descuentoGlobal, razonDescuento }
 
   /* ═══ ACCIONES ═══ */
 
@@ -110,6 +111,43 @@ export const useCartStore = create(
   /** Limpia la bandera de stock desactualizado */
   clearStockWarning: () => set({ stockDesactualizado: false }),
 
+  /* ═══ SUSPENDER / RECUPERAR ═══ */
+
+  /** Suspende la venta actual: guarda ítems y descuentos, luego limpia el carrito. */
+  suspendCart: () => {
+    const { items, descuentoGlobal, razonDescuento } = get();
+    if (items.length === 0) return;
+    set({
+      suspendedCart: {
+        items: items.map((i) => ({ ...i, producto: { ...i.producto } })),
+        descuentoGlobal,
+        razonDescuento,
+      },
+      items: [],
+      descuentoGlobal: 0,
+      razonDescuento: '',
+      stockDesactualizado: false,
+    });
+  },
+
+  /** Recupera la venta suspendida: restaura ítems y descuentos al carrito activo. */
+  recoverCart: () => {
+    const { suspendedCart } = get();
+    if (!suspendedCart) return;
+    set({
+      items: suspendedCart.items,
+      descuentoGlobal: suspendedCart.descuentoGlobal,
+      razonDescuento: suspendedCart.razonDescuento,
+      suspendedCart: null,
+      stockDesactualizado: false,
+    });
+  },
+
+  /** Descarta la venta suspendida sin recuperarla. */
+  discardSuspendedCart: () => {
+    set({ suspendedCart: null });
+  },
+
   /* ═══ SELECTORES COMPUTADOS ═══ */
 
   /** Subtotal = Σ (precioVenta × cantidad) */
@@ -190,6 +228,7 @@ export const useCartStore = create(
         items: state.items,
         descuentoGlobal: state.descuentoGlobal,
         razonDescuento: state.razonDescuento,
+        suspendedCart: state.suspendedCart,
       }),
       // Validar datos rehidratados: si la estructura es inválida, descartar
       merge: (persisted, current) => {

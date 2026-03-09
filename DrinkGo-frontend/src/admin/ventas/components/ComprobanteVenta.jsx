@@ -18,13 +18,11 @@ import { formatCurrency } from '@/shared/utils/formatters';
 const TIPO_COMPROBANTE_LABEL = {
   boleta: 'BOLETA DE VENTA ELECTRÓNICA',
   factura: 'FACTURA ELECTRÓNICA',
-  nota_venta: 'NOTA DE VENTA',
 };
 
 const TIPO_COMPROBANTE_SHORT = {
   boleta: 'BOLETA DE VENTA',
   factura: 'FACTURA',
-  nota_venta: 'NOTA DE VENTA',
 };
 
 /**
@@ -360,16 +358,9 @@ export const ComprobanteVenta = ({
               {/* ─── Footer ─── */}
               <div style={{ marginTop: 24, textAlign: 'center', borderTop: '1px dashed #ccc', paddingTop: 12 }}>
                 <p style={{ fontSize: 11, color: '#666' }}>¡Gracias por su preferencia!</p>
-                {venta.tipoComprobante !== 'nota_venta' && (
-                  <p style={{ fontWeight: 600, fontSize: 10, color: '#888', marginTop: 4 }}>
-                    Este comprobante es válido como documento tributario
-                  </p>
-                )}
-                {venta.tipoComprobante === 'nota_venta' && (
-                  <p style={{ fontWeight: 600, fontSize: 10, color: '#888', marginTop: 4 }}>
-                    Documento interno — No es comprobante tributario
-                  </p>
-                )}
+                <p style={{ fontWeight: 600, fontSize: 10, color: '#888', marginTop: 4 }}>
+                  Este comprobante es válido como documento tributario
+                </p>
               </div>
             </div>
           </div>
