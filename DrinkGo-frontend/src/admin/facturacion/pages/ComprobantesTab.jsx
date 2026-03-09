@@ -44,11 +44,8 @@ const TIPO_DOC_LABELS = {
 const MOTIVOS_NC = [
   { codigo: '01', label: 'Anulación de la operación' },
   { codigo: '02', label: 'Anulación por error en el RUC' },
-  { codigo: '03', label: 'Corrección por error en la descripción' },
-  { codigo: '04', label: 'Descuento global' },
   { codigo: '06', label: 'Devolución total' },
   { codigo: '07', label: 'Devolución por ítem' },
-  { codigo: '09', label: 'Disminución en el valor' },
 ];
 
 /* ─── Motivos SUNAT para Notas de Débito ─── */
@@ -363,8 +360,8 @@ export const ComprobantesTab = () => {
       payload.monto = parseFloat(ncMonto);
     }
 
-    // Solo para NC con motivos que permiten devolución de dinero (01, 06, 07, 09)
-    if (ncTipoNota === 'nota_credito' && ['01', '06', '07', '09'].includes(ncCodigoMotivo)) {
+    // Solo para NC con motivos que permiten devolución de dinero (01, 06, 07)
+    if (ncTipoNota === 'nota_credito' && ['01', '06', '07'].includes(ncCodigoMotivo)) {
       payload.devolverDinero = ncDevolverDinero;
     }
 
@@ -814,8 +811,8 @@ export const ComprobantesTab = () => {
 
           {/* ─── Sección dinámica según motivo ─── */}
 
-          {/* Pregunta de devolución de dinero (solo NC motivos 01, 06, 07, 09) */}
-          {ncTipoNota === 'nota_credito' && ['01', '06', '07', '09'].includes(ncCodigoMotivo) && (
+          {/* Pregunta de devolución de dinero (solo NC motivos 01, 06, 07) */}
+          {ncTipoNota === 'nota_credito' && ['01', '06', '07'].includes(ncCodigoMotivo) && (
             <div className="space-y-2">
               <div className="bg-white border border-gray-200 rounded-lg p-3">
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -869,13 +866,24 @@ export const ComprobantesTab = () => {
             </div>
           )}
 
-          {/* Info: Anulación con devolución física (01/06) */}
-          {ncTipoNota === 'nota_credito' && ['01', '06'].includes(ncCodigoMotivo) && (
+          {/* Info: Anulación de la operación (01) */}
+          {ncTipoNota === 'nota_credito' && ncCodigoMotivo === '01' && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
               <p className="text-xs text-amber-700">
                 Se emitirá una Nota de Crédito por el <strong>total</strong> del comprobante ({formatCurrency(totalComprobante)}).
                 Los ítems y montos se copiarán automáticamente. El comprobante original quedará marcado como <strong>anulado</strong>.
-                Se revertirá el inventario.
+                Se anulará la venta y se revertirá el inventario.
+              </p>
+            </div>
+          )}
+
+          {/* Info: Devolución total (06) */}
+          {ncTipoNota === 'nota_credito' && ncCodigoMotivo === '06' && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-amber-700">
+                Se emitirá una Nota de Crédito por el <strong>total</strong> del comprobante ({formatCurrency(totalComprobante)}).
+                Los ítems y montos se copiarán automáticamente. Se restaurará el inventario completo.
+                El comprobante quedará marcado como <strong>compensado</strong>. La venta permanecerá activa en el historial.
               </p>
             </div>
           )}

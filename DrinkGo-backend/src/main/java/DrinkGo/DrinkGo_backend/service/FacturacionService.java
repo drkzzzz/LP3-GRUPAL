@@ -151,7 +151,7 @@ public class FacturacionService {
     // ═══════════════════════════════════════════════════════════════════
 
     /** Motivos NC que anulan la operación CON devolución física (restaurar stock + anular venta). */
-    private static final Set<String> MOTIVOS_ANULACION_CON_DEVOLUCION = Set.of("01", "06");
+    private static final Set<String> MOTIVOS_ANULACION_CON_DEVOLUCION = Set.of("01");
 
     /** Motivos NC de corrección documental (anula documento, NO stock, NO anula venta). */
     private static final Set<String> MOTIVOS_CORRECCION_DOCUMENTAL = Set.of("02", "03");
@@ -173,8 +173,10 @@ public class FacturacionService {
      * <p>
      * Comportamiento según motivo:
      * <ul>
-     *   <li><b>NC 01/06</b>: Anulación con devolución física. Copia ítems, anula venta,
+     *   <li><b>NC 01</b>: Anulación de la operación. Copia ítems, anula venta,
      *       restaura stock, permite devolver dinero.</li>
+     *   <li><b>NC 06</b>: Devolución total. Copia ítems, restaura stock, marca doc como
+     *       compensado, pero NO anula la venta. Permite devolver dinero.</li>
      *   <li><b>NC 02/03</b>: Corrección documental. Copia ítems y anula el documento,
      *       pero NO restaura stock ni anula la venta (corrección de datos).</li>
      *   <li><b>NC 07</b>: Devolución parcial. Requiere {@code items} con cantidades a devolver.
@@ -570,7 +572,7 @@ public class FacturacionService {
 
         // ── 11. Efectos de negocio según categoría de motivo ──
 
-        // 11-A. Anulación con devolución física (01, 06): anula doc + venta + stock + dinero opcional
+        // 11-A. Anulación de la operación (01): anula doc + venta + stock + dinero opcional
         if (esNotaCredito && MOTIVOS_ANULACION_CON_DEVOLUCION.contains(codigoMotivo)) {
             // Con PSE: el comprobante sigue aceptado en SUNAT, solo se marca internamente como compensado.
             // Sin PSE: se marca como anulado (documento local).
@@ -602,6 +604,26 @@ public class FacturacionService {
                 if (Boolean.TRUE.equals(request.getDevolverDinero())) {
                     crearEgresoCajaPorNC(venta, total, true,
                             "Anulación por NC " + numeroDocumento);
+                }
+            }
+        }
+
+        // 11-C. Devolución total (06): restaura stock + marca doc como compensado, NO anula la venta
+        if (esNotaCredito && "06".equals(codigoMotivo)) {
+            // Marcar documento como compensado (tanto PSE como local)
+            docOriginal.setMotivoAnulacion("Compensado por " + TIPO_DOC_LABELS.get(tipoDoc)
+                    + " " + numeroDocumento + " (Motivo SUNAT: " + codigoMotivo + ")");
+            documentosRepo.save(docOriginal);
+
+            // Restaurar stock completo pero SIN anular la venta
+            Ventas venta = docOriginal.getVenta();
+            if (venta != null) {
+                restaurarStockVentaCompleta(venta, usuario);
+
+                // Crear egreso en caja SOLO si el usuario lo solicitó
+                if (Boolean.TRUE.equals(request.getDevolverDinero())) {
+                    crearEgresoCajaPorNC(venta, total, true,
+                            "Devolución total por NC " + numeroDocumento);
                 }
             }
         }
@@ -959,7 +981,7 @@ public class FacturacionService {
         }
     }
     /**
-     * Restaura stock completo de una venta anulada por NC (motivos 01/02/03/06).
+     * Restaura stock completo de una venta por NC (motivos 01/06).
      * Devuelve todos los productos al almacén predeterminado de la sede.
      */
     private void restaurarStockVentaCompleta(Ventas venta, Usuarios usuario) {
