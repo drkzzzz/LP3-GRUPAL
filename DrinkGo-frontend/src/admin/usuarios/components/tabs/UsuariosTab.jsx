@@ -35,7 +35,7 @@ export const UsuariosTab = () => {
   const { usuarios, isLoading, createUsuario, updateUsuario, deleteUsuario, isCreating, isUpdating } =
     useUsuarios(negocioId);
 
-  const { roles } = useRoles();
+  const { roles } = useRoles(negocioId);
 
   // Sedes del negocio (para asignar al crear usuario)
   const { data: sedes = [] } = useQuery({

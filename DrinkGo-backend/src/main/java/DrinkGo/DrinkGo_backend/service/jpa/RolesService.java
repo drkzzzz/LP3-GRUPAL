@@ -17,6 +17,10 @@ public class RolesService implements IRolesService {
         return repoRoles.findAll();
     }
 
+    public List<Roles> buscarPorNegocio(Long negocioId) {
+        return repoRoles.findByNegocio_Id(negocioId);
+    }
+
     public void guardar(Roles roles) {
         repoRoles.save(roles);
     }

@@ -7,7 +7,7 @@ import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Shield, ShieldCheck, Key, Check, X, Loader2, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, ShieldCheck, Key, Check, Loader2, ChevronDown } from 'lucide-react';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { useRoles } from '../../hooks/useRoles';
 import { rolSchema } from '../../validations/usuariosClientesSchemas';
@@ -95,7 +95,6 @@ const RolForm = ({ initialData, negocioId, onSubmit, onCancel, isLoading }) => {
   );
 };
 
-/* ─── Modal de permisos por rol ─── */
 /** Submódulos que soportan alcance "caja_asignada" */
 const PERMISOS_CON_ALCANCE = new Set([
   'ventas.cajas',
@@ -104,6 +103,62 @@ const PERMISOS_CON_ALCANCE = new Set([
   'facturacion.comprobantes',
 ]);
 
+/* ─── Fila individual de permiso (componente TOP-LEVEL — fuera de PermisosModal
+       para que React no lo desmonte/remonte en cada re-render del padre) ─── */
+const PermisoRow = ({ permiso, indent, asignadosAEsteRol, onToggle, onAlcanceChange, mutating }) => {
+  const asignado = asignadosAEsteRol.get(permiso.id);
+  const activo = !!asignado;
+  const moduloCodigo = permiso.modulo?.codigo ?? '';
+  const soportaAlcance = PERMISOS_CON_ALCANCE.has(moduloCodigo);
+  const alcanceActual = asignado?.alcance || 'completo';
+
+  return (
+    <div
+      className={[
+        'flex items-center gap-3 p-2.5 rounded-lg border transition-all select-none',
+        indent ? 'ml-5' : '',
+        activo ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white hover:bg-gray-50',
+        mutating ? 'opacity-60 pointer-events-none' : '',
+      ].join(' ')}
+    >
+      <label className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={activo}
+          onChange={() => onToggle(permiso)}
+          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-800">{permiso.nombre}</p>
+          {permiso.descripcion && (
+            <p className="text-xs text-gray-500 truncate">{permiso.descripcion}</p>
+          )}
+        </div>
+      </label>
+      {activo && soportaAlcance && (
+        <select
+          value={alcanceActual}
+          onChange={(e) => onAlcanceChange(permiso, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="completo">Completo</option>
+          <option value="caja_asignada">Solo su caja</option>
+        </select>
+      )}
+      {permiso.tipoAccion && (
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+          ACCION_COLORS[permiso.tipoAccion] || 'bg-gray-100 text-gray-600'
+        }`}>
+          {permiso.tipoAccion}
+        </span>
+      )}
+      {activo && <Check size={14} className="text-green-600 shrink-0" />}
+    </div>
+  );
+};
+
+/* ─── Modal de permisos por rol ─── */
 const PermisosModal = ({ rol, onClose }) => {
   const queryClient = useQueryClient();
   const [openModulos, setOpenModulos] = useState(new Set());
@@ -112,13 +167,13 @@ const PermisosModal = ({ rol, onClose }) => {
   const { data: todosPermisos = [], isLoading: loadingPermisos } = useQuery({
     queryKey: ['permisos-sistema'],
     queryFn: permisosSistemaService.getAll,
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 5,
   });
 
-  /* Permisos ya asignados al rol */
+  /* Permisos ya asignados al rol (scoped por rolId para cache independiente) */
   const { data: rolesPermisos = [], isLoading: loadingAsignados } = useQuery({
-    queryKey: ['roles-permisos'],
-    queryFn: rolesPermisosService.getAll,
+    queryKey: ['roles-permisos', rol.id],
+    queryFn: () => rolesPermisosService.getByRolId(rol.id),
     staleTime: 0,
   });
 
@@ -138,19 +193,29 @@ const PermisosModal = ({ rol, onClose }) => {
 
   const assignMutation = useMutation({
     mutationFn: rolesPermisosService.assign,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles-permisos'] }),
+    onSuccess: (newRp) => {
+      queryClient.setQueryData(['roles-permisos', rol.id], (old = []) => [...old, newRp]);
+    },
     onError: () => message.error('Error al asignar permiso'),
   });
 
   const revokeMutation = useMutation({
     mutationFn: rolesPermisosService.revoke,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles-permisos'] }),
+    onSuccess: (_, rpId) => {
+      queryClient.setQueryData(['roles-permisos', rol.id], (old = []) =>
+        old.filter((rp) => rp.id !== rpId),
+      );
+    },
     onError: () => message.error('Error al revocar permiso'),
   });
 
   const updateMutation = useMutation({
     mutationFn: rolesPermisosService.update,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles-permisos'] }),
+    onSuccess: (updatedRp) => {
+      queryClient.setQueryData(['roles-permisos', rol.id], (old = []) =>
+        old.map((rp) => (rp.id === updatedRp.id ? updatedRp : rp)),
+      );
+    },
     onError: () => message.error('Error al actualizar alcance'),
   });
 
@@ -224,60 +289,6 @@ const PermisosModal = ({ rol, onClose }) => {
   const loading = loadingPermisos || loadingAsignados;
   const mutating = assignMutation.isPending || revokeMutation.isPending || updateMutation.isPending;
 
-  const PermisoRow = ({ permiso, indent = false }) => {
-    const asignado = asignadosAEsteRol.get(permiso.id);
-    const activo = !!asignado;
-    const moduloCodigo = permiso.modulo?.codigo ?? '';
-    const soportaAlcance = PERMISOS_CON_ALCANCE.has(moduloCodigo);
-    const alcanceActual = asignado?.alcance || 'completo';
-
-    return (
-      <div
-        className={[
-          'flex items-center gap-3 p-2.5 rounded-lg border transition-all select-none',
-          indent ? 'ml-5' : '',
-          activo ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white hover:bg-gray-50',
-          mutating ? 'opacity-60 pointer-events-none' : '',
-        ].join(' ')}
-      >
-        <label className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={activo}
-            onChange={() => handleToggle(permiso)}
-            className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-800">{permiso.nombre}</p>
-            {permiso.descripcion && (
-              <p className="text-xs text-gray-500 truncate">{permiso.descripcion}</p>
-            )}
-          </div>
-        </label>
-        {/* Selector de alcance para permisos que lo soportan */}
-        {activo && soportaAlcance && (
-          <select
-            value={alcanceActual}
-            onChange={(e) => handleAlcanceChange(permiso, e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-            className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="completo">Completo</option>
-            <option value="caja_asignada">Solo su caja</option>
-          </select>
-        )}
-        {permiso.tipoAccion && (
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-            ACCION_COLORS[permiso.tipoAccion] || 'bg-gray-100 text-gray-600'
-          }`}>
-            {permiso.tipoAccion}
-          </span>
-        )}
-        {activo && <Check size={14} className="text-green-600 shrink-0" />}
-      </div>
-    );
-  };
-
   return (
     <div>
       {/* Header del rol */}
@@ -338,9 +349,26 @@ const PermisosModal = ({ rol, onClose }) => {
                 {/* Permisos del módulo (visible si no tiene hijos, o si está abierto) */}
                 {(!tieneHijos || isOpen) && (
                   <div className="p-2 space-y-1.5">
-                    {grupo.permiso && <PermisoRow permiso={grupo.permiso} indent={false} />}
+                    {grupo.permiso && (
+                      <PermisoRow
+                        permiso={grupo.permiso}
+                        indent={false}
+                        asignadosAEsteRol={asignadosAEsteRol}
+                        onToggle={handleToggle}
+                        onAlcanceChange={handleAlcanceChange}
+                        mutating={mutating}
+                      />
+                    )}
                     {grupo.hijos.map((hijo) => (
-                      <PermisoRow key={hijo.id} permiso={hijo} indent={true} />
+                      <PermisoRow
+                        key={hijo.id}
+                        permiso={hijo}
+                        indent={true}
+                        asignadosAEsteRol={asignadosAEsteRol}
+                        onToggle={handleToggle}
+                        onAlcanceChange={handleAlcanceChange}
+                        mutating={mutating}
+                      />
                     ))}
                   </div>
                 )}
@@ -364,7 +392,7 @@ export const RolesTab = () => {
   const { negocio } = useAdminAuthStore();
   const negocioId = negocio?.id;
 
-  const { roles, isLoading, createRol, updateRol, deleteRol, isCreating, isUpdating } = useRoles();
+  const { roles, isLoading, createRol, updateRol, deleteRol, isCreating, isUpdating } = useRoles(negocioId);
 
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);

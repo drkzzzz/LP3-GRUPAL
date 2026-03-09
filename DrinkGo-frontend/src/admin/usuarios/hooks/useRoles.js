@@ -7,19 +7,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { rolesService } from '../services/usuariosClientesService';
 import { message } from '@/shared/utils/notifications';
 
-export const useRoles = () => {
+export const useRoles = (negocioId) => {
   const queryClient = useQueryClient();
 
   const rolesQuery = useQuery({
-    queryKey: ['roles'],
-    queryFn: rolesService.getAll,
+    queryKey: ['roles', negocioId],
+    queryFn: () => negocioId ? rolesService.getByNegocio(negocioId) : rolesService.getAll(),
     staleTime: 1000 * 60 * 5,
+    enabled: !!negocioId,
   });
 
   const createRol = useMutation({
     mutationFn: rolesService.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.invalidateQueries({ queryKey: ['roles', negocioId] });
       message.success('Rol creado exitosamente');
     },
     onError: (err) => {
@@ -30,7 +31,7 @@ export const useRoles = () => {
   const updateRol = useMutation({
     mutationFn: rolesService.update,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.invalidateQueries({ queryKey: ['roles', negocioId] });
       message.success('Rol actualizado exitosamente');
     },
     onError: (err) => {
@@ -41,7 +42,7 @@ export const useRoles = () => {
   const deleteRol = useMutation({
     mutationFn: rolesService.delete,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.invalidateQueries({ queryKey: ['roles', negocioId] });
       message.success('Rol eliminado exitosamente');
     },
     onError: (err) => {

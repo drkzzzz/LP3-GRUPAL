@@ -25,6 +25,11 @@ public class RolesPermisosController {
         return service.buscarTodos();
     }
 
+    @GetMapping("/roles-permisos/por-rol/{rolId}")
+    public List<RolesPermisos> buscarPorRol(@PathVariable Long rolId) {
+        return service.buscarPorRol(rolId);
+    }
+
     @PostMapping("/roles-permisos")
     public RolesPermisos guardar(@RequestBody RolesPermisos entity) {
         service.guardar(entity);

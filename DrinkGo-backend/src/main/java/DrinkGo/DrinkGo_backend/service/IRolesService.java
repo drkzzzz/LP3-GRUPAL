@@ -6,8 +6,14 @@ import DrinkGo.DrinkGo_backend.entity.Roles;
 
 public interface IRolesService {
     List<Roles> buscarTodos();
+
+    List<Roles> buscarPorNegocio(Long negocioId);
+
     void guardar(Roles roles);
+
     void modificar(Roles roles);
+
     Optional<Roles> buscarId(Long id);
+
     void eliminar(Long id);
 }

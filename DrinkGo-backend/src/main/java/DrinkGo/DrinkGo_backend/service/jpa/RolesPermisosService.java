@@ -17,6 +17,10 @@ public class RolesPermisosService implements IRolesPermisosService {
         return repoRolesPermisos.findAll();
     }
 
+    public List<RolesPermisos> buscarPorRol(Long rolId) {
+        return repoRolesPermisos.findByRol_Id(rolId);
+    }
+
     public void guardar(RolesPermisos rolesPermisos) {
         repoRolesPermisos.save(rolesPermisos);
     }

@@ -98,6 +98,11 @@ export const rolesService = {
     return toArray(data);
   },
 
+  getByNegocio: async (negocioId) => {
+    const { data } = await adminApi.get(`/roles/por-negocio/${negocioId}`);
+    return toArray(data);
+  },
+
   getById: async (id) => {
     const { data } = await adminApi.get(`/roles/${id}`);
     return data;
@@ -135,6 +140,11 @@ export const permisosSistemaService = {
 export const rolesPermisosService = {
   getAll: async () => {
     const { data } = await adminApi.get('/roles-permisos');
+    return toArray(data);
+  },
+
+  getByRolId: async (rolId) => {
+    const { data } = await adminApi.get(`/roles-permisos/por-rol/${rolId}`);
     return toArray(data);
   },
 
