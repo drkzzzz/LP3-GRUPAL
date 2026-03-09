@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "cajas_registradoras")
+@Table(name = "cajas_registradoras", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_cajreg_sede_codigo", columnNames = {"sede_id", "codigo"})
+})
 @SQLDelete(sql = "UPDATE cajas_registradoras SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "negocioId", "sedeId", "usuarioAsignadoId", "nombreCaja", "codigo", "montoAperturaDefecto",
@@ -39,7 +41,7 @@ public class CajasRegistradoras {
     @Column(name = "nombre_caja", nullable = false)
     private String nombreCaja;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String codigo;
 
     @Column(name = "monto_apertura_defecto", precision = 10, scale = 2)

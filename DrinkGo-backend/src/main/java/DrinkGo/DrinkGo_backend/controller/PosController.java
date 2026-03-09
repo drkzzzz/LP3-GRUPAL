@@ -329,6 +329,13 @@ public class PosController {
             caja.setNombreCaja(body.get("nombreCaja").toString());
             caja.setCodigo(body.get("codigo").toString());
 
+            // Validar que el código no esté repetido en la misma sede
+            if (cajasRepo.existsBySedeIdAndCodigo(sede.getId(), caja.getCodigo())) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Ya existe una caja con el código '" + caja.getCodigo()
+                                + "' en esta sede. Usa un código diferente."));
+            }
+
             // Asignar usuario a la caja si se envía usuarioAsignadoId
             if (body.containsKey("usuarioAsignadoId") && body.get("usuarioAsignadoId") != null) {
                 Long uId = Long.valueOf(body.get("usuarioAsignadoId").toString());
@@ -363,8 +370,17 @@ public class PosController {
 
             if (body.containsKey("nombreCaja"))
                 caja.setNombreCaja(body.get("nombreCaja").toString());
-            if (body.containsKey("codigo"))
-                caja.setCodigo(body.get("codigo").toString());
+            if (body.containsKey("codigo")) {
+                String nuevoCodigo = body.get("codigo").toString();
+                // Validar que el nuevo código no choque con otra caja de la misma sede
+                if (!nuevoCodigo.equals(caja.getCodigo())
+                        && cajasRepo.existsBySedeIdAndCodigo(caja.getSede().getId(), nuevoCodigo)) {
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("error", "Ya existe una caja con el código '" + nuevoCodigo
+                                    + "' en esta sede. Usa un código diferente."));
+                }
+                caja.setCodigo(nuevoCodigo);
+            }
 
             // Actualizar usuario asignado (null para desasignar)
             if (body.containsKey("usuarioAsignadoId")) {

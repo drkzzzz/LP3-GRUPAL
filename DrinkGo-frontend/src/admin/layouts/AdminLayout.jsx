@@ -43,6 +43,7 @@ import {
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useSedesConfig } from '@/admin/configuracion/hooks/useSedesConfig';
+import { negocioService } from '@/admin/configuracion/services/configuracionService';
 
 /* ─── Sub-items del menú Configuración ─── */
 const CONFIGURACION_SUBITEMS = [
@@ -185,6 +186,25 @@ export const AdminLayout = () => {
   const { logout: superadminLogout } = useAuthStore();
   const { sedes } = useSedesConfig(negocio?.id);
   const tieneMesasActivo = sedes.some((s) => s.tieneMesas);
+
+  /* Sincronizar datos del negocio desde el backend (detecta cambios hechos por superadmin) */
+  useEffect(() => {
+    if (!negocio?.id) return;
+    negocioService.getById(negocio.id).then((fresh) => {
+      if (!fresh) return;
+      const store = useAdminAuthStore.getState();
+      const current = store.negocio;
+      if (
+        current.tienePse !== fresh.tienePse ||
+        current.nombre !== fresh.nombre ||
+        current.razonSocial !== fresh.razonSocial ||
+        current.porcentajeIgv !== fresh.porcentajeIgv ||
+        current.aplicaIgv !== fresh.aplicaIgv
+      ) {
+        store.setNegocio({ ...current, ...fresh });
+      }
+    }).catch(() => { /* silencioso */ });
+  }, [negocio?.id, location.pathname]);
 
 
   /**
