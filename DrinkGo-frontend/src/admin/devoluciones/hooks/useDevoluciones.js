@@ -75,6 +75,11 @@ export const useDevoluciones = (negocioId, origen = 'todos') => {
     mutationFn: ({ id, usuarioId }) => devolucionesService.aprobar(id, usuarioId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devoluciones'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas-sesion'] });
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
+      queryClient.invalidateQueries({ queryKey: ['resumen-turno'] });
+      queryClient.invalidateQueries({ queryKey: ['movimientos'] });
       message.success('Devolución aprobada exitosamente');
     },
     onError: (err) => {

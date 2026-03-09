@@ -155,7 +155,13 @@ public class FacturacionService {
     //  EMISIÓN DE NOTA DE CRÉDITO / DÉBITO
     // ═══════════════════════════════════════════════════════════════════
 
-    /** Motivos NC que representan una anulación completa (copiar todos los ítems). */
+    /** Motivos NC que anulan la operación CON devolución física (restaurar stock + anular venta). */
+    private static final Set<String> MOTIVOS_ANULACION_CON_DEVOLUCION = Set.of("01", "06");
+
+    /** Motivos NC de corrección documental (anula documento, NO stock, NO anula venta). */
+    private static final Set<String> MOTIVOS_CORRECCION_DOCUMENTAL = Set.of("02", "03");
+
+    /** Todos los motivos que copian ítems completos del original (anulación + corrección). */
     private static final Set<String> MOTIVOS_ANULACION_COMPLETA = Set.of("01", "02", "03", "06");
 
     /** Motivo NC: devolución parcial por ítem. */
@@ -164,13 +170,18 @@ public class FacturacionService {
     /** Motivos NC: descuento/disminución (requieren monto). */
     private static final Set<String> MOTIVOS_DESCUENTO = Set.of("04", "09");
 
+    /** Motivos NC que permiten devolución de dinero al cliente. */
+    private static final Set<String> MOTIVOS_CON_DEVOLUCION_DINERO = Set.of("01", "06", "07", "09");
+
     /**
      * Emite una Nota de Crédito o Nota de Débito referenciando un comprobante original.
      * <p>
      * Comportamiento según motivo:
      * <ul>
-     *   <li><b>NC 01/02/03/06</b>: Anulación completa. Copia todos los ítems del original.
-     *       Marca el comprobante original como "anulado" vía NC.</li>
+     *   <li><b>NC 01/06</b>: Anulación con devolución física. Copia ítems, anula venta,
+     *       restaura stock, permite devolver dinero.</li>
+     *   <li><b>NC 02/03</b>: Corrección documental. Copia ítems y anula el documento,
+     *       pero NO restaura stock ni anula la venta (corrección de datos).</li>
      *   <li><b>NC 07</b>: Devolución parcial. Requiere {@code items} con cantidades a devolver.
      *       Devuelve stock al almacén predeterminado.</li>
      *   <li><b>NC 04/09</b>: Descuento/disminución. Requiere {@code monto} de ajuste.</li>
@@ -374,6 +385,11 @@ public class FacturacionService {
                         "El documento no tiene ítems para realizar una devolución parcial");
             }
 
+            // Calcular cantidades ya devueltas por NC 07 anteriores
+            Map<Long, BigDecimal> cantidadesYaDevueltas = calcularCantidadesDevueltas(docOriginal.getId());
+
+            BigDecimal igvRate = tasaIgv.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+
             BigDecimal sumSubtotal = BigDecimal.ZERO;
             BigDecimal sumImpuesto = BigDecimal.ZERO;
             BigDecimal sumTotal = BigDecimal.ZERO;
@@ -391,17 +407,31 @@ public class FacturacionService {
                     throw new IllegalArgumentException(
                             "El producto ID " + item.getProductoId() + " no está en el comprobante original");
                 }
-                if (item.getCantidad().compareTo(cantOriginal) > 0) {
+
+                // Restar cantidades ya devueltas por NC 07 anteriores
+                BigDecimal yaDevueltas = cantidadesYaDevueltas.getOrDefault(item.getProductoId(), BigDecimal.ZERO);
+                BigDecimal cantidadDisponible = cantOriginal.subtract(yaDevueltas);
+
+                if (cantidadDisponible.compareTo(BigDecimal.ZERO) <= 0) {
                     throw new IllegalArgumentException(
-                            "No se puede devolver más cantidad (" + item.getCantidad()
-                            + ") que la vendida (" + cantOriginal + ") para el producto ID " + item.getProductoId());
+                            "El producto ID " + item.getProductoId()
+                            + " ya fue devuelto completamente en notas de crédito anteriores");
+                }
+                if (item.getCantidad().compareTo(cantidadDisponible) > 0) {
+                    throw new IllegalArgumentException(
+                            "No se puede devolver " + item.getCantidad()
+                            + " unidades del producto ID " + item.getProductoId()
+                            + ". Cantidad disponible: " + cantidadDisponible
+                            + " (original: " + cantOriginal + ", ya devueltas: " + yaDevueltas + ")");
                 }
 
+                // precioUnit es el precio SIN IGV (valor venta unitario)
                 BigDecimal precioUnit = preciosPorProducto.get(item.getProductoId());
-                BigDecimal totalItem = item.getCantidad().multiply(precioUnit)
+                BigDecimal subtotalItem = item.getCantidad().multiply(precioUnit)
                         .setScale(2, RoundingMode.HALF_UP);
-                BigDecimal subtotalItem = totalItem.divide(factorIgv, 2, RoundingMode.HALF_UP);
-                BigDecimal igvItem = totalItem.subtract(subtotalItem);
+                BigDecimal igvItem = subtotalItem.multiply(igvRate)
+                        .setScale(2, RoundingMode.HALF_UP);
+                BigDecimal totalItem = subtotalItem.add(igvItem);
 
                 DetalleDocumentosFacturacion detNota = new DetalleDocumentosFacturacion();
                 Productos prod = new Productos();
@@ -531,14 +561,15 @@ public class FacturacionService {
             documentosRepo.save(doc);
         }
 
-        // ── 11. Si es anulación completa, aplicar efectos de negocio ──
-        if (esNotaCredito && MOTIVOS_ANULACION_COMPLETA.contains(codigoMotivo)) {
+        // ── 11. Efectos de negocio según categoría de motivo ──
+
+        // 11-A. Anulación con devolución física (01, 06): anula doc + venta + stock + dinero opcional
+        if (esNotaCredito && MOTIVOS_ANULACION_CON_DEVOLUCION.contains(codigoMotivo)) {
             docOriginal.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.anulado);
             docOriginal.setMotivoAnulacion("Anulado por " + TIPO_DOC_LABELS.get(tipoDoc)
                     + " " + numeroDocumento + " (Motivo SUNAT: " + codigoMotivo + ")");
             documentosRepo.save(docOriginal);
 
-            // 11a. Marcar la venta como anulada (si existe y no lo está ya)
             Ventas venta = docOriginal.getVenta();
             if (venta != null && venta.getEstado() != Ventas.Estado.anulada) {
                 venta.setEstado(Ventas.Estado.anulada);
@@ -550,21 +581,43 @@ public class FacturacionService {
                 }
                 ventasRepo.save(venta);
 
-                // 11b. Restaurar stock de todos los productos de la venta
+                // Restaurar stock de todos los productos de la venta
                 restaurarStockVentaCompleta(venta, usuario);
 
-                // 11c. Crear egreso en caja (solo porción efectivo)
-                crearEgresoCajaPorNC(venta, total, true,
-                        "Anulación por NC " + numeroDocumento);
+                // Crear egreso en caja SOLO si el usuario lo solicitó
+                if (Boolean.TRUE.equals(request.getDevolverDinero())) {
+                    crearEgresoCajaPorNC(venta, total, true,
+                            "Anulación por NC " + numeroDocumento);
+                }
             }
         }
 
-        // ── 12. Si es devolución parcial (07), crear egreso en caja ──
+        // 11-B. Corrección documental (02, 03): solo anula el documento, NO stock, NO venta
+        if (esNotaCredito && MOTIVOS_CORRECCION_DOCUMENTAL.contains(codigoMotivo)) {
+            docOriginal.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.anulado);
+            docOriginal.setMotivoAnulacion("Anulado por " + TIPO_DOC_LABELS.get(tipoDoc)
+                    + " " + numeroDocumento + " (Motivo SUNAT: " + codigoMotivo + ")");
+            documentosRepo.save(docOriginal);
+            // No se restaura stock ni se anula la venta — es corrección de datos del documento.
+            // No se permite devolución de dinero para estos motivos.
+        }
+
+        // ── 12. Si es devolución parcial (07), crear egreso SOLO si solicitado ──
         if (esNotaCredito && MOTIVO_DEVOLUCION_ITEM.equals(codigoMotivo)) {
             Ventas ventaDev = docOriginal.getVenta();
-            if (ventaDev != null) {
+            if (ventaDev != null && Boolean.TRUE.equals(request.getDevolverDinero())) {
                 crearEgresoCajaPorNC(ventaDev, total, false,
                         "Devolución por NC " + numeroDocumento);
+            }
+        }
+
+        // ── 13. Si es descuento/disminución (04/09), crear egreso SOLO para motivo 09 si solicitado ──
+        //       Motivo 04 (descuento global) es ajuste contable, NO permite devolverDinero.
+        if (esNotaCredito && "09".equals(codigoMotivo)) {
+            Ventas ventaDesc = docOriginal.getVenta();
+            if (ventaDesc != null && Boolean.TRUE.equals(request.getDevolverDinero())) {
+                crearEgresoCajaPorNC(ventaDesc, total, false,
+                        "Disminución en el valor por NC " + numeroDocumento);
             }
         }
 
@@ -575,6 +628,260 @@ public class FacturacionService {
             DocumentosFacturacion.TipoDocumento.nota_credito, "Nota de Crédito",
             DocumentosFacturacion.TipoDocumento.nota_debito, "Nota de Débito"
     );
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  REEMISIÓN DE COMPROBANTE CON NUEVO RUC (TRAS NC MOTIVO 02)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Reemite un comprobante con un nuevo RUC/documento de cliente.
+     * Se usa después de emitir una NC motivo 02 (error en RUC).
+     * <p>
+     * Crea un nuevo comprobante (boleta o factura) con los mismos ítems y montos
+     * del documento original, pero asociado al nuevo cliente.
+     *
+     * @param ncId           ID de la NC motivo 02 que anuló el original
+     * @param tipoDocumento  Tipo de documento del nuevo cliente (RUC, DNI, CE)
+     * @param numeroDocumento Número de documento del nuevo cliente
+     * @param nombreCliente  Razón social o nombre del nuevo cliente
+     * @param direccion      Dirección del nuevo cliente (opcional)
+     * @param usuarioId      ID del usuario que realiza la operación
+     * @return El nuevo comprobante emitido
+     */
+    @Transactional
+    public DocumentosFacturacion reemitirComprobanteConNuevoCliente(
+            Long ncId,
+            String tipoDocumento,
+            String numeroDocumento,
+            String nombreCliente,
+            String direccion,
+            Long usuarioId) {
+
+        // 1. Validar que el documento NC existe y es motivo 02
+        DocumentosFacturacion nc = documentosRepo.findById(ncId)
+                .orElseThrow(() -> new IllegalArgumentException("Nota de crédito no encontrada"));
+
+        if (nc.getTipoDocumento() != DocumentosFacturacion.TipoDocumento.nota_credito) {
+            throw new IllegalStateException("El documento no es una nota de crédito");
+        }
+        if (!"02".equals(nc.getCodigoMotivoNota())) {
+            throw new IllegalStateException(
+                    "Solo se puede reemitir desde una NC con motivo 02 (error en RUC)");
+        }
+        if (nc.getEstadoDocumento() == DocumentosFacturacion.EstadoDocumento.anulado) {
+            throw new IllegalStateException("La nota de crédito está anulada");
+        }
+
+        // 2. Obtener el documento original (el que fue anulado por esta NC)
+        DocumentosFacturacion docOriginal = nc.getDocumentoReferencia();
+        if (docOriginal == null) {
+            throw new IllegalStateException("No se encontró el documento original de referencia");
+        }
+
+        // 3. Verificar que no se haya reemitido ya
+        List<DocumentosFacturacion> existentes = documentosRepo.findNotasByDocumentoReferenciaId(ncId);
+        boolean yaReemitido = existentes.stream()
+                .anyMatch(d -> (d.getTipoDocumento() == DocumentosFacturacion.TipoDocumento.boleta
+                        || d.getTipoDocumento() == DocumentosFacturacion.TipoDocumento.factura)
+                        && d.getEstadoDocumento() != DocumentosFacturacion.EstadoDocumento.anulado);
+        if (yaReemitido) {
+            throw new IllegalStateException("Ya se emitió un comprobante corregido desde esta NC");
+        }
+
+        // 4. Determinar tipo de comprobante a emitir (mismo que el original)
+        DocumentosFacturacion.TipoDocumento tipoDocNuevo = docOriginal.getTipoDocumento();
+        SeriesFacturacion.TipoDocumento tipoDocSerie = SeriesFacturacion.TipoDocumento
+                .valueOf(tipoDocNuevo.name());
+
+        // 5. Buscar serie predeterminada
+        Long negocioId = docOriginal.getNegocio().getId();
+        Optional<SeriesFacturacion> serieOpt = seriesRepo
+                .findFirstByNegocioIdAndTipoDocumentoAndEsPredeterminada(negocioId, tipoDocSerie, true);
+        if (serieOpt.isEmpty()) {
+            throw new IllegalStateException(
+                    "No hay serie predeterminada configurada para " + tipoDocNuevo
+                    + ". Vaya a Facturación → Series y configure una.");
+        }
+
+        // 6. Generar correlativo
+        SeriesFacturacion serie = seriesRepo.findByIdForUpdate(serieOpt.get().getId())
+                .orElseThrow(() -> new RuntimeException("Serie de facturación no encontrada"));
+        int correlativo = serie.getNumeroActual();
+        serie.setNumeroActual(correlativo + 1);
+        seriesRepo.save(serie);
+        String nuevoNumeroDocumento = serie.getSerie() + "-" + String.format("%08d", correlativo);
+
+        // 7. Buscar o crear cliente con el nuevo documento
+        Clientes cliente = resolverClienteParaReemision(
+                negocioId, docOriginal.getNegocio(),
+                tipoDocumento, numeroDocumento, nombreCliente, direccion);
+
+        // 8. Crear el nuevo comprobante
+        Usuarios usuario = null;
+        if (usuarioId != null) {
+            usuario = new Usuarios();
+            usuario.setId(usuarioId);
+        }
+
+        DocumentosFacturacion nuevoDoc = new DocumentosFacturacion();
+        nuevoDoc.setNegocio(docOriginal.getNegocio());
+        nuevoDoc.setSerieFacturacion(serie);
+        nuevoDoc.setTipoDocumento(tipoDocNuevo);
+        nuevoDoc.setNumeroDocumento(nuevoNumeroDocumento);
+        nuevoDoc.setDocumentoReferencia(nc); // referencia la NC como origen
+        nuevoDoc.setVenta(docOriginal.getVenta());
+        nuevoDoc.setCliente(cliente);
+        nuevoDoc.setUsuario(usuario != null ? usuario : docOriginal.getUsuario());
+        nuevoDoc.setFechaEmision(LocalDate.now());
+        nuevoDoc.setSubtotal(docOriginal.getSubtotal());
+        nuevoDoc.setImpuestos(docOriginal.getImpuestos());
+        nuevoDoc.setTotal(docOriginal.getTotal());
+        nuevoDoc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.pendiente_envio);
+
+        boolean usarPse = Boolean.TRUE.equals(docOriginal.getNegocio().getTienePse());
+        nuevoDoc.setModoEmision(usarPse
+                ? DocumentosFacturacion.ModoEmision.PSE
+                : DocumentosFacturacion.ModoEmision.LOCAL);
+
+        nuevoDoc = documentosRepo.save(nuevoDoc);
+
+        // 9. Copiar detalles del documento original
+        List<DetalleDocumentosFacturacion> detallesOrig =
+                detalleDocRepo.findByDocumentoFacturacionId(docOriginal.getId());
+
+        if (!detallesOrig.isEmpty()) {
+            for (DetalleDocumentosFacturacion detOrig : detallesOrig) {
+                DetalleDocumentosFacturacion detNuevo = new DetalleDocumentosFacturacion();
+                detNuevo.setDocumentoFacturacion(nuevoDoc);
+                detNuevo.setProducto(detOrig.getProducto());
+                detNuevo.setCombo(detOrig.getCombo());
+                detNuevo.setCantidad(detOrig.getCantidad());
+                detNuevo.setPrecioUnitario(detOrig.getPrecioUnitario());
+                detNuevo.setDescuento(detOrig.getDescuento());
+                detNuevo.setSubtotal(detOrig.getSubtotal());
+                detNuevo.setImpuesto(detOrig.getImpuesto());
+                detNuevo.setTotal(detOrig.getTotal());
+                detalleDocRepo.save(detNuevo);
+            }
+        } else if (docOriginal.getVenta() != null) {
+            // Copiar desde la venta si no hay detalles de facturación
+            List<DetalleVentas> detallesVenta = detalleVentasRepo
+                    .findByVentaId(docOriginal.getVenta().getId());
+            for (DetalleVentas dv : detallesVenta) {
+                DetalleDocumentosFacturacion detNuevo = new DetalleDocumentosFacturacion();
+                detNuevo.setDocumentoFacturacion(nuevoDoc);
+                detNuevo.setProducto(dv.getProducto());
+                detNuevo.setCombo(dv.getCombo());
+                detNuevo.setCantidad(dv.getCantidad());
+                detNuevo.setPrecioUnitario(dv.getPrecioUnitario());
+                detNuevo.setDescuento(dv.getDescuento() != null ? dv.getDescuento() : BigDecimal.ZERO);
+                detNuevo.setSubtotal(dv.getSubtotal());
+                detNuevo.setImpuesto(dv.getImpuesto() != null ? dv.getImpuesto() : BigDecimal.ZERO);
+                detNuevo.setTotal(dv.getTotal());
+                detalleDocRepo.save(detNuevo);
+            }
+        }
+
+        // 10. Si es LOCAL, aceptar directamente
+        if (!usarPse) {
+            nuevoDoc.setEstadoDocumento(DocumentosFacturacion.EstadoDocumento.aceptado);
+            nuevoDoc.setRespuestaSunat("Emitido localmente (sin PSE) — Reemisión por corrección de RUC");
+            documentosRepo.save(nuevoDoc);
+        }
+
+        return nuevoDoc;
+    }
+
+    /**
+     * Resuelve o crea un cliente para la reemisión de comprobante.
+     */
+    private Clientes resolverClienteParaReemision(
+            Long negocioId, Negocios negocio,
+            String tipoDocumento, String numeroDocumento,
+            String nombreCliente, String direccion) {
+
+        // Buscar cliente existente con ese documento
+        Optional<Clientes> existente = clientesRepo
+                .findFirstByNegocioIdAndNumeroDocumento(negocioId, numeroDocumento);
+
+        if (existente.isPresent()) {
+            Clientes c = existente.get();
+            // Actualizar datos si se proporcionan
+            if (nombreCliente != null && !nombreCliente.isBlank()) {
+                if ("RUC".equalsIgnoreCase(tipoDocumento)) {
+                    c.setRazonSocial(nombreCliente);
+                } else {
+                    String[] partes = nombreCliente.trim().split(" ", 2);
+                    c.setNombres(partes[0]);
+                    c.setApellidos(partes.length > 1 ? partes[1] : "");
+                }
+            }
+            if (direccion != null && !direccion.isBlank()) {
+                c.setDireccion(direccion);
+            }
+            clientesRepo.save(c);
+            return c;
+        }
+
+        // Crear nuevo cliente
+        Clientes nuevo = new Clientes();
+        nuevo.setNegocio(negocio);
+
+        if ("RUC".equalsIgnoreCase(tipoDocumento)) {
+            nuevo.setTipoDocumento(Clientes.TipoDocumento.RUC);
+            nuevo.setRazonSocial(nombreCliente != null ? nombreCliente : numeroDocumento);
+        } else if ("CE".equalsIgnoreCase(tipoDocumento)) {
+            nuevo.setTipoDocumento(Clientes.TipoDocumento.CE);
+            if (nombreCliente != null && !nombreCliente.isBlank()) {
+                String[] partes = nombreCliente.trim().split(" ", 2);
+                nuevo.setNombres(partes[0]);
+                nuevo.setApellidos(partes.length > 1 ? partes[1] : "");
+            }
+        } else {
+            nuevo.setTipoDocumento(Clientes.TipoDocumento.DNI);
+            if (nombreCliente != null && !nombreCliente.isBlank()) {
+                String[] partes = nombreCliente.trim().split(" ", 2);
+                nuevo.setNombres(partes[0]);
+                nuevo.setApellidos(partes.length > 1 ? partes[1] : "");
+            } else {
+                nuevo.setNombres("Cliente");
+                nuevo.setApellidos("General");
+            }
+        }
+
+        nuevo.setNumeroDocumento(numeroDocumento);
+        if (direccion != null && !direccion.isBlank()) {
+            nuevo.setDireccion(direccion);
+        }
+        return clientesRepo.save(nuevo);
+    }
+
+    /**
+     * Calcula las cantidades ya devueltas por NC motivo 07 anteriores sobre un comprobante.
+     * Recorre todas las NC 07 no anuladas que referencian este documento,
+     * y suma las cantidades por productoId.
+     */
+    private Map<Long, BigDecimal> calcularCantidadesDevueltas(Long documentoReferenciaId) {
+        Map<Long, BigDecimal> devueltas = new java.util.HashMap<>();
+
+        List<DocumentosFacturacion> notasExistentes = documentosRepo
+                .findNotasByDocumentoReferenciaId(documentoReferenciaId);
+
+        for (DocumentosFacturacion nota : notasExistentes) {
+            // Solo NC motivo 07 no anuladas
+            if (nota.getTipoDocumento() != DocumentosFacturacion.TipoDocumento.nota_credito) continue;
+            if (!"07".equals(nota.getCodigoMotivoNota())) continue;
+            if (nota.getEstadoDocumento() == DocumentosFacturacion.EstadoDocumento.anulado) continue;
+
+            List<DetalleDocumentosFacturacion> detallesNota =
+                    detalleDocRepo.findByDocumentoFacturacionId(nota.getId());
+            for (DetalleDocumentosFacturacion det : detallesNota) {
+                if (det.getProducto() == null) continue;
+                devueltas.merge(det.getProducto().getId(), det.getCantidad(), BigDecimal::add);
+            }
+        }
+        return devueltas;
+    }
 
     /**
      * Restaura stock al almacén predeterminado para los ítems devueltos en una NC motivo 07.

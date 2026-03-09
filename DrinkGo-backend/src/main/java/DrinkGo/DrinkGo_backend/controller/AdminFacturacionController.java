@@ -23,6 +23,7 @@ import DrinkGo.DrinkGo_backend.repository.DetalleVentasRepository;
 import DrinkGo.DrinkGo_backend.repository.DocumentosFacturacionRepository;
 import DrinkGo.DrinkGo_backend.repository.MetodosPagoRepository;
 import DrinkGo.DrinkGo_backend.repository.NegociosRepository;
+import DrinkGo.DrinkGo_backend.repository.PagosVentaRepository;
 import DrinkGo.DrinkGo_backend.repository.SedesRepository;
 import DrinkGo.DrinkGo_backend.repository.SeriesFacturacionRepository;
 import DrinkGo.DrinkGo_backend.repository.ConfiguracionPseRepository;
@@ -44,6 +45,7 @@ public class AdminFacturacionController {
     @Autowired private DetalleDocumentosFacturacionRepository detalleDocRepo;
     @Autowired private DetalleVentasRepository detalleVentasRepo;
     @Autowired private MetodosPagoRepository metodosPagoRepo;
+    @Autowired private PagosVentaRepository pagosVentaRepo;
     @Autowired private NegociosRepository negociosRepo;
     @Autowired private SedesRepository sedesRepo;
     @Autowired private ConfiguracionPseRepository configPseRepo;
@@ -269,12 +271,49 @@ public class AdminFacturacionController {
             java.math.BigDecimal totalNcAcumulado = documentosRepo
                     .sumTotalNotasCreditoByDocumentoReferenciaId(id);
 
-            return ResponseEntity.ok(Map.of(
-                    "items", itemsResult,
-                    "notasExistentes", notasExistentes,
-                    "totalNcAcumulado", totalNcAcumulado,
-                    "totalComprobante", doc.getTotal()
-            ));
+            // Cantidades ya devueltas por NC motivo 07 anteriores (productoId → cantidad)
+            java.util.Map<Long, java.math.BigDecimal> cantidadesDevueltas = new java.util.HashMap<>();
+            for (var nota : notasExistentes) {
+                if (nota.getTipoDocumento() != DocumentosFacturacion.TipoDocumento.nota_credito) continue;
+                if (!"07".equals(nota.getCodigoMotivoNota())) continue;
+                if (nota.getEstadoDocumento() == DocumentosFacturacion.EstadoDocumento.anulado) continue;
+                var detallesNota = detalleDocRepo.findByDocumentoFacturacionId(nota.getId());
+                for (var det : detallesNota) {
+                    if (det.getProducto() == null) continue;
+                    cantidadesDevueltas.merge(det.getProducto().getId(), det.getCantidad(), java.math.BigDecimal::add);
+                }
+            }
+
+            // Determinar estado de la sesión de caja asociada a la venta
+            String estadoSesionCaja = "sin_sesion";
+            boolean tieneEfectivo = false;
+            if (doc.getVenta() != null && doc.getVenta().getSesionCaja() != null) {
+                var sesion = doc.getVenta().getSesionCaja();
+                estadoSesionCaja = sesion.getEstadoSesion() != null
+                        ? sesion.getEstadoSesion().name() : "cerrada";
+                // Verificar si la venta tiene pagos en efectivo
+                var pagos = pagosVentaRepo.findByVentaId(doc.getVenta().getId());
+                for (var pago : pagos) {
+                    if (pago.getMetodoPago() != null
+                            && pago.getMetodoPago().getTipo() == MetodosPago.TipoMetodoPago.efectivo
+                            && pago.getMonto() != null
+                            && pago.getMonto().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        tieneEfectivo = true;
+                        break;
+                    }
+                }
+            }
+
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("items", itemsResult);
+            response.put("notasExistentes", notasExistentes);
+            response.put("totalNcAcumulado", totalNcAcumulado);
+            response.put("totalComprobante", doc.getTotal());
+            response.put("cantidadesDevueltas", cantidadesDevueltas);
+            response.put("estadoSesionCaja", estadoSesionCaja);
+            response.put("tieneEfectivo", tieneEfectivo);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
@@ -301,6 +340,50 @@ public class AdminFacturacionController {
 
             DocumentosFacturacion doc = facturacionService.emitirNotaCreditoDebito(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(doc);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  REEMISIÓN DE COMPROBANTE (TRAS NC MOTIVO 02 - ERROR EN RUC)
+    // ═══════════════════════════════════════════════════════════════════
+
+    @PostMapping("/comprobantes/{ncId}/reemitir")
+    @Transactional
+    public ResponseEntity<?> reemitirComprobanteConNuevoRuc(
+            @PathVariable Long ncId,
+            @RequestBody Map<String, String> request) {
+        try {
+            String tipoDocumento = request.get("tipoDocumento");
+            String numeroDocumento = request.get("numeroDocumento");
+            String nombreCliente = request.get("nombreCliente");
+            String direccion = request.get("direccion");
+            String usuarioIdStr = request.get("usuarioId");
+
+            if (tipoDocumento == null || tipoDocumento.isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "tipoDocumento es requerido"));
+            }
+            if (numeroDocumento == null || numeroDocumento.isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "numeroDocumento es requerido"));
+            }
+
+            Long usuarioId = null;
+            if (usuarioIdStr != null && !usuarioIdStr.isBlank()) {
+                usuarioId = Long.parseLong(usuarioIdStr);
+            }
+
+            DocumentosFacturacion nuevoDoc = facturacionService
+                    .reemitirComprobanteConNuevoCliente(
+                            ncId, tipoDocumento, numeroDocumento,
+                            nombreCliente, direccion, usuarioId);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(nuevoDoc);
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -395,12 +478,8 @@ public class AdminFacturacionController {
         try {
             Optional<ConfiguracionPse> config = configPseRepo.findFirstByNegocioId(negocioId);
             if (config.isEmpty()) {
-                // Retornar config default vacía
-                ConfiguracionPse defaultConfig = new ConfiguracionPse();
-                defaultConfig.setProveedor("SIMULADOR");
-                defaultConfig.setEntorno("SANDBOX");
-                defaultConfig.setEstaActivo(false);
-                return ResponseEntity.ok(defaultConfig);
+                // Sin configuración previa: retornar objeto vacío sin defaults
+                return ResponseEntity.ok(Map.of("estaActivo", false));
             }
             return ResponseEntity.ok(config.get());
         } catch (Exception e) {
@@ -440,47 +519,23 @@ public class AdminFacturacionController {
             @PathVariable Long negocioId,
             @RequestBody(required = false) Map<String, Object> body) {
         try {
-            final String TOKEN_VALIDO = "9d4f7a2b8c1e6f3a5b9c2d7e4f1a8b6c3d9e2f7a1b4c8d6e3f5a9b2c7d4e1f";
             String tokenEnviado = body != null ? (String) body.get("apiToken") : null;
 
-            if (tokenEnviado == null || tokenEnviado.isBlank()) {
-                return ResponseEntity.ok(Map.of(
-                        "success", false,
-                        "message", "Debe ingresar un API Token"
-                ));
-            }
-
-            Optional<ConfiguracionPse> configOpt = configPseRepo.findFirstByNegocioId(negocioId);
-            String tokenEsperado;
-
-            if (configOpt.isPresent() && configOpt.get().getApiToken() != null && !configOpt.get().getApiToken().isBlank()) {
-                // Validar contra el token guardado en BD
-                tokenEsperado = configOpt.get().getApiToken();
-            } else {
-                // Primera vez: validar contra el token válido del simulador
-                tokenEsperado = TOKEN_VALIDO;
-            }
-
-            if (!tokenEnviado.equals(tokenEsperado)) {
-                return ResponseEntity.ok(Map.of(
-                        "success", false,
-                        "message", "Token inválido — Las credenciales no son correctas"
-                ));
-            }
-
-            // Token correcto: si no estaba guardado, guardarlo ahora
-            if (configOpt.isEmpty() || configOpt.get().getApiToken() == null || configOpt.get().getApiToken().isBlank()) {
-                ConfiguracionPse cfg = configOpt.orElseGet(() -> {
-                    ConfiguracionPse c = new ConfiguracionPse();
-                    c.setNegocio(negociosRepo.getReferenceById(negocioId));
-                    return c;
-                });
+            // Guardar el token si se proporcionó
+            if (tokenEnviado != null && !tokenEnviado.isBlank()) {
+                ConfiguracionPse cfg = configPseRepo.findFirstByNegocioId(negocioId)
+                        .orElseGet(() -> {
+                            ConfiguracionPse c = new ConfiguracionPse();
+                            c.setNegocio(negociosRepo.getReferenceById(negocioId));
+                            return c;
+                        });
                 cfg.setApiToken(tokenEnviado);
                 if (cfg.getProveedor() == null) cfg.setProveedor("SIMULADOR");
                 if (cfg.getEntorno() == null) cfg.setEntorno("SANDBOX");
                 configPseRepo.save(cfg);
             }
 
+            Optional<ConfiguracionPse> configOpt = configPseRepo.findFirstByNegocioId(negocioId);
             String proveedor = configOpt.map(ConfiguracionPse::getProveedor).orElse("SIMULADOR");
             String entorno = configOpt.map(ConfiguracionPse::getEntorno).orElse("SANDBOX");
 

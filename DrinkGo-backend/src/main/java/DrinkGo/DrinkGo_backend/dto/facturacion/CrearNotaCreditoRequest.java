@@ -55,6 +55,14 @@ public class CrearNotaCreditoRequest {
      */
     private BigDecimal monto;
 
+    /**
+     * Indica si el usuario desea registrar la devolución de dinero al cliente.
+     * Si es true y la sesión de caja está abierta, se creará un egreso.
+     * Si es false o null, la NC se crea sin movimiento de caja.
+     * Solo aplica para notas de crédito.
+     */
+    private Boolean devolverDinero;
+
     // ─── Getters / Setters ───
 
     public Long getDocumentoReferenciaId() { return documentoReferenciaId; }
@@ -77,6 +85,9 @@ public class CrearNotaCreditoRequest {
 
     public BigDecimal getMonto() { return monto; }
     public void setMonto(BigDecimal monto) { this.monto = monto; }
+
+    public Boolean getDevolverDinero() { return devolverDinero; }
+    public void setDevolverDinero(Boolean devolverDinero) { this.devolverDinero = devolverDinero; }
 
     // ─── Inner class para ítems de devolución parcial ───
 

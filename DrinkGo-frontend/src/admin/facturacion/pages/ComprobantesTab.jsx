@@ -8,8 +8,9 @@
  */
 import { useState, useMemo, useCallback } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Eye, XCircle, Search, CheckCircle, AlertCircle, Hash, Monitor, FileText, Info } from 'lucide-react';
-import { useComprobantes, useCambiarEstadoComprobante, useEmitirNotaCreditoDebito, useItemsComprobante } from '../hooks/useFacturacion';
+import { Eye, Search, CheckCircle, AlertCircle, Hash, Monitor, FileText, Info, X } from 'lucide-react';
+import { useComprobantes, useCambiarEstadoComprobante, useEmitirNotaCreditoDebito, useItemsComprobante, useReemitirComprobante } from '../hooks/useFacturacion';
+import { useConsultarRuc } from '@/shared/hooks/useConsultaDocumento';
 import { ComprobanteViewModal } from '../components/ComprobanteViewModal';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
 import { SinCajaAsignada } from '@/admin/ventas/components/SinCajaAsignada';
@@ -66,7 +67,8 @@ const formatCurrency = (amount) => {
 
 export const ComprobantesTab = () => {
   const { negocioId } = useOutletContext();
-  const { user, getAlcance, cajaAsignada } = useAdminAuthStore();
+  const { user, negocio, getAlcance, cajaAsignada } = useAdminAuthStore();
+  const tienePse = negocio?.tienePse ?? false;
   const navigate = useNavigate();
   const alcanceComprobantes = getAlcance('m.facturacion.comprobantes');
   const esSoloCaja = alcanceComprobantes === 'caja_asignada';
@@ -118,13 +120,23 @@ export const ComprobantesTab = () => {
   const [ncItems, setNcItems] = useState({});
   // Motivos 04/09 (NC) y todos ND: monto libre
   const [ncMonto, setNcMonto] = useState('');
+  // ¿Desea devolver dinero al cliente?
+  const [ncDevolverDinero, setNcDevolverDinero] = useState(false);
+
+  /* ─── Modal Reemitir comprobante (tras NC motivo 02) ─── */
+  const [reemitirTarget, setReemitirTarget] = useState(null);
+  const [reemitirRuc, setReemitirRuc] = useState('');
+  const [reemitirRazonSocial, setReemitirRazonSocial] = useState('');
+  const [reemitirDireccion, setReemitirDireccion] = useState('');
+  const reemitirMutation = useReemitirComprobante();
+  const consultaRuc = useConsultarRuc();
 
   /* Items del comprobante de referencia (carga dinámica) */
   const { data: itemsData, isLoading: itemsLoading } = useItemsComprobante(ncTarget?.id);
 
   /* Si es cajero con alcance caja_asignada pero sin caja asignada -> bloquear */
   if (esSoloCaja && !cajaAsignada) {
-    return <SinCajaAsignada titulo="Comprobantes Electrónicos" />;
+    return <SinCajaAsignada titulo={tienePse ? 'Comprobantes Electrónicos' : 'Comprobantes'} />;
   }
 
   /* ─── Stats ─── */
@@ -201,6 +213,7 @@ export const ComprobantesTab = () => {
     setNcDescripcion('');
     setNcItems({});
     setNcMonto('');
+    setNcDevolverDinero(false);
     setNoSerieError(null);
   };
 
@@ -210,6 +223,7 @@ export const ComprobantesTab = () => {
     setNcDescripcion('');
     setNcItems({});
     setNcMonto('');
+    setNcDevolverDinero(false);
     setNoSerieError(null);
   }, []);
 
@@ -219,6 +233,10 @@ export const ComprobantesTab = () => {
   const totalNcAcumulado = itemsData?.totalNcAcumulado ?? 0;
   const totalComprobante = itemsData?.totalComprobante ?? ncTarget?.total ?? 0;
   const saldoDisponibleNc = Math.max(0, totalComprobante - totalNcAcumulado);
+  const cantidadesDevueltas = itemsData?.cantidadesDevueltas || {};
+  const estadoSesionCaja = itemsData?.estadoSesionCaja || 'sin_sesion';
+  const tieneEfectivo = itemsData?.tieneEfectivo || false;
+  const sesionAbierta = estadoSesionCaja === 'abierta';
 
   /* Categoría del motivo actual */
   const esAnulacionCompleta = ncTipoNota === 'nota_credito' && MOTIVOS_ANULACION_COMPLETA.has(ncCodigoMotivo);
@@ -297,18 +315,20 @@ export const ComprobantesTab = () => {
     const initial = {};
     itemsOriginal.forEach((it) => {
       const key = it.productoId ? `p_${it.productoId}` : `c_${it.comboId}`;
+      const yaDevueltas = it.productoId ? (cantidadesDevueltas[it.productoId] || 0) : 0;
+      const disponible = Math.max(0, it.cantidad - yaDevueltas);
       initial[key] = {
         checked: false,
         cantidad: 0,
-        maxCantidad: it.cantidad,
+        maxCantidad: disponible,
         nombre: it.nombreProducto || it.nombreCombo || 'Producto',
-        precioUnit: it.subtotal / it.cantidad,
+        precioUnit: (it.total || it.subtotal) / it.cantidad,
         productoId: it.productoId || null,
         comboId: it.comboId || null,
       };
     });
     setNcItems(initial);
-  }, [itemsOriginal]);
+  }, [itemsOriginal, cantidadesDevueltas]);
 
   const handleConfirmNcNd = async () => {
     if (!ncTarget || !ncFormValid) return;
@@ -337,6 +357,11 @@ export const ComprobantesTab = () => {
       payload.monto = parseFloat(ncMonto);
     }
 
+    // Solo para NC con motivos que permiten devolución de dinero (01, 06, 07, 09)
+    if (ncTipoNota === 'nota_credito' && ['01', '06', '07', '09'].includes(ncCodigoMotivo)) {
+      payload.devolverDinero = ncDevolverDinero;
+    }
+
     try {
       await emitirNota.mutateAsync(payload);
       handleCloseNcNd();
@@ -355,8 +380,8 @@ export const ComprobantesTab = () => {
     <div className="space-y-6">
       {/* ─── Header ─── */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Comprobantes Electrónicos</h1>
-        <p className="text-gray-600 mt-1">Consulta y gestión de boletas, facturas y notas de crédito</p>
+        <h1 className="text-2xl font-bold text-gray-900">{tienePse ? 'Comprobantes Electrónicos' : 'Comprobantes'}</h1>
+        <p className="text-gray-600 mt-1">{tienePse ? 'Consulta y gestión de boletas, facturas y notas de crédito' : 'Consulta y gestión de comprobantes de venta'}</p>
       </div>
 
       {/* Banner alcance restringido */}
@@ -478,19 +503,62 @@ export const ComprobantesTab = () => {
                       </td>
                       <td className="py-3 px-3 text-gray-600">{formatDate(doc.fechaEmision || doc.creadoEn)}</td>
                       <td className="py-3 px-3">
-                        <div className="flex justify-center gap-2">
-                          <button title="Ver detalles" onClick={() => setSelectedDoc(doc)} className="text-blue-500 hover:text-blue-700">
+                        <div className="flex justify-center items-center gap-3">
+                          {/* Ver detalles: siempre clickeable */}
+                          <button
+                            title="Ver detalles"
+                            onClick={() => setSelectedDoc(doc)}
+                            className="text-blue-500 hover:text-blue-700"
+                          >
                             <Eye size={16} />
                           </button>
-                          {puedeEmitirNcNd(doc) && (
-                            <button title="Emitir Nota de Crédito/Débito" onClick={() => handleOpenNcNd(doc)} className="text-amber-600 hover:text-amber-800">
-                              <FileText size={16} />
-                            </button>
-                          )}
-                          {!esAnulado && !(doc.modoEmision === 'PSE' && ['enviado', 'aceptado', 'observado'].includes(doc.estadoDocumento)) && (
-                            <button title="Anular" onClick={() => setAnularTarget(doc)} className="text-red-500 hover:text-red-700">
-                              <XCircle size={16} />
-                            </button>
+
+                          {tienePse ? (
+                            /* ── CON PSE: NC/ND y Reemitir (sin anular directo) ── */
+                            <>
+                              {!esAnulado && doc.tipoDocumento === 'nota_credito' && doc.codigoMotivoNota === '02' ? (
+                                <button
+                                  title="Reemitir comprobante con RUC corregido"
+                                  onClick={() => {
+                                    setReemitirTarget(doc);
+                                    setReemitirRuc('');
+                                    setReemitirRazonSocial('');
+                                    setReemitirDireccion('');
+                                    consultaRuc.reset();
+                                  }}
+                                  className="text-green-600 hover:text-green-800"
+                                >
+                                  <FileText size={16} />
+                                </button>
+                              ) : !esAnulado && puedeEmitirNcNd(doc) ? (
+                                <button
+                                  title="Emitir Nota de Crédito/Débito"
+                                  onClick={() => handleOpenNcNd(doc)}
+                                  className="text-amber-600 hover:text-amber-800"
+                                >
+                                  <FileText size={16} />
+                                </button>
+                              ) : (
+                                <span className="text-gray-300 opacity-40 cursor-default inline-flex">
+                                  <FileText size={16} />
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            /* ── SIN PSE: solo anular (sin NC/ND) ── */
+                            !esAnulado && puedeEmitirNcNd(doc) ? (
+                              <button
+                                title="Anular comprobante"
+                                onClick={() => setAnularTarget(doc)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <X size={16} />
+                              </button>
+                            ) : (
+                              <span className="text-gray-300 opacity-40 cursor-default inline-flex">
+                                <X size={16} />
+                              </span>
+                            )
                           )}
                         </div>
                       </td>
@@ -543,7 +611,8 @@ export const ComprobantesTab = () => {
         />
       )}
 
-      {/* ─── Modal anulación con razón ─── */}
+      {/* ─── Modal anulación con razón (solo sin PSE) ─── */}
+      {!tienePse && (
       <Modal
         isOpen={!!anularTarget}
         onClose={() => { setAnularTarget(null); setRazonAnulacion(''); }}
@@ -578,8 +647,10 @@ export const ComprobantesTab = () => {
           </div>
         </div>
       </Modal>
+      )}
 
-      {/* ─── Modal Nota de Crédito / Débito ─── */}
+      {/* ─── Modal Nota de Crédito / Débito (solo con PSE) ─── */}
+      {tienePse && (
       <Modal
         isOpen={!!ncTarget}
         onClose={handleCloseNcNd}
@@ -687,7 +758,9 @@ export const ComprobantesTab = () => {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="">Seleccione un motivo...</option>
-              {(ncTipoNota === 'nota_credito' ? MOTIVOS_NC : MOTIVOS_ND).map((m) => (
+              {(ncTipoNota === 'nota_credito' ? MOTIVOS_NC : MOTIVOS_ND)
+                .filter((m) => !(m.codigo === '02' && ncTarget?.clienteTipoDocIdentidad !== 'RUC'))
+                .map((m) => (
                 <option key={m.codigo} value={m.codigo}>
                   {m.codigo} - {m.label}
                 </option>
@@ -697,13 +770,89 @@ export const ComprobantesTab = () => {
 
           {/* ─── Sección dinámica según motivo ─── */}
 
-          {/* Anulación completa (01/02/03/06): solo info */}
-          {esAnulacionCompleta && (
+          {/* Pregunta de devolución de dinero (solo NC motivos 01, 06, 07, 09) */}
+          {ncTipoNota === 'nota_credito' && ['01', '06', '07', '09'].includes(ncCodigoMotivo) && (
+            <div className="space-y-2">
+              <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={ncDevolverDinero}
+                    onChange={(e) => setNcDevolverDinero(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">
+                      ¿Desea registrar la devolución de dinero al cliente?
+                    </span>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Si marca esta opción, se registrará un egreso de caja por el monto en efectivo correspondiente.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Advertencia: sesión cerrada + quiere devolver */}
+              {ncDevolverDinero && !sesionAbierta && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2">
+                  <AlertCircle size={14} className="text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-700">
+                    La caja asociada a esta venta ya fue cerrada. La devolución de dinero deberá realizarse manualmente fuera del sistema.
+                    Se creará la nota de crédito pero <strong>no se generará movimiento de caja</strong>.
+                  </p>
+                </div>
+              )}
+
+              {/* Info: devolver + no tiene efectivo */}
+              {ncDevolverDinero && sesionAbierta && !tieneEfectivo && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-start gap-2">
+                  <Info size={14} className="text-blue-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-blue-700">
+                    La venta original no tiene pagos en efectivo. No se generará movimiento de caja ya que la devolución es por medio digital.
+                  </p>
+                </div>
+              )}
+
+              {/* Confirmación: devolver + sesión abierta + tiene efectivo */}
+              {ncDevolverDinero && sesionAbierta && tieneEfectivo && (
+                <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-start gap-2">
+                  <CheckCircle size={14} className="text-green-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-green-700">
+                    Se registrará un egreso de caja proporcional al monto pagado en efectivo.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Info: Anulación con devolución física (01/06) */}
+          {ncTipoNota === 'nota_credito' && ['01', '06'].includes(ncCodigoMotivo) && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
               <p className="text-xs text-amber-700">
                 Se emitirá una Nota de Crédito por el <strong>total</strong> del comprobante ({formatCurrency(totalComprobante)}).
                 Los ítems y montos se copiarán automáticamente. El comprobante original quedará marcado como <strong>anulado</strong>.
+                Se revertirá el inventario.
               </p>
+            </div>
+          )}
+
+          {/* Info: Corrección documental (02/03) — sin stock, sin devolución */}
+          {ncTipoNota === 'nota_credito' && ['02', '03'].includes(ncCodigoMotivo) && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+              <div className="flex items-start gap-2">
+                <Info size={14} className="text-blue-600 mt-0.5 shrink-0" />
+                <div className="text-xs text-blue-700">
+                  <p>
+                    Corrección documental: se emitirá NC por el total ({formatCurrency(totalComprobante)})
+                    y el comprobante original quedará anulado.
+                  </p>
+                  <p className="mt-1">
+                    <strong>No</strong> se modificará el inventario ni se registrará devolución de dinero.
+                    {ncCodigoMotivo === '02' && ' Emita un nuevo comprobante con el RUC correcto.'}
+                    {ncCodigoMotivo === '03' && ' Emita un nuevo comprobante con la descripción correcta.'}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -732,33 +881,38 @@ export const ComprobantesTab = () => {
                     <tbody>
                       {itemsOriginal.map((it) => {
                         const key = it.productoId ? `p_${it.productoId}` : `c_${it.comboId}`;
-                        const sel = ncItems[key] || { checked: false, cantidad: 0 };
-                        const precioUnit = it.subtotal / it.cantidad;
+                        const sel = ncItems[key] || { checked: false, cantidad: 0, maxCantidad: 0 };
+                        const precioUnit = (it.total || it.subtotal) / it.cantidad;
+                        const yaDevueltas = it.productoId ? (cantidadesDevueltas[it.productoId] || 0) : 0;
+                        const disponible = Math.max(0, it.cantidad - yaDevueltas);
+                        const agotado = disponible <= 0;
                         return (
-                          <tr key={key} className={`border-b border-gray-100 ${sel.checked ? 'bg-blue-50/50' : ''}`}>
+                          <tr key={key} className={`border-b border-gray-100 ${agotado ? 'opacity-50' : sel.checked ? 'bg-blue-50/50' : ''}`}>
                             <td className="px-3 py-2 text-center">
                               <input
                                 type="checkbox"
                                 checked={sel.checked}
-                                onChange={() => handleToggleItem(key, { ...it, maxCantidad: it.cantidad, nombre: it.nombreProducto || it.nombreCombo, precioUnit })}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                disabled={agotado}
+                                onChange={() => handleToggleItem(key, { ...it, maxCantidad: disponible, nombre: it.nombreProducto || it.nombreCombo, precioUnit })}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                               />
                             </td>
                             <td className="px-3 py-2 text-gray-700">
                               {it.nombreProducto || it.nombreCombo || '-'}
+                              {agotado && <span className="text-xs text-red-500 ml-1">(Ya devuelto)</span>}
                             </td>
                             <td className="px-3 py-2 text-center">
                               {sel.checked ? (
                                 <input
                                   type="number"
                                   min={1}
-                                  max={it.cantidad}
+                                  max={disponible}
                                   value={sel.cantidad}
                                   onChange={(e) => handleItemCantidad(key, parseInt(e.target.value) || 0)}
                                   className="w-16 text-center border border-gray-300 rounded px-1 py-0.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 />
                               ) : (
-                                <span className="text-gray-400">{it.cantidad}</span>
+                                <span className="text-gray-400">{disponible}</span>
                               )}
                               <span className="text-xs text-gray-400 ml-1">/ {it.cantidad}</span>
                             </td>
@@ -782,7 +936,7 @@ export const ComprobantesTab = () => {
           {esDescuento && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Monto del descuento <span className="text-red-500">*</span>
+                {ncCodigoMotivo === '04' ? 'Monto del descuento' : 'Monto de la disminución'} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">S/</span>
@@ -800,6 +954,14 @@ export const ComprobantesTab = () => {
               <p className="text-xs text-gray-400 mt-1">
                 Máximo: {formatCurrency(saldoDisponibleNc)}
               </p>
+              {ncCodigoMotivo === '04' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mt-2 flex items-start gap-2">
+                  <Info size={14} className="text-blue-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-blue-700">
+                    El descuento global es un ajuste contable. <strong>No</strong> se modificará el inventario ni se registrará devolución de dinero.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -883,6 +1045,178 @@ export const ComprobantesTab = () => {
           )}
         </div>
       </Modal>
+      )}
+
+      {/* ─── Modal: Reemitir comprobante con nuevo RUC (solo con PSE) ─── */}
+      {tienePse && (
+      <Modal
+        isOpen={!!reemitirTarget}
+        onClose={() => setReemitirTarget(null)}
+        title="Reemitir comprobante con nuevo RUC"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setReemitirTarget(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!reemitirRuc || !/^(10|20)\d{9}$/.test(reemitirRuc)) {
+                  message.error('Ingrese un RUC válido de 11 dígitos (debe iniciar con 10 o 20)');
+                  return;
+                }
+                if (!reemitirRazonSocial.trim()) {
+                  message.error(reemitirRuc.startsWith('20') ? 'La razón social es requerida' : 'El nombre completo es requerido');
+                  return;
+                }
+                if (reemitirRuc.startsWith('20') && !reemitirDireccion.trim()) {
+                  message.error('La dirección fiscal es requerida para persona jurídica');
+                  return;
+                }
+                try {
+                  await reemitirMutation.mutateAsync({
+                    ncId: reemitirTarget.id,
+                    payload: {
+                      tipoDocumento: 'RUC',
+                      numeroDocumento: reemitirRuc,
+                      nombreCliente: reemitirRazonSocial.trim(),
+                      direccion: reemitirDireccion.trim() || null,
+                      usuarioId: user?.id ? String(user.id) : null,
+                    },
+                  });
+                  message.success('Comprobante reemitido exitosamente con el nuevo RUC');
+                  setReemitirTarget(null);
+                } catch (err) {
+                  const msg = err?.response?.data?.error || err?.message || 'Error al reemitir comprobante';
+                  message.error(msg);
+                }
+              }}
+              disabled={reemitirMutation.isPending || !reemitirRuc || !/^(10|20)\d{9}$/.test(reemitirRuc) || !reemitirRazonSocial.trim() || (reemitirRuc.startsWith('20') && !reemitirDireccion.trim())}
+            >
+              {reemitirMutation.isPending ? 'Emitiendo...' : 'Emitir comprobante'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {/* Información de la NC de referencia */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-xs text-blue-700">
+              <strong>NC de referencia:</strong> {reemitirTarget?.numeroDocumento}
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              Se creará un nuevo comprobante con los mismos ítems y montos del documento original,
+              pero asociado al nuevo RUC que ingrese.
+            </p>
+          </div>
+
+          {/* Campo RUC + botón consulta */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nuevo RUC <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                maxLength={11}
+                value={reemitirRuc}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  setReemitirRuc(val);
+                  if (val.length < 11) {
+                    setReemitirRazonSocial('');
+                    setReemitirDireccion('');
+                    consultaRuc.reset();
+                  }
+                }}
+                placeholder="20123456789"
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!/^\d{11}$/.test(reemitirRuc) || consultaRuc.isLoading}
+                onClick={async () => {
+                  const result = await consultaRuc.buscar(reemitirRuc);
+                  if (result) {
+                    setReemitirRazonSocial(result.razonSocial || result.nombre || '');
+                    setReemitirDireccion(result.direccion || '');
+                  }
+                }}
+              >
+                {consultaRuc.isLoading ? 'Buscando...' : 'Consultar'}
+              </Button>
+            </div>
+            {reemitirRuc.length >= 2 && (
+              <span className={`inline-flex items-center mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                reemitirRuc.startsWith('20')
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : reemitirRuc.startsWith('10')
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-gray-50 text-gray-500 border-gray-200'
+              }`}>
+                {reemitirRuc.startsWith('20')
+                  ? 'Persona Jurídica (RUC 20)'
+                  : reemitirRuc.startsWith('10')
+                    ? 'Persona Natural con Negocio (RUC 10)'
+                    : 'RUC no válido — debe iniciar con 10 o 20'}
+              </span>
+            )}
+            {!/^\d{11}$/.test(reemitirRuc) && reemitirRuc.length > 0 && (
+              <p className="text-xs text-amber-500 mt-1 flex items-center gap-1">
+                <Info size={12} /> RUC debe tener exactamente 11 dígitos
+              </p>
+            )}
+            {consultaRuc.error && (
+              <p className="text-xs text-red-500 mt-1">{consultaRuc.error}</p>
+            )}
+          </div>
+
+          {/* Campos dinámicos según RUC 10/20 */}
+          {reemitirRuc.startsWith('20') ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Razón Social <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={reemitirRazonSocial}
+                  onChange={(e) => setReemitirRazonSocial(e.target.value)}
+                  placeholder="Ej: Distribuidora ABC S.A.C."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Dirección Fiscal <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={reemitirDireccion}
+                  onChange={(e) => setReemitirDireccion(e.target.value)}
+                  placeholder="Ej: Av. Los Olivos 123, Lima"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </>
+          ) : reemitirRuc.startsWith('10') ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre Completo <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={reemitirRazonSocial}
+                onChange={(e) => setReemitirRazonSocial(e.target.value)}
+                placeholder="Ej: Juan Pérez López"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          ) : null}
+        </div>
+      </Modal>
+      )}
     </div>
   );
 };

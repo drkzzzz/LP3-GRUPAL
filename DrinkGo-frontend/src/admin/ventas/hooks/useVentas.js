@@ -113,6 +113,7 @@ export const useCrearVenta = () => {
       queryClient.invalidateQueries({ queryKey: ['movimientos'] });
       // Refrescar comprobantes en módulo de facturación sin recargar la página
       queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'pse', 'bandeja'] });
       // Invalidar cache de productos para reflejar el nuevo stock en el POS
       invalidarCacheProductos();
       queryClient.invalidateQueries({ queryKey: ['productos-pos'] });
@@ -150,6 +151,11 @@ export const useAnularVenta = () => {
       queryClient.invalidateQueries({ queryKey: ['ventas-sesion'] });
       queryClient.invalidateQueries({ queryKey: ['resumen-turno'] });
       queryClient.invalidateQueries({ queryKey: ['movimientos'] });
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'pse', 'bandeja'] });
+      queryClient.invalidateQueries({ queryKey: ['devoluciones'] });
+      invalidarCacheProductos();
+      queryClient.invalidateQueries({ queryKey: ['productos-pos'] });
       message.success('Venta anulada exitosamente');
     },
     onError: (err) => {

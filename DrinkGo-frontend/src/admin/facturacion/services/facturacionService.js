@@ -73,6 +73,16 @@ export const facturacionService = {
     return data;
   },
 
+  /* ═══ REEMISIÓN DE COMPROBANTE (TRAS NC MOTIVO 02) ═══ */
+
+  reemitirComprobante: async (ncId, payload) => {
+    const { data } = await adminApi.post(
+      `/admin/facturacion/comprobantes/${ncId}/reemitir`,
+      payload
+    );
+    return data;
+  },
+
   /* ═══ PSE (Proveedor de Servicios Electrónicos) ═══ */
 
   getConfiguracionPse: async (negocioId) => {

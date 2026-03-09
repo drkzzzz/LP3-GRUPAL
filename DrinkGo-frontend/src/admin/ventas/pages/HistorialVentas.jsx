@@ -173,30 +173,34 @@ export const HistorialVentas = () => {
       title: 'Acciones',
       width: '100px',
       align: 'center',
-      render: (_, row) => (
-        <div className="flex justify-center gap-2">
-          <button
-            title="Ver detalle"
-            onClick={() => handleVerDetalle(row.id)}
-            className="text-blue-500 hover:text-blue-700"
-          >
-            <Eye size={16} />
-          </button>
-          {row.estado === 'completada' && (
-            // Admin: puede anular cualquier venta
-            // Cajero: solo si la sesión de caja sigue abierta
-            esAdmin || row.sesionCaja?.estadoSesion === 'abierta'
-          ) && (
+      render: (_, row) => {
+        const puedeAnular = row.estado === 'completada' &&
+          (esAdmin || row.sesionCaja?.estadoSesion === 'abierta');
+        return (
+          <div className="flex justify-center items-center gap-3">
             <button
-              title="Anular"
-              onClick={() => setAnularTarget(row)}
-              className="text-red-500 hover:text-red-700"
+              title="Ver detalle"
+              onClick={() => handleVerDetalle(row.id)}
+              className="text-blue-500 hover:text-blue-700"
             >
-              <Ban size={16} />
+              <Eye size={16} />
             </button>
-          )}
-        </div>
-      ),
+            {puedeAnular ? (
+              <button
+                title="Anular"
+                onClick={() => setAnularTarget(row)}
+                className="text-red-500 hover:text-red-700"
+              >
+                <Ban size={16} />
+              </button>
+            ) : (
+              <span className="text-gray-300 opacity-40 cursor-default inline-flex">
+                <Ban size={16} />
+              </span>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -508,8 +512,23 @@ export const HistorialVentas = () => {
           <p className="text-sm text-gray-600">
             {'¿Está seguro de anular la venta '}
             <strong>{anularTarget?.numeroVenta}</strong>
-            {'? Se revertirá el stock y se registrará un egreso en caja.'}
+            {'? Se revertirá el stock.'}
           </p>
+
+          {/* Advertencia según estado de la sesión de caja */}
+          {anularTarget?.sesionCaja?.estadoSesion === 'abierta' ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-green-700">
+                La caja está abierta. Si la venta tiene pagos en efectivo, se registrará un egreso de caja automáticamente.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-amber-700">
+                La caja asociada a esta venta ya fue cerrada. La anulación se registrará contablemente pero <strong>no se generará movimiento de caja</strong>. La devolución de dinero deberá realizarse manualmente.
+              </p>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Razón de anulación

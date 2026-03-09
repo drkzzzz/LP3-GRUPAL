@@ -65,6 +65,9 @@ export const useCambiarEstadoComprobante = () => {
     mutationFn: ({ id, estado, motivoAnulacion }) => facturacionService.cambiarEstadoComprobante(id, estado, motivoAnulacion),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas-sesion'] });
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'pse', 'bandeja'] });
     },
   });
 };
@@ -77,6 +80,12 @@ export const useEmitirNotaCreditoDebito = ({ onErrorCallback } = {}) => {
     mutationFn: facturacionService.emitirNotaCreditoDebito,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobante-items'] });
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'pse', 'bandeja'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas-sesion'] });
+      queryClient.invalidateQueries({ queryKey: ['resumen-turno'] });
+      queryClient.invalidateQueries({ queryKey: ['movimientos'] });
     },
     onError: (error) => {
       const msg = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Error al emitir nota';
@@ -92,6 +101,21 @@ export const useItemsComprobante = (docId) => {
     queryFn: () => facturacionService.getItemsComprobante(docId),
     enabled: !!docId,
     staleTime: 1000 * 30,
+  });
+};
+
+/* ═══ REEMISIÓN DE COMPROBANTE (TRAS NC MOTIVO 02) ═══ */
+
+export const useReemitirComprobante = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ncId, payload }) =>
+      facturacionService.reemitirComprobante(ncId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
+      queryClient.invalidateQueries({ queryKey: ['facturacion', 'pse', 'bandeja'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
+    },
   });
 };
 

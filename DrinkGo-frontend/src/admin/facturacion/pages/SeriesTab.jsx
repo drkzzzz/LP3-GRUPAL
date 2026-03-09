@@ -45,6 +45,7 @@ const validarPrefijo = (serie, tipoDoc) => {
 export const SeriesTab = () => {
   const { negocioId } = useOutletContext();
   const negocio = useAdminAuthStore((s) => s.negocio);
+  const tienePse = negocio?.tienePse ?? false;
   const sedeId = negocio?.sedeId || negocio?.sedes?.[0]?.id || 1;
 
   const { data: series = [], isLoading } = useSeries(negocioId);
@@ -131,23 +132,25 @@ export const SeriesTab = () => {
         <p className="text-gray-600 mt-1">Administre las series de documentos electrónicos de su negocio</p>
       </div>
 
-      {/* ─── Guía de prefijos ─── */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <div className="flex items-start gap-3">
-          <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800 space-y-1">
-            <p className="font-semibold">Prefijos requeridos según tipo de documento:</p>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-0.5 mt-1">
-              <span><span className="font-mono font-bold">B001</span> — Boleta de venta</span>
-              <span><span className="font-mono font-bold">F001</span> — Factura</span>
-              <span><span className="font-mono font-bold">BC01</span> — Nota de Crédito sobre Boleta</span>
-              <span><span className="font-mono font-bold">FC01</span> — Nota de Crédito sobre Factura</span>
-              <span><span className="font-mono font-bold">BD01</span> — Nota de Débito sobre Boleta</span>
-              <span><span className="font-mono font-bold">FD01</span> — Nota de Débito sobre Factura</span>
+      {/* ─── Guía de prefijos (solo con PSE) ─── */}
+      {tienePse && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-800 space-y-1">
+              <p className="font-semibold">Prefijos requeridos según tipo de documento:</p>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-0.5 mt-1">
+                <span><span className="font-mono font-bold">B001</span> — Boleta de venta</span>
+                <span><span className="font-mono font-bold">F001</span> — Factura</span>
+                <span><span className="font-mono font-bold">BC01</span> — Nota de Crédito sobre Boleta</span>
+                <span><span className="font-mono font-bold">FC01</span> — Nota de Crédito sobre Factura</span>
+                <span><span className="font-mono font-bold">BD01</span> — Nota de Débito sobre Boleta</span>
+                <span><span className="font-mono font-bold">FD01</span> — Nota de Débito sobre Factura</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ─── Card ─── */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -270,8 +273,8 @@ export const SeriesTab = () => {
                 >
                   <option value="boleta">Boleta</option>
                   <option value="factura">Factura</option>
-                  <option value="nota_credito">Nota de Crédito</option>
-                  <option value="nota_debito">Nota de Débito</option>
+                  {tienePse && <option value="nota_credito">Nota de Crédito</option>}
+                  {tienePse && <option value="nota_debito">Nota de Débito</option>}
                 </select>
               </div>
               <div>

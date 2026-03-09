@@ -255,6 +255,12 @@ public class DocumentosFacturacion {
         return cliente != null ? cliente.getNumeroDocumento() : null;
     }
 
+    @JsonProperty("clienteTipoDocIdentidad")
+    public String getClienteTipoDocIdentidad() {
+        return cliente != null && cliente.getTipoDocumento() != null
+            ? cliente.getTipoDocumento().name() : null;
+    }
+
     @JsonIgnore
     public Ventas getVenta() {
         return venta;

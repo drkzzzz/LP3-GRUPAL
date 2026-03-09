@@ -259,8 +259,15 @@ export const PseTab = () => {
   };
 
   const handleProbarConexion = async () => {
-    if (!configForm.apiToken) {
-      setConnResult({ ok: false, msg: 'Error en la conexión: Debe ingresar un API Token válido' });
+    const camposRequeridos = [
+      configForm.proveedor,
+      configForm.entorno,
+      configForm.rucEmisor,
+      configForm.apiToken,
+      configForm.urlServicio,
+    ];
+    if (camposRequeridos.some((v) => !v || !v.trim())) {
+      setConnResult({ ok: false, msg: 'Credenciales incorrectas' });
       setConnectionTested(false);
       return;
     }

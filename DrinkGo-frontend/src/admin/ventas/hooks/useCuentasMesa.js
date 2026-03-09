@@ -129,6 +129,11 @@ export const useCuentasMesaMutations = (sedeId) => {
     onSuccess: () => {
       message.success('Cuenta cerrada y mesa liberada');
       invalidar();
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['ventas-sesion'] });
+      qc.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
+      qc.invalidateQueries({ queryKey: ['resumen-turno'] });
+      qc.invalidateQueries({ queryKey: ['movimientos'] });
     },
     onError: (err) => {
       message.error(err?.response?.data?.message || 'Error al cerrar la cuenta');

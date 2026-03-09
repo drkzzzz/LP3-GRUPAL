@@ -46,6 +46,7 @@ export function VerificarPagoModal({ pedido, onClose, onConfirmarPedido }) {
     mutationFn: aprobarPago,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pagos-pedido', pedido.id] });
+      queryClient.invalidateQueries({ queryKey: ['pedidos'] });
       message.success('Pago aprobado');
       refetch();
     },

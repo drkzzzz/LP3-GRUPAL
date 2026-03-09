@@ -226,7 +226,9 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
       >
         {/* Modal header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
-          <h2 className="text-sm font-bold text-gray-900">Comprobante de Venta</h2>
+          <h2 className="text-sm font-bold text-gray-900">
+            {esNota ? (esNotaCredito ? 'Nota de Crédito' : 'Nota de Débito') : 'Comprobante de Venta'}
+          </h2>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
@@ -524,6 +526,7 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                 )}
 
                 {/* ─── Footer ─── */}
+                {!esNota && (
                 <div style={{ marginTop: 24, textAlign: 'center', borderTop: '1px dashed #ccc', paddingTop: 12 }}>
                   <p style={{ fontSize: 11, color: '#666' }}>¡Gracias por su preferencia!</p>
                   {doc.tipoDocumento !== 'nota_venta' ? (
@@ -536,6 +539,7 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                     </p>
                   )}
                 </div>
+                )}
               </div>
             </div>
           )}
