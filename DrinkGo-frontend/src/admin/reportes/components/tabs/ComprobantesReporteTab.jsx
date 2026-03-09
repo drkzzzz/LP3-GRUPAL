@@ -19,17 +19,26 @@ import { formatCurrency, formatDate } from '@/shared/utils/formatters';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { exportToCSV, exportToPDF } from '../../utils/exportUtils';
 
-const getTipo      = (c) => (c.tipoComprobante || c.tipo || '').toUpperCase();
-const getEstado    = (c) => (c.estado || '').toUpperCase();
+const getTipo      = (c) => (c.tipoDocumento || c.tipoComprobante || c.tipo || '').toUpperCase();
+const getEstado    = (c) => (c.estadoDocumento || c.estado || '').toUpperCase();
 const getCliente   = (c) => c.clienteNombre || c.cliente?.razonSocial || c.cliente?.nombre || '—';
-const getDocumento = (c) => c.clienteDocumento || c.cliente?.documento || '';
-const getTotal     = (c) => c.total || c.montoTotal || 0;
+const getDocumento = (c) => c.clienteNumeroDocumento || c.clienteDocumento || c.cliente?.documento || '';
+const getTotal     = (c) => Number(c.total || c.montoTotal || 0);
 const getFecha     = (c) => c.fechaEmision || c.creadoEn;
+const getSerie     = (c) => c.serie || (c.numeroDocumento ? c.numeroDocumento.split('-')[0] : null);
+const getNumero    = (c) => c.numero || (c.numeroDocumento ? c.numeroDocumento.split('-').slice(1).join('-') : null);
 
 const ESTADO_MAP = {
-  EMITIDO:  { label: 'Emitido',  variant: 'success' },
-  PENDIENTE:{ label: 'Pendiente',variant: 'warning'  },
-  ANULADO:  { label: 'Anulado',  variant: 'error'    },
+  BORRADOR:        { label: 'Borrador',    variant: 'info'    },
+  PENDIENTE_ENVIO: { label: 'Pend. envío', variant: 'warning' },
+  ENVIADO:         { label: 'Enviado',     variant: 'info'    },
+  ACEPTADO:        { label: 'Aceptado',    variant: 'success' },
+  OBSERVADO:       { label: 'Observado',   variant: 'warning' },
+  RECHAZADO:       { label: 'Rechazado',   variant: 'error'   },
+  ANULADO:         { label: 'Anulado',     variant: 'error'   },
+  // aliases de compatibilidad
+  EMITIDO:         { label: 'Emitido',     variant: 'success' },
+  PENDIENTE:       { label: 'Pendiente',   variant: 'warning' },
 };
 
 const INNER_TABS = [
@@ -82,7 +91,7 @@ export const ComprobantesReporteTab = () => {
     boletas:   boletas.length,
     facturas:  facturas.length,
     monto:     byDate.reduce((a, c) => a + getTotal(c), 0),
-    pendientes: byDate.filter((c) => getEstado(c) === 'PENDIENTE').length,
+    pendientes: byDate.filter((c) => getEstado(c) === 'PENDIENTE_ENVIO').length,
     anulados:   byDate.filter((c) => getEstado(c) === 'ANULADO').length,
   }), [byDate, boletas, facturas]);
 
@@ -91,8 +100,8 @@ export const ComprobantesReporteTab = () => {
     if (!debouncedSearch) return boletas;
     const q = debouncedSearch.toLowerCase();
     return boletas.filter((c) =>
-      (c.serie || '').toLowerCase().includes(q) ||
-      (c.numero || '').toLowerCase().includes(q) ||
+      (getSerie(c) || '').toLowerCase().includes(q) ||
+      (getNumero(c) || '').toLowerCase().includes(q) ||
       getCliente(c).toLowerCase().includes(q),
     );
   }, [boletas, debouncedSearch]);
@@ -100,12 +109,13 @@ export const ComprobantesReporteTab = () => {
   const seriesBoletas = useMemo(() => {
     const g = {};
     boletas.forEach((c) => {
-      const s = c.serie || 'S/N';
+      const s = getSerie(c) || 'S/N';
       if (!g[s]) g[s] = { serie: s, cantidad: 0, monto: 0, ultimoNumero: '' };
       g[s].cantidad++;
       g[s].monto += getTotal(c);
-      if (!g[s].ultimoNumero || (c.numero || '') > g[s].ultimoNumero)
-        g[s].ultimoNumero = c.numero || '—';
+      const num = getNumero(c) || '';
+      if (!g[s].ultimoNumero || num > g[s].ultimoNumero)
+        g[s].ultimoNumero = num || '—';
     });
     return Object.values(g).sort((a, b) => b.cantidad - a.cantidad);
   }, [boletas]);
@@ -115,8 +125,8 @@ export const ComprobantesReporteTab = () => {
     if (!debouncedSearch) return facturas;
     const q = debouncedSearch.toLowerCase();
     return facturas.filter((c) =>
-      (c.serie || '').toLowerCase().includes(q) ||
-      (c.numero || '').toLowerCase().includes(q) ||
+      (getSerie(c) || '').toLowerCase().includes(q) ||
+      (getNumero(c) || '').toLowerCase().includes(q) ||
       getCliente(c).toLowerCase().includes(q) ||
       getDocumento(c).toLowerCase().includes(q),
     );
@@ -134,8 +144,7 @@ export const ComprobantesReporteTab = () => {
   }, [facturas]);
 
   const pendientesEnvio = useMemo(
-    () => facturas.filter((c) => getEstado(c) === 'PENDIENTE'),
-    [facturas],
+    () => facturas.filter((c) => getEstado(c) === 'PENDIENTE_ENVIO'),
   );
 
   /* ── SUNAT ── */
@@ -171,7 +180,7 @@ export const ComprobantesReporteTab = () => {
   const commonCols = [
     { key:'#',  title:'#', width:'50px', render:(_,__,i) => (page-1)*PAGE_SIZE + i + 1 },
     { key:'sn', title:'Serie-Número', render:(_,r) => (
-      <span className="font-mono text-sm">{r.serie||'—'}-{r.numero||'—'}</span>
+      <span className="font-mono text-sm">{getSerie(r)||'—'}-{getNumero(r)||'—'}</span>
     )},
     { key:'f',  title:'Fecha', render:(_,r) => formatDate(getFecha(r)) },
     { key:'cl', title:'Cliente', render:(_,r) => (
@@ -234,15 +243,15 @@ export const ComprobantesReporteTab = () => {
             fechaDesde={fechaDesde} onDesde={setFechaDesde}
             fechaHasta={fechaHasta} onHasta={setFechaHasta}
             onCSV={() => exportToCSV(filteredBoletas.map((c) => ({
-              'Serie-Número': `${c.serie||''}-${c.numero||''}`,
+              'Serie-Número': `${getSerie(c)||''}-${getNumero(c)||''}`,
               Fecha: formatDate(getFecha(c)),
               Cliente: getCliente(c), Documento: getDocumento(c),
               Total: getTotal(c), Estado: ESTADO_MAP[getEstado(c)]?.label || c.estado || '',
             })), 'reporte_boletas')}
             onPDF={() => exportToPDF('Boletas de Venta', filteredBoletas.map((c) => ({
-              'Serie-Número': `${c.serie||''}-${c.numero||''}`,
+              'Serie-Número': `${getSerie(c)||''}-${getNumero(c)||''}`,
               Fecha: formatDate(getFecha(c)), Cliente: getCliente(c),
-              Total: formatCurrency(getTotal(c)), Estado: ESTADO_MAP[getEstado(c)]?.label || c.estado || '',
+              Total: formatCurrency(getTotal(c)), Estado: ESTADO_MAP[getEstado(c)]?.label || c.estadoDocumento || '',
             })))}
           />
 
@@ -285,13 +294,13 @@ export const ComprobantesReporteTab = () => {
             fechaDesde={fechaDesde} onDesde={setFechaDesde}
             fechaHasta={fechaHasta} onHasta={setFechaHasta}
             onCSV={() => exportToCSV(filteredFacturas.map((c) => ({
-              'Serie-Número': `${c.serie||''}-${c.numero||''}`,
+              'Serie-Número': `${getSerie(c)||''}-${getNumero(c)||''}`,
               Fecha: formatDate(getFecha(c)), Cliente: getCliente(c),
               RUC: getDocumento(c), Total: getTotal(c),
               Estado: ESTADO_MAP[getEstado(c)]?.label || c.estado || '',
             })), 'reporte_facturas')}
             onPDF={() => exportToPDF('Facturas de Venta', filteredFacturas.map((c) => ({
-              'Serie-Número': `${c.serie||''}-${c.numero||''}`,
+              'Serie-Número': `${getSerie(c)||''}-${getNumero(c)||''}`,
               Fecha: formatDate(getFecha(c)), Cliente: getCliente(c),
               RUC: getDocumento(c), Total: formatCurrency(getTotal(c)),
               Estado: ESTADO_MAP[getEstado(c)]?.label || c.estado || '',

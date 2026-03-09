@@ -16,7 +16,19 @@ export const useReporteVentas = () => {
     queryKey: ['reportes', 'ventas', negocioId],
     queryFn: () => reportesService.getVentasByNegocio(negocioId),
     enabled: !!negocioId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
+  });
+};
+
+/* ─── Detalle ventas por negocio (para reporte de productos) ─── */
+export const useReporteDetalleVentas = () => {
+  const negocioId = useAdminAuthStore((s) => s.negocio?.id);
+
+  return useQuery({
+    queryKey: ['reportes', 'detalleVentas', negocioId],
+    queryFn: () => reportesService.getDetalleVentasByNegocio(negocioId),
+    enabled: !!negocioId,
+    staleTime: 0,
   });
 };
 
@@ -25,7 +37,7 @@ export const useReporteStock = () => {
   return useQuery({
     queryKey: ['reportes', 'stock'],
     queryFn: () => reportesService.getStockInventario(),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
 };
 
@@ -34,7 +46,7 @@ export const useReporteLotes = () => {
   return useQuery({
     queryKey: ['reportes', 'lotes'],
     queryFn: () => reportesService.getLotesInventario(),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
 };
 
@@ -43,7 +55,7 @@ export const useReporteCompras = () => {
   return useQuery({
     queryKey: ['reportes', 'compras'],
     queryFn: () => reportesService.getOrdenesCompra(),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
 };
 
@@ -55,7 +67,7 @@ export const useReporteGastos = () => {
     queryKey: ['reportes', 'gastos', negocioId],
     queryFn: () => reportesService.getGastos(negocioId),
     enabled: !!negocioId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
 };
 
@@ -67,7 +79,7 @@ export const useReporteComprobantes = () => {
     queryKey: ['reportes', 'comprobantes', negocioId],
     queryFn: () => reportesService.getComprobantes(negocioId),
     enabled: !!negocioId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
 };
 
@@ -76,6 +88,6 @@ export const useReporteMovimientos = () => {
   return useQuery({
     queryKey: ['reportes', 'movimientos'],
     queryFn: () => reportesService.getMovimientosInventario(),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
 };

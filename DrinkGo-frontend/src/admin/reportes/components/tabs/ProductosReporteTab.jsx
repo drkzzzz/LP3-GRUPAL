@@ -19,13 +19,13 @@ import { StatCard } from '@/admin/components/ui/StatCard';
 import { Badge } from '@/admin/components/ui/Badge';
 import { Table } from '@/admin/components/ui/Table';
 import { Button } from '@/admin/components/ui/Button';
-import { useReporteVentas } from '../../hooks/useReportes';
+import { useReporteDetalleVentas } from '../../hooks/useReportes';
 import { formatCurrency } from '@/shared/utils/formatters';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { exportToCSV } from '../../utils/exportUtils';
 
 export const ProductosReporteTab = () => {
-  const { data: ventas = [], isLoading } = useReporteVentas();
+  const { data: detalles = [], isLoading } = useReporteDetalleVentas();
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 400);
@@ -34,45 +34,44 @@ export const ProductosReporteTab = () => {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  /* Filtrar ventas completadas en rango */
-  const filteredVentas = useMemo(() => {
-    let result = ventas.filter((v) => v.estado === 'completada');
+  /* Filtrar detalles de ventas completadas en rango */
+  const filteredDetalles = useMemo(() => {
+    let result = detalles.filter((d) => d.ventaEstado === 'completada');
     if (fechaDesde) {
       const desde = new Date(fechaDesde);
-      result = result.filter((v) => new Date(v.creadoEn) >= desde);
+      result = result.filter((d) => new Date(d.ventaCreadoEn || d.creadoEn) >= desde);
     }
     if (fechaHasta) {
       const hasta = new Date(fechaHasta);
       hasta.setHours(23, 59, 59, 999);
-      result = result.filter((v) => new Date(v.creadoEn) <= hasta);
+      result = result.filter((d) => new Date(d.ventaCreadoEn || d.creadoEn) <= hasta);
     }
     return result;
-  }, [ventas, fechaDesde, fechaHasta]);
+  }, [detalles, fechaDesde, fechaHasta]);
 
-  /* Agregar productos desde detalles de venta */
+  /* Armar ranking de productos directamente desde detalles */
   const productosRanking = useMemo(() => {
     const map = {};
-    filteredVentas.forEach((venta) => {
-      const detalles = venta.detalles || venta.detallesVenta || [];
-      detalles.forEach((d) => {
-        const nombre = d.nombreProducto || d.producto?.nombre || d.productoNombre || `Producto #${d.productoId || '?'}`;
-        const key = d.productoId || nombre;
-        if (!map[key]) {
-          map[key] = {
-            productoId: d.productoId,
-            nombre,
-            cantidadVendida: 0,
-            montoTotal: 0,
-            vecesEnVentas: 0,
-          };
-        }
-        map[key].cantidadVendida += d.cantidad || 0;
-        map[key].montoTotal += (d.subtotal || d.precioUnitario * (d.cantidad || 0)) || 0;
-        map[key].vecesEnVentas++;
-      });
+    filteredDetalles.forEach((d) => {
+      const nombre = d.nombreProducto || `Producto #${d.productoId || '?'}`;
+      const key = d.productoId || nombre;
+      if (!map[key]) {
+        map[key] = {
+          productoId: d.productoId,
+          nombre,
+          cantidadVendida: 0,
+          montoTotal: 0,
+          vecesEnVentas: new Set(),
+        };
+      }
+      map[key].cantidadVendida += Number(d.cantidad) || 0;
+      map[key].montoTotal += Number(d.subtotal) || (Number(d.precioUnitario) * (Number(d.cantidad) || 0));
+      map[key].vecesEnVentas.add(d.ventaId);
     });
 
-    let ranking = Object.values(map).sort((a, b) => b.cantidadVendida - a.cantidadVendida);
+    let ranking = Object.values(map)
+      .map((p) => ({ ...p, vecesEnVentas: p.vecesEnVentas.size }))
+      .sort((a, b) => b.cantidadVendida - a.cantidadVendida);
 
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
@@ -80,7 +79,7 @@ export const ProductosReporteTab = () => {
     }
 
     return ranking;
-  }, [filteredVentas, debouncedSearch]);
+  }, [filteredDetalles, debouncedSearch]);
 
   /* Stats */
   const stats = useMemo(() => {

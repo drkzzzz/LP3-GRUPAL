@@ -15,7 +15,8 @@ import java.time.LocalDateTime;
 @Table(name = "detalle_ventas")
 @SQLDelete(sql = "UPDATE detalle_ventas SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
-@JsonPropertyOrder({ "id", "ventaId", "productoId", "nombreProducto", "comboId", "cantidad", "precioUnitario", "descuento", "subtotal",
+@JsonPropertyOrder({ "id", "ventaId", "productoId", "nombreProducto", "comboId", "cantidad", "precioUnitario",
+        "descuento", "subtotal",
         "impuesto", "total", "estaActivo", "creadoEn", "actualizadoEn", "eliminadoEn" })
 public class DetalleVentas {
 
@@ -102,6 +103,16 @@ public class DetalleVentas {
         return venta != null ? venta.getId() : null;
     }
 
+    @JsonProperty("ventaEstado")
+    public String getVentaEstado() {
+        return venta != null && venta.getEstado() != null ? venta.getEstado().name() : null;
+    }
+
+    @JsonProperty("ventaCreadoEn")
+    public LocalDateTime getVentaCreadoEn() {
+        return venta != null ? venta.getCreadoEn() : null;
+    }
+
     @JsonIgnore
     public Productos getProducto() {
         return producto;
@@ -118,7 +129,8 @@ public class DetalleVentas {
 
     @JsonProperty("nombreProducto")
     public String getNombreProducto() {
-        if (nombreProductoSnapshot != null) return nombreProductoSnapshot;
+        if (nombreProductoSnapshot != null)
+            return nombreProductoSnapshot;
         return producto != null ? producto.getNombre() : null;
     }
 
