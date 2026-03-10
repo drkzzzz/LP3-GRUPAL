@@ -31,6 +31,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import DrinkGo.DrinkGo_backend.entity.DetalleDevoluciones;
+import DrinkGo.DrinkGo_backend.entity.Negocios;
+import DrinkGo.DrinkGo_backend.repository.DetalleDevolucionesRepository;
+import DrinkGo.DrinkGo_backend.repository.DetallePedidosRepository;
+import DrinkGo.DrinkGo_backend.service.IDevolucionesService;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +87,15 @@ public class StorefrontCustomerController {
 
     @Autowired
     private FileStorageService fileStorageService;
+
+    @Autowired
+    private IDevolucionesService devolucionesService;
+
+    @Autowired
+    private DetalleDevolucionesRepository detalleDevolucionesRepo;
+
+    @Autowired
+    private DetallePedidosRepository detallePedidosRepo;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
@@ -423,15 +438,20 @@ public class StorefrontCustomerController {
                     pago.setMetodoPago(metodo);
                     pago.setMonto(pedido.getTotal());
                     pago.setEstadoPago(PagosPedido.EstadoPago.pendiente);
-                    if (body.get("banco") != null) pago.setBanco(body.get("banco").toString());
-                    if (body.get("ultimosCuatroDigitos") != null) pago.setUltimosCuatroDigitos(body.get("ultimosCuatroDigitos").toString());
-                    if (body.get("nombreTitular") != null) pago.setNombreTitular(body.get("nombreTitular").toString());
-                    if (body.get("numeroReferencia") != null) pago.setNumeroReferencia(body.get("numeroReferencia").toString());
+                    if (body.get("banco") != null)
+                        pago.setBanco(body.get("banco").toString());
+                    if (body.get("ultimosCuatroDigitos") != null)
+                        pago.setUltimosCuatroDigitos(body.get("ultimosCuatroDigitos").toString());
+                    if (body.get("nombreTitular") != null)
+                        pago.setNombreTitular(body.get("nombreTitular").toString());
+                    if (body.get("numeroReferencia") != null)
+                        pago.setNumeroReferencia(body.get("numeroReferencia").toString());
                     pagosPedidoRepo.save(pago);
                 });
             }
         } catch (Exception e) {
-            System.err.println("⚠️ No se pudo crear registro de pago para pedido " + pedido.getId() + ": " + e.getMessage());
+            System.err.println(
+                    "⚠️ No se pudo crear registro de pago para pedido " + pedido.getId() + ": " + e.getMessage());
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
@@ -551,5 +571,161 @@ public class StorefrontCustomerController {
         Long clienteId = getClienteId();
         List<Devoluciones> devoluciones = devolucionesRepo.findByClienteId(clienteId);
         return ResponseEntity.ok(devoluciones);
+    }
+
+    /*
+     * ══════════════════════════════════════════════
+     * POST /restful/tienda/{slug}/solicitar-devolucion
+     * Body: { pedidoId, tipoDevolucion, categoriaMotivo,
+     * detalleMotivo, metodoReembolso, notas?,
+     * productos: [{ detallePedidoId, cantidad }] }
+     * ══════════════════════════════════════════════
+     */
+    @PostMapping("/solicitar-devolucion")
+    public ResponseEntity<?> solicitarDevolucion(
+            @PathVariable String slug,
+            @RequestBody Map<String, Object> body) {
+
+        Long clienteId = getClienteId();
+
+        // 1. Resolver negocio desde el slug
+        var configOpt = configRepo.findBySlugTienda(slug);
+        if (configOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Tienda no encontrada"));
+        }
+        Negocios negocio = configOpt.get().getNegocio();
+        if (negocio == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "La tienda no tiene un negocio asociado"));
+        }
+
+        // 2. Cliente autenticado
+        Optional<Clientes> clienteOpt = clientesRepo.findById(clienteId);
+        if (clienteOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Cliente no encontrado"));
+        }
+        Clientes cliente = clienteOpt.get();
+
+        // 3. Validar pedidoId
+        Object pedidoIdRaw = body.get("pedidoId");
+        if (pedidoIdRaw == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "pedidoId es requerido"));
+        }
+        Long pedidoId;
+        try {
+            pedidoId = Long.parseLong(pedidoIdRaw.toString());
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "pedidoId inválido"));
+        }
+
+        Optional<Pedidos> pedidoOpt = pedidosRepo.findById(pedidoId);
+        if (pedidoOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Pedido no encontrado"));
+        }
+        Pedidos pedido = pedidoOpt.get();
+
+        // Verificar que el pedido pertenece al cliente
+        if (pedido.getCliente() == null || !clienteId.equals(pedido.getCliente().getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "No tiene acceso a este pedido"));
+        }
+
+        // Verificar que el pedido esté entregado
+        if (pedido.getEstadoPedido() != Pedidos.EstadoPedido.entregado) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Solo se pueden solicitar devoluciones de pedidos entregados"));
+        }
+
+        // Verificar que no exista ya una devolución para este pedido
+        if (devolucionesRepo.existsByPedidoId(pedidoId)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Ya existe una solicitud de devolución para este pedido"));
+        }
+
+        // 4. Validar campos requeridos
+        String tipoDevolucion = (String) body.get("tipoDevolucion");
+        String categoriaMotivo = (String) body.get("categoriaMotivo");
+        String detalleMotivo = (String) body.get("detalleMotivo");
+        String metodoReembolso = (String) body.get("metodoReembolso");
+        String notas = (String) body.get("notas");
+
+        if (tipoDevolucion == null || categoriaMotivo == null || detalleMotivo == null || metodoReembolso == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message",
+                            "Campos requeridos: tipoDevolucion, categoriaMotivo, detalleMotivo, metodoReembolso"));
+        }
+
+        // 5. Obtener detalles del pedido para calcular montos
+        List<DetallePedidos> detallesPedido = detallePedidosRepo.findByPedido_Id(pedidoId);
+
+        // 6. Parsear productos a devolver
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> productosBody = (List<Map<String, Object>>) body.get("productos");
+        if (productosBody == null || productosBody.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Debe seleccionar al menos un producto a devolver"));
+        }
+
+        // 7. Crear la devolución cabecera
+        Devoluciones devolucion = new Devoluciones();
+        devolucion.setNegocio(negocio);
+        devolucion.setSede(pedido.getSede());
+        devolucion.setPedido(pedido);
+        devolucion.setCliente(cliente);
+        devolucion.setTipoDevolucion(Devoluciones.TipoDevolucion.valueOf(tipoDevolucion));
+        devolucion.setCategoriaMotivo(Devoluciones.CategoriaMotivo.valueOf(categoriaMotivo));
+        devolucion.setDetalleMotivo(detalleMotivo);
+        devolucion.setMetodoReembolso(Devoluciones.MetodoReembolso.valueOf(metodoReembolso));
+        devolucion.setEstado(Devoluciones.EstadoDevolucion.solicitada);
+        devolucion.setNotas(notas);
+
+        // Calcular totales según productos seleccionados
+        BigDecimal totalDev = BigDecimal.ZERO;
+        List<DetalleDevoluciones> detallesDevolucion = new ArrayList<>();
+
+        for (Map<String, Object> prod : productosBody) {
+            Long detallePedidoId = Long.parseLong(prod.get("detallePedidoId").toString());
+            int cantidad = Integer.parseInt(prod.get("cantidad").toString());
+
+            DetallePedidos detallePedido = detallesPedido.stream()
+                    .filter(dp -> dp.getId().equals(detallePedidoId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (detallePedido == null)
+                continue;
+
+            BigDecimal precioUnit = detallePedido.getPrecioUnitario();
+            BigDecimal totalItem = precioUnit.multiply(BigDecimal.valueOf(cantidad));
+            totalDev = totalDev.add(totalItem);
+
+            DetalleDevoluciones detDev = new DetalleDevoluciones();
+            detDev.setProducto(detallePedido.getProducto());
+            detDev.setDetallePedido(detallePedido);
+            detDev.setCantidad(cantidad);
+            detDev.setPrecioUnitario(precioUnit);
+            detDev.setTotal(totalItem);
+            detDev.setEstadoCondicion(DetalleDevoluciones.EstadoCondicion.bueno);
+            detDev.setDevolverStock(true);
+            detallesDevolucion.add(detDev);
+        }
+
+        devolucion.setSubtotal(totalDev);
+        devolucion.setMontoImpuesto(BigDecimal.ZERO);
+        devolucion.setTotal(totalDev);
+
+        // 8. Guardar la devolución (genera número automáticamente)
+        devolucionesService.guardar(devolucion);
+
+        // 9. Guardar los detalles
+        for (DetalleDevoluciones detDev : detallesDevolucion) {
+            detDev.setDevolucion(devolucion);
+            detalleDevolucionesRepo.save(detDev);
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(devolucion);
     }
 }
