@@ -173,6 +173,11 @@ export const storefrontService = {
     return toArray(data);
   },
 
+  solicitarDevolucion: async (slug, devolucionData) => {
+    const { data } = await customerApi.post(`/tienda/${slug}/solicitar-devolucion`, devolucionData);
+    return data;
+  },
+
   /* ── Combos visibles en tienda (público) ── */
   getCombosBySlug: async (slug, sedeId) => {
     const { data } = await publicApi.get(`/tienda/public/${slug}/combos`, {

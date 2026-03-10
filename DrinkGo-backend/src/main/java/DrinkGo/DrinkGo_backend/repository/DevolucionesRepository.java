@@ -17,4 +17,6 @@ public interface DevolucionesRepository extends JpaRepository<Devoluciones, Long
 
     @Query("SELECT COALESCE(MAX(CAST(SUBSTRING(d.numeroDevolucion, 5) AS int)), 0) FROM Devoluciones d WHERE d.negocio.id = :negocioId")
     Long findMaxNumeroByNegocioId(@Param("negocioId") Long negocioId);
+
+    boolean existsByPedidoId(Long pedidoId);
 }

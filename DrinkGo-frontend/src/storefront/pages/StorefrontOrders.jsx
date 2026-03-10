@@ -538,13 +538,13 @@ export const StorefrontOrders = () => {
       ) : pedidos.length === 0 ? (
         <div className="text-center py-16">
           <ShoppingBag size={48} className="mx-auto mb-4 text-gray-300" />
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Sin pedidos aÃºn</h2>
-          <p className="text-gray-500 mb-6">Comienza explorando nuestro catÃ¡logo</p>
+          <h2 className="text-lg font-bold text-gray-900 mb-2">Sin pedidos</h2>
+          <p className="text-gray-500 mb-6">Comienza explorando nuestro catalogo</p>
           <Link
             to={`/tienda/${slug}/catalogo`}
             className="inline-flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition-colors"
           >
-            Ver CatÃ¡logo
+            Ver Catalogo
           </Link>
         </div>
       ) : (
