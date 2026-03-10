@@ -8,6 +8,7 @@ import DrinkGo.DrinkGo_backend.entity.Devoluciones;
 public interface IDevolucionesService {
     List<Devoluciones> buscarTodos();
     List<Devoluciones> buscarPorNegocio(Long negocioId);
+    List<Devoluciones> buscarPorVenta(Long ventaId);
     void guardar(Devoluciones devoluciones);
     void modificar(Devoluciones devoluciones);
     Optional<Devoluciones> buscarId(Long id);

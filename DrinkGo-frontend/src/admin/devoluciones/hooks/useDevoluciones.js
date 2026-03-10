@@ -23,7 +23,7 @@ export const useDevoluciones = (negocioId, origen = 'todos') => {
       if (origen === 'clientes') {
         filtered = filtered.filter((d) => d.venta || d.ventaId || d.cliente || d.clienteId);
       } else if (origen === 'proveedores') {
-        filtered = filtered.filter((d) => d.pedido || d.pedidoId);
+        filtered = filtered.filter((d) => !d.venta && !d.ventaId);
       }
 
       return filtered;
@@ -76,6 +76,8 @@ export const useDevoluciones = (negocioId, origen = 'todos') => {
       queryClient.invalidateQueries({ queryKey: ['facturacion', 'comprobantes'] });
       queryClient.invalidateQueries({ queryKey: ['resumen-turno'] });
       queryClient.invalidateQueries({ queryKey: ['movimientos'] });
+      queryClient.invalidateQueries({ queryKey: ['lotes-inventario'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-inventario'] });
       message.success('Devolución aprobada exitosamente');
     },
     onError: (err) => {
