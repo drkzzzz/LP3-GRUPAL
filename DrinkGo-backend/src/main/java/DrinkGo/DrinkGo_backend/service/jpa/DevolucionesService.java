@@ -57,6 +57,10 @@ public class DevolucionesService implements IDevolucionesService {
         return repoDevoluciones.findByNegocioIdOrderBySolicitadoEnDesc(negocioId);
     }
 
+    public List<Devoluciones> buscarPorVenta(Long ventaId) {
+        return repoDevoluciones.findByVentaIdOrderBySolicitadoEnDesc(ventaId);
+    }
+
     public void guardar(Devoluciones devoluciones) {
         if (devoluciones.getNumeroDevolucion() == null || devoluciones.getNumeroDevolucion().isBlank()) {
             Long negocioId = devoluciones.getNegocio().getId();

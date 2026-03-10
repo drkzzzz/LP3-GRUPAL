@@ -4,7 +4,8 @@
  * Historial de ventas del negocio con filtro, detalle y anulación.
  */
 import { useState, useMemo } from 'react';
-import { Eye, Ban, Search, Receipt, Banknote, XCircle, Monitor, Gift, Calendar } from 'lucide-react';
+import { Eye, Ban, Search, Receipt, Banknote, XCircle, Monitor, Gift, Calendar, RotateCcw } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
 import { Badge } from '@/admin/components/ui/Badge';
@@ -16,6 +17,7 @@ import { SinCajaAsignada } from '../components/SinCajaAsignada';
 import { formatCurrency, formatDateTime } from '@/shared/utils/formatters';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
+import { devolucionesService, detalleDevolucionesService } from '@/admin/devoluciones/services/devolucionesService';
 
 const ESTADO_MAP = {
   completada: { label: 'Completada', variant: 'success' },
@@ -56,6 +58,23 @@ export const HistorialVentas = () => {
   const [showDetalle, setShowDetalle] = useState(false);
   const { venta: ventaDetail, detalle, pagos, isLoading: loadingDetalle } =
     useVentaDetalle(showDetalle ? selectedVentaId : null);
+
+  /* Devolución asociada a la venta (solo cuando es "devuelta") */
+  const esDevuelta = ventaDetail?.estado === 'devuelta';
+  const devolucionQuery = useQuery({
+    queryKey: ['devoluciones-venta', selectedVentaId],
+    queryFn: () => devolucionesService.getByVenta(selectedVentaId),
+    enabled: !!selectedVentaId && showDetalle && esDevuelta,
+    select: (data) => data.find((d) => d.estado === 'aprobada' || d.estado === 'completada') || data[0],
+  });
+  const devolucion = devolucionQuery.data || null;
+
+  const detalleDevQuery = useQuery({
+    queryKey: ['detalle-devolucion-venta', devolucion?.id],
+    queryFn: () => detalleDevolucionesService.getByDevolucion(devolucion.id),
+    enabled: !!devolucion?.id && esDevuelta,
+  });
+  const detalleDevolucion = detalleDevQuery.data || [];
 
   /* Anulación */
   const [anularTarget, setAnularTarget] = useState(null);
@@ -349,127 +368,175 @@ export const HistorialVentas = () => {
             </div>
 
             {/* Detalle de ítems */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                Productos
-              </h3>
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">
-                        Producto
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500">
-                        Cant.
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">
-                        P. Unit.
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">
-                        Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {(() => {
-                      /* Agrupar items que pertenecen a un combo */
-                      const comboGroups = {};
-                      const standalone = [];
+            {(() => {
+              const esParcial = esDevuelta && devolucion?.tipoDevolucion === 'parcial';
+              const esTotal = esDevuelta && devolucion?.tipoDevolucion === 'total';
 
-                      (detalle || []).forEach((d) => {
-                        if (d.comboId) {
-                          if (!comboGroups[d.comboId]) {
-                            comboGroups[d.comboId] = {
-                              nombre: d.nombreCombo || `Combo #${d.comboId}`,
-                              items: [],
-                              totalCombo: 0,
-                            };
-                          }
-                          comboGroups[d.comboId].items.push(d);
-                          comboGroups[d.comboId].totalCombo += Number(d.total || d.subtotal || 0);
-                        } else {
-                          standalone.push(d);
-                        }
-                      });
-
-                      const rows = [];
-
-                      /* Renderizar combos agrupados */
-                      Object.entries(comboGroups).forEach(([cId, group]) => {
-                        rows.push(
-                          <tr key={`combo-header-${cId}`} className="bg-purple-50">
-                            <td className="px-3 py-2 font-semibold text-purple-700" colSpan={3}>
-                              <span className="flex items-center gap-1.5">
-                                <Gift size={14} className="text-purple-500" />
-                                📦 {group.nombre}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 text-right font-semibold text-purple-700">
-                              {formatCurrency(group.totalCombo)}
-                            </td>
-                          </tr>,
-                        );
-                        group.items.forEach((d, i) =>
-                          rows.push(
-                            <tr key={`combo-${cId}-${i}`} className="bg-purple-50/50">
-                              <td className="px-3 py-1.5 pl-7 text-gray-500 text-xs">
-                                └ {d.nombreProducto || d.producto?.nombre || '—'}
-                              </td>
-                              <td className="px-3 py-1.5 text-center text-gray-500 text-xs">{d.cantidad}</td>
-                              <td className="px-3 py-1.5 text-right text-gray-500 text-xs">
-                                {formatCurrency(d.precioUnitario)}
-                              </td>
-                              <td className="px-3 py-1.5 text-right text-gray-500 text-xs">
-                                {formatCurrency(d.total || d.subtotal)}
-                              </td>
-                            </tr>,
-                          ),
-                        );
-                      });
-
-                      /* Renderizar productos sueltos */
-                      standalone.forEach((d, i) =>
-                        rows.push(
-                          <tr key={`std-${i}`}>
-                            <td className="px-3 py-2">
-                              {d.nombreProducto || d.producto?.nombre || '—'}
-                            </td>
-                            <td className="px-3 py-2 text-center">{d.cantidad}</td>
-                            <td className="px-3 py-2 text-right">
-                              {formatCurrency(d.precioUnitario)}
-                            </td>
-                            <td className="px-3 py-2 text-right font-medium">
-                              {formatCurrency(d.total || d.subtotal)}
-                            </td>
-                          </tr>,
-                        ),
-                      );
-
-                      return rows;
-                    })()}
-                  </tbody>
-                </table>
-              </div>
-              {/* Subtotales */}
-              <div className="flex justify-end mt-2 pr-1">
-                <div className="w-56 space-y-1 text-sm">
-                  {parseFloat(ventaDetail?.subtotal || 0) > 0 && (
-                    <div className="flex justify-between text-gray-500">
-                      <span>Subtotal</span>
-                      <span>{formatCurrency(ventaDetail.subtotal)}</span>
-                    </div>
-                  )}
-                  {parseFloat(ventaDetail?.costoEnvio || 0) > 0 && (
-                    <div className="flex justify-between text-gray-500">
-                      <span>Delivery</span>
-                      <span>{formatCurrency(ventaDetail.costoEnvio)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-gray-900 border-t pt-1">
-                    <span>Total</span>
-                    <span className="text-green-700">{formatCurrency(ventaDetail?.total)}</span>
+              /* Helper: renderiza la tabla de productos vendidos */
+              const renderProductosVendidos = (titulo) => (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">{titulo}</h3>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Producto</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500">Cant.</th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">P. Unit.</th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {(() => {
+                          const comboGroups = {};
+                          const standalone = [];
+                          (detalle || []).forEach((d) => {
+                            if (d.comboId) {
+                              if (!comboGroups[d.comboId]) {
+                                comboGroups[d.comboId] = { nombre: d.nombreCombo || `Combo #${d.comboId}`, items: [], totalCombo: 0 };
+                              }
+                              comboGroups[d.comboId].items.push(d);
+                              comboGroups[d.comboId].totalCombo += Number(d.total || d.subtotal || 0);
+                            } else {
+                              standalone.push(d);
+                            }
+                          });
+                          const rows = [];
+                          Object.entries(comboGroups).forEach(([cId, group]) => {
+                            rows.push(
+                              <tr key={`combo-header-${cId}`} className="bg-purple-50">
+                                <td className="px-3 py-2 font-semibold text-purple-700" colSpan={3}>
+                                  <span className="flex items-center gap-1.5"><Gift size={14} className="text-purple-500" /> 📦 {group.nombre}</span>
+                                </td>
+                                <td className="px-3 py-2 text-right font-semibold text-purple-700">{formatCurrency(group.totalCombo)}</td>
+                              </tr>,
+                            );
+                            group.items.forEach((d, i) =>
+                              rows.push(
+                                <tr key={`combo-${cId}-${i}`} className="bg-purple-50/50">
+                                  <td className="px-3 py-1.5 pl-7 text-gray-500 text-xs">└ {d.nombreProducto || d.producto?.nombre || '—'}</td>
+                                  <td className="px-3 py-1.5 text-center text-gray-500 text-xs">{d.cantidad}</td>
+                                  <td className="px-3 py-1.5 text-right text-gray-500 text-xs">{formatCurrency(d.precioUnitario)}</td>
+                                  <td className="px-3 py-1.5 text-right text-gray-500 text-xs">{formatCurrency(d.total || d.subtotal)}</td>
+                                </tr>,
+                              ),
+                            );
+                          });
+                          standalone.forEach((d, i) =>
+                            rows.push(
+                              <tr key={`std-${i}`}>
+                                <td className="px-3 py-2">{d.nombreProducto || d.producto?.nombre || '—'}</td>
+                                <td className="px-3 py-2 text-center">{d.cantidad}</td>
+                                <td className="px-3 py-2 text-right">{formatCurrency(d.precioUnitario)}</td>
+                                <td className="px-3 py-2 text-right font-medium">{formatCurrency(d.total || d.subtotal)}</td>
+                              </tr>,
+                            ),
+                          );
+                          return rows;
+                        })()}
+                      </tbody>
+                    </table>
                   </div>
+                </div>
+              );
+
+              /* Helper: renderiza la tabla de productos devueltos */
+              const renderProductosDevueltos = () => (
+                <div>
+                  <h3 className="text-sm font-semibold text-red-600 mb-2 flex items-center gap-1.5">
+                    <RotateCcw size={14} />
+                    Productos Devueltos
+                    {devolucion?.numeroDevolucion && (
+                      <span className="text-xs font-normal text-gray-400 ml-1">({devolucion.numeroDevolucion})</span>
+                    )}
+                  </h3>
+                  {detalleDevQuery.isLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="w-5 h-5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                      <span className="ml-2 text-sm text-gray-500">Cargando...</span>
+                    </div>
+                  ) : detalleDevolucion.length === 0 ? (
+                    <p className="text-sm text-gray-400 bg-gray-50 p-3 rounded-lg">No se encontraron productos devueltos</p>
+                  ) : (
+                    <div className="border border-red-200 rounded-lg overflow-hidden">
+                      <table className="min-w-full divide-y divide-red-100 text-sm">
+                        <thead className="bg-red-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-red-600">Producto</th>
+                            <th className="px-3 py-2 text-center text-xs font-semibold text-red-600">Cant.</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-red-600">P. Unit.</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-red-600">Total</th>
+                            <th className="px-3 py-2 text-center text-xs font-semibold text-red-600">Condición</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-red-50">
+                          {detalleDevolucion.map((det, i) => (
+                            <tr key={det.id || i}>
+                              <td className="px-3 py-2">{det.producto?.nombre || det.nombreProducto || '—'}</td>
+                              <td className="px-3 py-2 text-center">{det.cantidad}</td>
+                              <td className="px-3 py-2 text-right">{formatCurrency(det.precioUnitario)}</td>
+                              <td className="px-3 py-2 text-right font-medium">{formatCurrency(det.total)}</td>
+                              <td className="px-3 py-2 text-center">
+                                <Badge variant={det.estadoCondicion === 'bueno' ? 'success' : 'warning'}>
+                                  {det.estadoCondicion || 'N/A'}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-red-50 font-medium">
+                          <tr>
+                            <td colSpan={3} className="px-3 py-2 text-right text-red-700">Total devuelto:</td>
+                            <td className="px-3 py-2 text-right text-red-700">
+                              {formatCurrency(detalleDevolucion.reduce((s, d) => s + Number(d.total || 0), 0))}
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+
+              /* Renderizado condicional */
+              if (esTotal) {
+                /* Devolución total: solo tabla de devueltos */
+                return renderProductosDevueltos();
+              }
+
+              if (esParcial) {
+                /* Devolución parcial: tabla de vendidos + tabla de devueltos */
+                return (
+                  <>
+                    {renderProductosVendidos('Productos Vendidos')}
+                    {renderProductosDevueltos()}
+                  </>
+                );
+              }
+
+              /* Venta normal (no devuelta): tabla de productos original */
+              return renderProductosVendidos('Productos');
+            })()}
+
+            {/* Subtotales */}
+            <div className="flex justify-end mt-2 pr-1">
+              <div className="w-56 space-y-1 text-sm">
+                {parseFloat(ventaDetail?.subtotal || 0) > 0 && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Subtotal</span>
+                    <span>{formatCurrency(ventaDetail.subtotal)}</span>
+                  </div>
+                )}
+                {parseFloat(ventaDetail?.costoEnvio || 0) > 0 && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Delivery</span>
+                    <span>{formatCurrency(ventaDetail.costoEnvio)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-gray-900 border-t pt-1">
+                  <span>Total</span>
+                  <span className="text-green-700">{formatCurrency(ventaDetail?.total)}</span>
                 </div>
               </div>
             </div>
