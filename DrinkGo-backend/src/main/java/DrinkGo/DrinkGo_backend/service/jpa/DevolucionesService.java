@@ -4,20 +4,26 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import DrinkGo.DrinkGo_backend.entity.Almacenes;
 import DrinkGo.DrinkGo_backend.entity.DetalleDevoluciones;
 import DrinkGo.DrinkGo_backend.entity.Devoluciones;
 import DrinkGo.DrinkGo_backend.entity.Devoluciones.EstadoDevolucion;
+import DrinkGo.DrinkGo_backend.entity.LotesInventario;
 import DrinkGo.DrinkGo_backend.entity.StockInventario;
 import DrinkGo.DrinkGo_backend.entity.Usuarios;
+import DrinkGo.DrinkGo_backend.entity.Ventas;
 import DrinkGo.DrinkGo_backend.repository.AlmacenesRepository;
 import DrinkGo.DrinkGo_backend.repository.DetalleDevolucionesRepository;
 import DrinkGo.DrinkGo_backend.repository.DevolucionesRepository;
+import DrinkGo.DrinkGo_backend.repository.LotesInventarioRepository;
 import DrinkGo.DrinkGo_backend.repository.StockInventarioRepository;
 import DrinkGo.DrinkGo_backend.repository.UsuariosRepository;
+import DrinkGo.DrinkGo_backend.repository.VentasRepository;
 import DrinkGo.DrinkGo_backend.service.IDevolucionesService;
 
 @Service
@@ -37,12 +43,22 @@ public class DevolucionesService implements IDevolucionesService {
     @Autowired
     private AlmacenesRepository repoAlmacenes;
 
+    @Autowired
+    private VentasRepository repoVentas;
+
+    @Autowired
+    private LotesInventarioRepository repoLotes;
+
     public List<Devoluciones> buscarTodos() {
         return repoDevoluciones.findAll();
     }
 
     public List<Devoluciones> buscarPorNegocio(Long negocioId) {
         return repoDevoluciones.findByNegocioIdOrderBySolicitadoEnDesc(negocioId);
+    }
+
+    public List<Devoluciones> buscarPorVenta(Long ventaId) {
+        return repoDevoluciones.findByVentaIdOrderBySolicitadoEnDesc(ventaId);
     }
 
     public void guardar(Devoluciones devoluciones) {
@@ -82,8 +98,16 @@ public class DevolucionesService implements IDevolucionesService {
         dev.setAprobadoEn(LocalDateTime.now());
         Devoluciones saved = repoDevoluciones.save(dev);
 
-        // Restaurar stock para cada detalle con devolverStock = true
-        restaurarStock(dev);
+        if (dev.getVenta() != null) {
+            // Devolución de cliente: restaurar stock y marcar venta como devuelta
+            restaurarStock(dev);
+            Ventas venta = dev.getVenta();
+            venta.setEstado(Ventas.Estado.devuelta);
+            repoVentas.save(venta);
+        } else {
+            // Devolución a proveedor: disminuir stock (se devuelve producto al proveedor)
+            disminuirStock(dev);
+        }
 
         return saved;
     }
@@ -137,6 +161,57 @@ public class DevolucionesService implements IDevolucionesService {
                 nuevoStock.setCostoPromedio(detalle.getPrecioUnitario() != null
                         ? detalle.getPrecioUnitario() : BigDecimal.ZERO);
                 repoStock.save(nuevoStock);
+            }
+        }
+    }
+
+    /**
+     * Disminuye el stock de cada producto devuelto al proveedor.
+     * Busca el almacén predeterminado de la sede y reduce cantidades en stock y lote.
+     */
+    private void disminuirStock(Devoluciones dev) {
+        List<DetalleDevoluciones> detalles = repoDetalleDevoluciones.findByDevolucionId(dev.getId());
+        if (detalles.isEmpty()) return;
+
+        Long sedeId = dev.getSede() != null ? dev.getSede().getId() : null;
+        Long negocioId = dev.getNegocio() != null ? dev.getNegocio().getId() : null;
+
+        Optional<Almacenes> almacenOpt = Optional.empty();
+        if (sedeId != null) {
+            almacenOpt = repoAlmacenes.findFirstBySede_IdAndEsPredeterminado(sedeId, true);
+        }
+        if (almacenOpt.isEmpty() && negocioId != null) {
+            almacenOpt = repoAlmacenes.findFirstByNegocio_IdAndEsPredeterminado(negocioId, true);
+        }
+        if (almacenOpt.isEmpty()) return;
+
+        Almacenes almacen = almacenOpt.get();
+
+        for (DetalleDevoluciones detalle : detalles) {
+            if (!Boolean.TRUE.equals(detalle.getDevolverStock())) continue;
+            if (detalle.getProducto() == null) continue;
+
+            Long productoId = detalle.getProducto().getId();
+            BigDecimal cantidadDevuelta = BigDecimal.valueOf(detalle.getCantidad());
+
+            // Disminuir stock del producto
+            Optional<StockInventario> stockOpt = repoStock.findFirstByProductoIdAndAlmacenId(productoId, almacen.getId());
+            if (stockOpt.isPresent()) {
+                StockInventario stock = stockOpt.get();
+                stock.setCantidadActual(stock.getCantidadActual().subtract(cantidadDevuelta));
+                BigDecimal reservada = stock.getCantidadReservada() != null ? stock.getCantidadReservada() : BigDecimal.ZERO;
+                stock.setCantidadDisponible(stock.getCantidadActual().subtract(reservada));
+                repoStock.save(stock);
+            }
+
+            // Disminuir cantidad del lote si existe referencia
+            if (detalle.getLote() != null) {
+                Optional<LotesInventario> loteOpt = repoLotes.findById(detalle.getLote().getId());
+                if (loteOpt.isPresent()) {
+                    LotesInventario lote = loteOpt.get();
+                    lote.setCantidadActual(lote.getCantidadActual().subtract(cantidadDevuelta));
+                    repoLotes.save(lote);
+                }
             }
         }
     }

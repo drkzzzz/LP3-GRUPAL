@@ -35,6 +35,11 @@ public class DevolucionesController {
         return service.buscarPorNegocio(negocioId);
     }
 
+    @GetMapping("/devoluciones/venta/{ventaId}")
+    public List<Devoluciones> buscarPorVenta(@PathVariable Long ventaId) {
+        return service.buscarPorVenta(ventaId);
+    }
+
     @PostMapping("/devoluciones")
     public Devoluciones guardar(@RequestBody Devoluciones entity) {
         service.guardar(entity);

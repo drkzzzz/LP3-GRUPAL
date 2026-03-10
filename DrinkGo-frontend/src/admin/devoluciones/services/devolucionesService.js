@@ -32,6 +32,11 @@ export const devolucionesService = {
     return toArray(data);
   },
 
+  getByVenta: async (ventaId) => {
+    const { data } = await adminApi.get(`/devoluciones/venta/${ventaId}`);
+    return toArray(data);
+  },
+
   getById: async (id) => {
     const { data } = await adminApi.get(`/devoluciones/${id}`);
     return data;
