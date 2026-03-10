@@ -1,13 +1,24 @@
 package DrinkGo.DrinkGo_backend.entity;
 
+import java.math.BigDecimal;
+
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-import jakarta.persistence.*;
-import java.math.BigDecimal;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "detalle_devoluciones")
-@JsonPropertyOrder({ "id", "devolucionId", "productoId", "detalleVentaId", "detallePedidoId", "cantidad",
+@JsonPropertyOrder({ "id", "devolucionId", "productoId", "detalleVentaId", "detallePedidoId", "loteId", "cantidad",
         "precioUnitario", "total", "estadoCondicion", "devolverStock", "almacenId", "notas" })
 public class DetalleDevoluciones {
 
@@ -50,6 +61,10 @@ public class DetalleDevoluciones {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "almacen_id")
     private Almacenes almacen;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lote_id")
+    private LotesInventario lote;
 
     @Column(length = 300)
     private String notas;
@@ -145,6 +160,14 @@ public class DetalleDevoluciones {
 
     public void setAlmacen(Almacenes almacen) {
         this.almacen = almacen;
+    }
+
+    public LotesInventario getLote() {
+        return lote;
+    }
+
+    public void setLote(LotesInventario lote) {
+        this.lote = lote;
     }
 
     public String getNotas() {

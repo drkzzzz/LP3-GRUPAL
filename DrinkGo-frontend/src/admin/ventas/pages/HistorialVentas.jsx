@@ -24,6 +24,7 @@ const ESTADO_MAP = {
   cancelada: { label: 'Cancelada', variant: 'error' },
   reembolsada: { label: 'Reembolsada', variant: 'info' },
   parcialmente_pagada: { label: 'Parcial', variant: 'warning' },
+  devuelta: { label: 'Devuelta', variant: 'info' },
 };
 
 const TIPO_VENTA_MAP = {
