@@ -66,8 +66,11 @@ const mapPedidoFromBackend = (pedido) => {
  */
 
 /**
- * Obtener todos los pedidos del negocio
- * GET /restful/pedidos
+ * Obtiene todos los pedidos del negocio.
+ * Mapea los campos snake_case del backend a camelCase.
+ * @returns {Promise<Array>} Lista de pedidos normalizados
+ * @example
+ * const pedidos = await getPedidos();
  */
 export const getPedidos = async () => {
   const response = await adminApi.get('/pedidos');
@@ -76,8 +79,11 @@ export const getPedidos = async () => {
 };
 
 /**
- * Obtener pedido por ID
- * GET /restful/pedidos/:id
+ * Obtiene un pedido por su ID.
+ * @param {number} id - ID del pedido
+ * @returns {Promise<Object>} Pedido normalizado
+ * @example
+ * const pedido = await getPedidoById(100);
  */
 export const getPedidoById = async (id) => {
   const response = await adminApi.get(`/pedidos/${id}`);
@@ -85,8 +91,11 @@ export const getPedidoById = async (id) => {
 };
 
 /**
- * Crear nuevo pedido
- * POST /restful/pedidos
+ * Crea un nuevo pedido.
+ * @param {Object} pedidoData - Datos del pedido (cliente, items, dirección)
+ * @returns {Promise<Object>} Pedido creado
+ * @example
+ * const pedido = await createPedido({ clienteId: 1, tipoPedido: 'DELIVERY', ... });
  */
 export const createPedido = async (pedidoData) => {
   const response = await adminApi.post('/pedidos', pedidoData);
@@ -94,8 +103,11 @@ export const createPedido = async (pedidoData) => {
 };
 
 /**
- * Actualizar pedido
- * PUT /restful/pedidos
+ * Actualiza un pedido existente.
+ * @param {Object} pedidoData - Datos del pedido a actualizar
+ * @returns {Promise<Object>} Pedido actualizado
+ * @example
+ * await updatePedido({ id: 100, estado: 'EN_PREPARACION' });
  */
 export const updatePedido = async (pedidoData) => {
   const response = await adminApi.put('/pedidos', pedidoData);
@@ -103,8 +115,13 @@ export const updatePedido = async (pedidoData) => {
 };
 
 /**
- * Cambiar solo el estado de un pedido
- * PATCH /restful/pedidos/:id/estado
+ * Cambia solo el estado de un pedido.
+ * @param {Object} params - Parámetros
+ * @param {number} params.id - ID del pedido
+ * @param {string} params.nuevoEstado - Nuevo estado (PENDIENTE, EN_PREPARACION, EN_CAMINO, ENTREGADO, etc.)
+ * @returns {Promise<void>}
+ * @example
+ * await cambiarEstadoPedido({ id: 100, nuevoEstado: 'ENTREGADO' });
  */
 export const cambiarEstadoPedido = async ({ id, nuevoEstado }) => {
   await adminApi.patch(`/pedidos/${id}/estado`, { estado: nuevoEstado });
@@ -112,8 +129,11 @@ export const cambiarEstadoPedido = async ({ id, nuevoEstado }) => {
 };
 
 /**
- * Eliminar pedido (soft delete)
- * DELETE /restful/pedidos/:id
+ * Elimina (soft delete) un pedido.
+ * @param {number} id - ID del pedido a eliminar
+ * @returns {Promise<Object>} Resultado de la operación
+ * @example
+ * await deletePedido(100);
  */
 export const deletePedido = async (id) => {
   const response = await adminApi.delete(`/pedidos/${id}`);
@@ -127,8 +147,10 @@ export const deletePedido = async (id) => {
  */
 
 /**
- * Obtener todos los detalles de pedidos
- * GET /restful/detalle-pedidos
+ * Obtiene todos los detalles de pedidos (items).
+ * @returns {Promise<Array>} Lista de detalles de todos los pedidos
+ * @example
+ * const detalles = await getDetallePedidos();
  */
 export const getDetallePedidos = async () => {
   const response = await adminApi.get('/detalle-pedidos');
@@ -136,8 +158,11 @@ export const getDetallePedidos = async () => {
 };
 
 /**
- * Obtener detalle de pedido por ID
- * GET /restful/detalle-pedidos/:id
+ * Obtiene un detalle de pedido por su ID.
+ * @param {number} id - ID del detalle
+ * @returns {Promise<Object>} Detalle del pedido
+ * @example
+ * const detalle = await getDetallePedidoById(1);
  */
 export const getDetallePedidoById = async (id) => {
   const response = await adminApi.get(`/detalle-pedidos/${id}`);
@@ -145,8 +170,11 @@ export const getDetallePedidoById = async (id) => {
 };
 
 /**
- * Crear detalle de pedido
- * POST /restful/detalle-pedidos
+ * Crea un nuevo detalle de pedido (item del pedido).
+ * @param {Object} detalleData - Datos del ítem (pedidoId, productoId, cantidad, precio)
+ * @returns {Promise<Object>} Detalle creado
+ * @example
+ * const detalle = await createDetallePedido({ pedidoId: 100, productoId: 10, cantidad: 2 });
  */
 export const createDetallePedido = async (detalleData) => {
   const response = await adminApi.post('/detalle-pedidos', detalleData);
@@ -154,8 +182,11 @@ export const createDetallePedido = async (detalleData) => {
 };
 
 /**
- * Actualizar detalle de pedido
- * PUT /restful/detalle-pedidos
+ * Actualiza un detalle de pedido existente.
+ * @param {Object} detalleData - Datos del detalle a actualizar
+ * @returns {Promise<Object>} Detalle actualizado
+ * @example
+ * await updateDetallePedido({ id: 1, cantidad: 3 });
  */
 export const updateDetallePedido = async (detalleData) => {
   const response = await adminApi.put('/detalle-pedidos', detalleData);
@@ -163,8 +194,11 @@ export const updateDetallePedido = async (detalleData) => {
 };
 
 /**
- * Eliminar detalle de pedido
- * DELETE /restful/detalle-pedidos/:id
+ * Elimina un detalle de pedido.
+ * @param {number} id - ID del detalle a eliminar
+ * @returns {Promise<Object>} Resultado de la operación
+ * @example
+ * await deleteDetallePedido(1);
  */
 export const deleteDetallePedido = async (id) => {
   const response = await adminApi.delete(`/detalle-pedidos/${id}`);
@@ -178,8 +212,10 @@ export const deleteDetallePedido = async (id) => {
  */
 
 /**
- * Obtener todos los seguimientos
- * GET /restful/seguimiento-pedidos
+ * Obtiene todos los seguimientos de pedidos (timeline de estados).
+ * @returns {Promise<Array>} Lista de seguimientos
+ * @example
+ * const seguimientos = await getSeguimientoPedidos();
  */
 export const getSeguimientoPedidos = async () => {
   const response = await adminApi.get('/seguimiento-pedidos');
@@ -187,8 +223,11 @@ export const getSeguimientoPedidos = async () => {
 };
 
 /**
- * Obtener seguimiento por ID
- * GET /restful/seguimiento-pedidos/:id
+ * Obtiene un seguimiento por su ID.
+ * @param {number} id - ID del seguimiento
+ * @returns {Promise<Object>} Seguimiento encontrado
+ * @example
+ * const seguimiento = await getSeguimientoPedidoById(1);
  */
 export const getSeguimientoPedidoById = async (id) => {
   const response = await adminApi.get(`/seguimiento-pedidos/${id}`);
@@ -196,8 +235,11 @@ export const getSeguimientoPedidoById = async (id) => {
 };
 
 /**
- * Crear seguimiento de pedido
- * POST /restful/seguimiento-pedidos
+ * Crea un nuevo seguimiento de pedido.
+ * @param {Object} seguimientoData - Datos del seguimiento (pedidoId, estado, comentario)
+ * @returns {Promise<Object>} Seguimiento creado
+ * @example
+ * const seguimiento = await createSeguimientoPedido({ pedidoId: 100, estado: 'EN_CAMINO' });
  */
 export const createSeguimientoPedido = async (seguimientoData) => {
   const response = await adminApi.post('/seguimiento-pedidos', seguimientoData);
@@ -205,8 +247,11 @@ export const createSeguimientoPedido = async (seguimientoData) => {
 };
 
 /**
- * Actualizar seguimiento
- * PUT /restful/seguimiento-pedidos
+ * Actualiza un seguimiento existente.
+ * @param {Object} seguimientoData - Datos del seguimiento a actualizar
+ * @returns {Promise<Object>} Seguimiento actualizado
+ * @example
+ * await updateSeguimientoPedido({ id: 1, comentario: 'Actualización' });
  */
 export const updateSeguimientoPedido = async (seguimientoData) => {
   const response = await adminApi.put('/seguimiento-pedidos', seguimientoData);
@@ -214,8 +259,11 @@ export const updateSeguimientoPedido = async (seguimientoData) => {
 };
 
 /**
- * Eliminar seguimiento
- * DELETE /restful/seguimiento-pedidos/:id
+ * Elimina un seguimiento.
+ * @param {number} id - ID del seguimiento a eliminar
+ * @returns {Promise<Object>} Resultado de la operación
+ * @example
+ * await deleteSeguimientoPedido(1);
  */
 export const deleteSeguimientoPedido = async (id) => {
   const response = await adminApi.delete(`/seguimiento-pedidos/${id}`);
@@ -229,8 +277,11 @@ export const deleteSeguimientoPedido = async (id) => {
  */
 
 /**
- * Obtener pagos de un pedido específico
- * GET /restful/pagos-pedido/por-pedido/:pedidoId
+ * Obtiene los pagos de un pedido específico.
+ * @param {number} pedidoId - ID del pedido
+ * @returns {Promise<Array>} Lista de pagos del pedido
+ * @example
+ * const pagos = await getPagosPorPedido(100);
  */
 export const getPagosPorPedido = async (pedidoId) => {
   const response = await adminApi.get(`/pagos-pedido/por-pedido/${pedidoId}`);
@@ -238,8 +289,11 @@ export const getPagosPorPedido = async (pedidoId) => {
 };
 
 /**
- * Aprobar un pago (marcarlo como pagado)
- * PATCH /restful/pagos-pedido/:id/aprobar
+ * Aprueba un pago (marcarlo como pagado).
+ * @param {number} pagoId - ID del pago
+ * @returns {Promise<Object>} Pago aprobado
+ * @example
+ * await aprobarPago(1);
  */
 export const aprobarPago = async (pagoId) => {
   const response = await adminApi.patch(`/pagos-pedido/${pagoId}/aprobar`);
