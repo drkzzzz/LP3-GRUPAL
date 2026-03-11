@@ -63,7 +63,7 @@ public class Clientes {
 
     private String direccion;
 
-    @JsonIgnore
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "password_hash")
     private String passwordHash;
 
