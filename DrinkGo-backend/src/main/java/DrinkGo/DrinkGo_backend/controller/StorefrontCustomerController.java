@@ -726,6 +726,11 @@ public class StorefrontCustomerController {
             detalleDevolucionesRepo.save(detDev);
         }
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(devolucion);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "id", devolucion.getId(),
+                "numeroDevolucion", devolucion.getNumeroDevolucion() != null ? devolucion.getNumeroDevolucion() : "",
+                "estado", devolucion.getEstado().name(),
+                "total", devolucion.getTotal(),
+                "message", "Solicitud de devolución registrada correctamente"));
     }
 }
