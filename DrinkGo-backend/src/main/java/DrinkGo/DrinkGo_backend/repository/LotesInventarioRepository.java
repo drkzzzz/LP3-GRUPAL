@@ -50,4 +50,6 @@ public interface LotesInventarioRepository extends JpaRepository<LotesInventario
      */
     @Query("SELECT l FROM LotesInventario l WHERE l.producto = :producto AND l.almacen = :almacen AND l.estaActivo = true")
     List<LotesInventario> findByProductoAndAlmacen(@Param("producto") Productos producto, @Param("almacen") Almacenes almacen);
+
+    boolean existsByProductoIdAndCantidadActualGreaterThan(Long productoId, java.math.BigDecimal cantidadActual);
 }

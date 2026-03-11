@@ -64,9 +64,11 @@ export const Cajas = () => {
   }
 
   /* Usuarios activos (para dropdown de asignar cajero) */
-  /* Solo mostrar usuarios que NO están asignados a otra caja (excepto la caja que se está editando) */
+  /* Solo mostrar usuarios que NO son el admin y NO están asignados a otra caja */
   const usuariosDisponibles = todosUsuarios.filter((u) => {
     if (u.estaActivo === false) return false;
+    // Excluir al admin del negocio (usuario actualmente logueado)
+    if (u.id === user?.id) return false;
     const cajaAsignadaDelUsuario = cajas.find(
       (c) => c.estaActivo !== false && c.usuarioAsignado?.id === u.id,
     );

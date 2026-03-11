@@ -110,11 +110,22 @@ public class AdminFacturacionController {
             SeriesFacturacion serie = new SeriesFacturacion();
             serie.setNegocio(negociosRepo.getReferenceById(request.getNegocioId()));
             serie.setSede(sedesRepo.getReferenceById(request.getSedeId()));
-            serie.setTipoDocumento(SeriesFacturacion.TipoDocumento.valueOf(tipoDoc));
+            SeriesFacturacion.TipoDocumento tipoDocEnum = SeriesFacturacion.TipoDocumento.valueOf(tipoDoc);
+            serie.setTipoDocumento(tipoDocEnum);
             serie.setSerie(serieCode);
             serie.setNumeroActual(1);
-            serie.setEsPredeterminada(request.getEsPredeterminada() != null ? request.getEsPredeterminada() : false);
             serie.setEstaActivo(true);
+
+            // Si no existe otra serie predeterminada para este tipo+negocio, forzar a true
+            boolean existePredeterminada = seriesRepo
+                    .existsByNegocioIdAndTipoDocumentoAndEsPredeterminada(
+                            request.getNegocioId(), tipoDocEnum, true);
+            if (!existePredeterminada) {
+                serie.setEsPredeterminada(true);
+            } else {
+                serie.setEsPredeterminada(
+                        request.getEsPredeterminada() != null ? request.getEsPredeterminada() : false);
+            }
 
             seriesRepo.save(serie);
             return ResponseEntity.status(HttpStatus.CREATED).body(serie);
@@ -221,11 +232,27 @@ public class AdminFacturacionController {
             }
 
             doc.setEstadoDocumento(estadoNuevo);
+            String motivo = null;
             if (estadoNuevo == DocumentosFacturacion.EstadoDocumento.anulado) {
-                String motivo = body.get("motivoAnulacion");
+                motivo = body.get("motivoAnulacion");
                 doc.setMotivoAnulacion(motivo != null ? motivo.trim() : null);
             }
             documentosRepo.save(doc);
+
+            // Cascada: anular venta asociada + restaurar stock + egreso caja (solo LOCAL)
+            if (estadoNuevo == DocumentosFacturacion.EstadoDocumento.anulado
+                    && doc.getModoEmision() == DocumentosFacturacion.ModoEmision.LOCAL
+                    && doc.getVenta() != null) {
+                String usuarioIdStr = body.get("usuarioId");
+                Long usuarioId = null;
+                if (usuarioIdStr != null && !usuarioIdStr.isBlank()) {
+                    usuarioId = Long.parseLong(usuarioIdStr);
+                }
+                facturacionService.anularVentaLocal(
+                        doc.getVenta().getId(),
+                        motivo != null ? motivo.trim() : null,
+                        usuarioId);
+            }
             return ResponseEntity.ok(doc);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -723,7 +750,8 @@ public class AdminFacturacionController {
             case rechazado -> to == DocumentosFacturacion.EstadoDocumento.pendiente_envio;
             case observado -> to == DocumentosFacturacion.EstadoDocumento.aceptado
                     || to == DocumentosFacturacion.EstadoDocumento.anulado;
-            case aceptado, anulado -> false; // terminal states
+            case aceptado -> to == DocumentosFacturacion.EstadoDocumento.anulado; // allowed locally (sin PSE)
+            case anulado -> false; // terminal state
         };
     }
 

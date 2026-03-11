@@ -3,8 +3,8 @@
  * ───────────────────
  * Historial de ventas del negocio con filtro, detalle y anulación.
  */
-import { useState, useMemo } from 'react';
-import { Eye, Ban, Search, Receipt, Banknote, XCircle, Monitor, Gift, Calendar, RotateCcw } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Eye, Ban, Search, Receipt, Banknote, XCircle, Monitor, Gift, Calendar, RotateCcw, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
@@ -43,15 +43,23 @@ export const HistorialVentas = () => {
   const { anularVenta, isAnulando } = useAnularVenta();
   const esSoloCaja = alcanceHistorial === 'caja_asignada';
   const esAdmin = getAlcance('m.ventas') === 'completo';
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setTimeout(() => setIsRefreshing(false), 600);
+  }, [refetch]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 400);
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  /* Filtros de fecha */
+  /* Filtros de fecha y estado */
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [estadoFiltro, setEstadoFiltro] = useState('');
 
   /* Detalle modal */
   const [selectedVentaId, setSelectedVentaId] = useState(null);
@@ -106,8 +114,11 @@ export const HistorialVentas = () => {
       hasta.setHours(23, 59, 59, 999);
       result = result.filter((v) => new Date(v.creadoEn) <= hasta);
     }
+    if (estadoFiltro) {
+      result = result.filter((v) => v.estado === estadoFiltro);
+    }
     return result;
-  }, [ventas, debouncedSearch, fechaDesde, fechaHasta]);
+  }, [ventas, debouncedSearch, fechaDesde, fechaHasta, estadoFiltro]);
 
 
   /* Paginación del lado del cliente */
@@ -283,6 +294,17 @@ export const HistorialVentas = () => {
                          focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
+          <select
+            value={estadoFiltro}
+            onChange={(e) => { setEstadoFiltro(e.target.value); setPage(1); }}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="">Todos los estados</option>
+            <option value="completada">Completada</option>
+            <option value="anulada">Anulada</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="devuelta">Devuelta</option>
+          </select>
           <div className="flex items-center gap-2">
             <Calendar size={16} className="text-gray-400" />
             <input
@@ -299,8 +321,9 @@ export const HistorialVentas = () => {
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
-          <Button variant="outline" size="sm" onClick={refetch}>
-            Actualizar
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw size={14} className={`mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Actualizando...' : 'Actualizar'}
           </Button>
         </div>
 
@@ -367,6 +390,38 @@ export const HistorialVentas = () => {
               </div>
             </div>
 
+            {/* Razón de anulación */}
+            {ventaDetail?.estado === 'anulada' && (
+              <div className="rounded-lg border border-red-200 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center gap-2 bg-red-600 px-4 py-2.5">
+                  <AlertTriangle size={15} className="text-white shrink-0" />
+                  <span className="text-sm font-semibold text-white tracking-wide">Venta Anulada</span>
+                </div>
+                {/* Body */}
+                <div className="bg-red-50 px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-red-500 uppercase tracking-wider mb-1">Motivo de anulación</p>
+                      <p className="text-sm text-gray-800 font-medium">
+                        {ventaDetail.razonCancelacion || <span className="text-gray-400 italic">Sin motivo especificado</span>}
+                      </p>
+                    </div>
+                  </div>
+                  {(ventaDetail.anuladoEn || ventaDetail.anuladoPor?.nombre) && (
+                    <div className="mt-3 pt-3 border-t border-red-200 flex flex-wrap gap-4 text-xs text-red-600">
+                      {ventaDetail.anuladoEn && (
+                        <span>📅 {formatDateTime(ventaDetail.anuladoEn)}</span>
+                      )}
+                      {ventaDetail.anuladoPor?.nombre && (
+                        <span>👤 {ventaDetail.anuladoPor.nombre}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Detalle de ítems */}
             {(() => {
               const esParcial = esDevuelta && devolucion?.tipoDevolucion === 'parcial';
@@ -396,7 +451,7 @@ export const HistorialVentas = () => {
                                 comboGroups[d.comboId] = { nombre: d.nombreCombo || `Combo #${d.comboId}`, items: [], totalCombo: 0 };
                               }
                               comboGroups[d.comboId].items.push(d);
-                              comboGroups[d.comboId].totalCombo += Number(d.total || d.subtotal || 0);
+                              comboGroups[d.comboId].totalCombo += Number(d.subtotal || 0);
                             } else {
                               standalone.push(d);
                             }
@@ -417,7 +472,7 @@ export const HistorialVentas = () => {
                                   <td className="px-3 py-1.5 pl-7 text-gray-500 text-xs">└ {d.nombreProducto || d.producto?.nombre || '—'}</td>
                                   <td className="px-3 py-1.5 text-center text-gray-500 text-xs">{d.cantidad}</td>
                                   <td className="px-3 py-1.5 text-right text-gray-500 text-xs">{formatCurrency(d.precioUnitario)}</td>
-                                  <td className="px-3 py-1.5 text-right text-gray-500 text-xs">{formatCurrency(d.total || d.subtotal)}</td>
+                                  <td className="px-3 py-1.5 text-right text-gray-500 text-xs"></td>
                                 </tr>,
                               ),
                             );
@@ -428,7 +483,7 @@ export const HistorialVentas = () => {
                                 <td className="px-3 py-2">{d.nombreProducto || d.producto?.nombre || '—'}</td>
                                 <td className="px-3 py-2 text-center">{d.cantidad}</td>
                                 <td className="px-3 py-2 text-right">{formatCurrency(d.precioUnitario)}</td>
-                                <td className="px-3 py-2 text-right font-medium">{formatCurrency(d.total || d.subtotal)}</td>
+                                <td className="px-3 py-2 text-right font-medium">{formatCurrency(d.subtotal)}</td>
                               </tr>,
                             ),
                           );
@@ -528,10 +583,22 @@ export const HistorialVentas = () => {
                     <span>{formatCurrency(ventaDetail.subtotal)}</span>
                   </div>
                 )}
+                {parseFloat(ventaDetail?.montoDescuento || 0) > 0 && (
+                  <div className="flex justify-between text-red-500">
+                    <span>Descuento</span>
+                    <span>-{formatCurrency(ventaDetail.montoDescuento)}</span>
+                  </div>
+                )}
                 {parseFloat(ventaDetail?.costoEnvio || 0) > 0 && (
                   <div className="flex justify-between text-gray-500">
                     <span>Delivery</span>
                     <span>{formatCurrency(ventaDetail.costoEnvio)}</span>
+                  </div>
+                )}
+                {parseFloat(ventaDetail?.montoImpuesto || 0) > 0 && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>IGV (18%)</span>
+                    <span>{formatCurrency(ventaDetail.montoImpuesto)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-gray-900 border-t pt-1">
@@ -599,7 +666,7 @@ export const HistorialVentas = () => {
           )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Razón de anulación
+              Razón de anulación <span className="text-red-500">*</span>
             </label>
             <textarea
               value={razonAnulacion}
@@ -614,9 +681,9 @@ export const HistorialVentas = () => {
               Cancelar
             </Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleAnular}
-              disabled={isAnulando}
+              disabled={isAnulando || razonAnulacion.trim() === ''}
             >
               {isAnulando ? 'Anulando...' : 'Anular Venta'}
             </Button>

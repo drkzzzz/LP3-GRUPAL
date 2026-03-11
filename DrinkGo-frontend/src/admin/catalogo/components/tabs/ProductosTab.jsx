@@ -116,10 +116,14 @@ export const ProductosTab = () => {
 
   const handleDeleteConfirm = async () => {
     if (selected) {
-      await deleteProducto(selected.id);
+      try {
+        await deleteProducto(selected.id);
+        setIsDeleteOpen(false);
+        setSelected(null);
+      } catch {
+        // Error ya manejado por onError del mutation (toast)
+      }
     }
-    setIsDeleteOpen(false);
-    setSelected(null);
   };
 
   /* ─── Resolver nombre de relación ─── */

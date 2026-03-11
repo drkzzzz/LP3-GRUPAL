@@ -20,7 +20,7 @@ public interface IGastosService {
 
     Gastos marcarPagado(Long id, String metodoPago, String referencia);
 
-    Gastos subirComprobante(Long id, MultipartFile archivo);
+    Gastos subirComprobante(Long id, MultipartFile archivo, String metodoPago, String referenciaPago);
 
     Gastos eliminarComprobante(Long id);
 }

@@ -52,7 +52,6 @@ import { PseTab } from '../facturacion/pages/PseTab';
 import { ConfiguracionPage } from '../pages/Configuracion';
 import { NegocioYSedesPage } from '../configuracion/components/tabs/NegocioYSedesPage';
 import { OperacionesPage } from '../configuracion/components/tabs/OperacionesPage';
-import { CategoriasGastosPage } from '../configuracion/components/tabs/CategoriasGastosPage';
 
 
 const ProtectedRoute = ({ children }) => {
@@ -158,7 +157,6 @@ export const AdminRoutes = () => {
             <SmartModuleRedirect options={[
               { permiso: 'm.configuracion.negocio', to: 'negocio' },
               { permiso: 'm.configuracion.operaciones', to: 'operaciones' },
-              { permiso: 'm.configuracion.categorias-gastos', to: 'categorias-gastos' },
             ]} />
           } />
           <Route path="negocio" element={
@@ -166,9 +164,6 @@ export const AdminRoutes = () => {
           } />
           <Route path="operaciones" element={
             <PermissionRoute permiso="m.configuracion.operaciones"><OperacionesPage /></PermissionRoute>
-          } />
-          <Route path="categorias-gastos" element={
-            <PermissionRoute permiso="m.configuracion.categorias-gastos"><CategoriasGastosPage /></PermissionRoute>
           } />
         </Route>
         <Route path="usuarios" element={

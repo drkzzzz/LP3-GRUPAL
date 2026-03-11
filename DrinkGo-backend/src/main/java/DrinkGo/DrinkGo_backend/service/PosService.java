@@ -286,7 +286,7 @@ public class PosService {
         // ── 11. Deducir stock del inventario (en TODOS los almacenes del negocio) ──
         deducirStockVenta(request.getItems(), almacenDefault, negocio, usuario, venta.getNumeroVenta());
 
-        // ── 12. Generar comprobante de facturación (transacción separada) ──
+        // ── 12. Generar comprobante de facturación ──
         try {
             DocumentosFacturacion doc = facturacionService.emitirComprobanteDesdeVenta(venta, usuario);
             if (doc != null) {
@@ -393,8 +393,10 @@ public class PosService {
         // Restaurar stock
         restaurarStockVenta(venta);
 
-        // Anular comprobantes asociados
-        facturacionService.anularComprobantesPorVenta(venta.getId());
+        // Anular comprobantes asociados (skip si ya viene de anulación de comprobante)
+        if (!request.isSkipAnularComprobantes()) {
+            facturacionService.anularComprobantesPorVenta(venta.getId());
+        }
 
         return venta;
     }

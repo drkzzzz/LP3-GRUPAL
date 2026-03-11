@@ -18,6 +18,8 @@ import {
   Upload,
   Eye,
   AlertCircle,
+  Search,
+  Hash,
 } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
@@ -30,6 +32,7 @@ import { useGastos } from '../hooks/useGastos';
 import { formatCurrency, formatDate } from '@/shared/utils/formatters';
 import { message } from '@/shared/utils/notifications';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 
 /* ─────────────────────────────────────────── */
 /*  Helpers                                    */
@@ -238,25 +241,9 @@ const PagoModal = ({ isOpen, onClose, titulo, monto, onConfirm, isLoading }) => 
 /*  Modal: Crear / Editar Gasto                */
 /* ─────────────────────────────────────────── */
 
-const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoading, categorias = [], onCrearCategoria, isCreatingCategoria }) => {
+const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoading, categorias = [] }) => {
   const isEdit = !!initialData?.id;
   const isRecurrenteExistente = isEdit && !!initialData?.esRecurrente;
-  const [showNewCategoria, setShowNewCategoria] = useState(false);
-  const [newCategoriaNombre, setNewCategoriaNombre] = useState('');
-
-  const handleCrearCategoria = async () => {
-    if (!newCategoriaNombre.trim()) return;
-    try {
-      const created = await onCrearCategoria({
-        negocio: { id: negocioId },
-        nombre: newCategoriaNombre.trim(),
-        tipo: 'operativo',
-      });
-      setForm((prev) => ({ ...prev, categoriaGastoId: created?.id || '' }));
-      setNewCategoriaNombre('');
-      setShowNewCategoria(false);
-    } catch { /* error handled by hook */ }
-  };
 
   const buildFormState = (data) => ({
     descripcion: data?.descripcion || '',
@@ -294,7 +281,6 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Validar fechaFin contra mínimo de recurrencia
     if (form.esRecurrente && form.fechaFin) {
       const minFin = calcMinFechaFin(form.fechaGasto, form.periodoRecurrencia);
       if (form.fechaFin < minFin) {
@@ -352,55 +338,16 @@ const GastoFormModal = ({ isOpen, onClose, initialData, negocioId, onSave, isLoa
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Categoría de Gasto
           </label>
-          {!showNewCategoria ? (
-            <div className="flex gap-2">
-              <select
-                value={form.categoriaGastoId}
-                onChange={set('categoriaGastoId')}
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Sin categoría</option>
-                {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => setShowNewCategoria(true)}
-                className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
-                title="Crear nueva categoría"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <Input
-                value={newCategoriaNombre}
-                onChange={(e) => setNewCategoriaNombre(e.target.value)}
-                placeholder="Nombre de la categoría"
-                className="flex-1"
-                autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCrearCategoria(); } }}
-              />
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleCrearCategoria}
-                disabled={isCreatingCategoria || !newCategoriaNombre.trim()}
-                className="shrink-0"
-              >
-                {isCreatingCategoria ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-              </Button>
-              <button
-                type="button"
-                onClick={() => { setShowNewCategoria(false); setNewCategoriaNombre(''); }}
-                className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          )}
+          <select
+            value={form.categoriaGastoId}
+            onChange={set('categoriaGastoId')}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Sin categoría</option>
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
+            ))}
+          </select>
         </div>
 
         {/* Monto */}
@@ -557,17 +504,45 @@ const HistorialPagosTab = ({ gastos, isLoading, onSubirComprobante, onEliminarCo
   const totalPagado = gastos.reduce((sum, g) => sum + Number(g.total || g.monto || 0), 0);
   const sinComprobante = gastos.filter((g) => !g.urlComprobante).length;
 
-  const handleUpload = (gastoId) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/jpeg,image/png,image/webp,application/pdf';
-    input.onchange = (e) => {
-      const archivo = e.target.files?.[0];
-      if (archivo) {
-        onSubirComprobante({ id: gastoId, archivo });
+  const [uploadTarget, setUploadTarget] = useState(null);
+  const [viewTarget, setViewTarget] = useState(null);
+  const [metodoPago, setMetodoPago] = useState('efectivo');
+  const [referencia, setReferencia] = useState('');
+  const [archivoComprobante, setArchivoComprobante] = useState(null);
+  const [fileError, setFileError] = useState('');
+
+  const openUpload = (g) => {
+    setUploadTarget(g);
+    setMetodoPago(g.metodoPago || 'efectivo');
+    setReferencia(g.referenciaPago || '');
+    setArchivoComprobante(null);
+    setFileError('');
+  };
+
+  const handleCloseUpload = () => {
+    setUploadTarget(null);
+    setArchivoComprobante(null);
+    setFileError('');
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        e.target.value = '';
+        setFileError('El archivo supera el límite de 5 MB');
+        return;
       }
-    };
-    input.click();
+      setFileError('');
+      setArchivoComprobante(file);
+    }
+  };
+
+  const handleConfirmUpload = async (e) => {
+    e.preventDefault();
+    if (!archivoComprobante || !uploadTarget) return;
+    await onSubirComprobante({ id: uploadTarget.id, archivo: archivoComprobante, metodoPago, referenciaPago: referencia });
+    handleCloseUpload();
   };
 
   const columns = [
@@ -602,16 +577,14 @@ const HistorialPagosTab = ({ gastos, isLoading, onSubirComprobante, onEliminarCo
       if (g.urlComprobante) {
         return (
           <div className="flex items-center justify-center gap-1">
-            <a
-              href={`/uploads/${g.urlComprobante}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => setViewTarget(g)}
               className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
               title="Ver comprobante"
             >
               <Eye size={13} />
               Ver
-            </a>
+            </button>
             <button
               onClick={() => onEliminarComprobante(g.id)}
               className="p-1 text-gray-400 hover:text-red-500 transition-colors"
@@ -624,7 +597,7 @@ const HistorialPagosTab = ({ gastos, isLoading, onSubirComprobante, onEliminarCo
       }
       return (
         <button
-          onClick={() => handleUpload(g.id)}
+          onClick={() => openUpload(g)}
           disabled={isSubiendoComprobante}
           className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors disabled:opacity-50"
           title="Subir comprobante"
@@ -675,6 +648,132 @@ const HistorialPagosTab = ({ gastos, isLoading, onSubirComprobante, onEliminarCo
           emptyText="Aún no hay pagos realizados"
         />
       </Card>
+
+      {/* Modal Subir Comprobante (igual que Pagar) */}
+      <Modal
+        isOpen={!!uploadTarget}
+        onClose={handleCloseUpload}
+        title="Subir Comprobante de Pago"
+        size="sm"
+      >
+        <form onSubmit={handleConfirmUpload} className="space-y-4">
+          {uploadTarget && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
+              <DollarSign size={16} className="text-blue-600" />
+              <span className="text-sm text-blue-800">
+                Monto a pagar: <strong>{formatCurrency(uploadTarget.total || uploadTarget.monto)}</strong>
+              </span>
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Método de pago <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={metodoPago}
+              onChange={(e) => setMetodoPago(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {METODOS_PAGO.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Referencia / Número de operación
+            </label>
+            <Input
+              value={referencia}
+              onChange={(e) => setReferencia(e.target.value)}
+              placeholder="Nro. operación, voucher, etc."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Comprobante de pago <span className="text-red-500">*</span>
+            </label>
+            {archivoComprobante ? (
+              <div className="flex items-center gap-2 border border-green-200 bg-green-50 rounded-lg px-3 py-2">
+                <CheckCircle size={14} className="text-green-600 shrink-0" />
+                <span className="text-sm text-green-800 truncate flex-1">{archivoComprobante.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setArchivoComprobante(null)}
+                  className="text-gray-400 hover:text-red-500 transition-colors shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-lg px-3 py-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors">
+                <Upload size={16} className="text-gray-400" />
+                <span className="text-sm text-gray-500">Seleccionar archivo</span>
+                <input
+                  type="file"
+                  accept={ACCEPTED_FILE_TYPES}
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+            )}
+            <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP o PDF (máx. 5 MB)</p>
+            {fileError && <p className="text-xs text-red-500 mt-1">{fileError}</p>}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={handleCloseUpload} disabled={isSubiendoComprobante}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubiendoComprobante || !archivoComprobante}>
+              {isSubiendoComprobante ? (
+                <><Loader2 size={14} className="animate-spin mr-2" />Subiendo...</>
+              ) : (
+                <><Upload size={14} className="mr-2" />Subir Comprobante</>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Ver Comprobante */}
+      <Modal
+        isOpen={!!viewTarget}
+        onClose={() => setViewTarget(null)}
+        title="Comprobante de Pago"
+        size="md"
+      >
+        {viewTarget && (
+          <div className="space-y-4">
+            {viewTarget.urlComprobante?.match(/\.pdf$/i) ? (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                <Receipt size={40} className="text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600 mb-3">Archivo PDF</p>
+                <a
+                  href={`/uploads/${viewTarget.urlComprobante}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                >
+                  <Eye size={14} />
+                  Abrir PDF
+                </a>
+              </div>
+            ) : (
+              <img
+                src={`/uploads/${viewTarget.urlComprobante}`}
+                alt="Comprobante de pago"
+                className="w-full rounded-lg border border-gray-200 max-h-[400px] object-contain bg-gray-50"
+              />
+            )}
+            {viewTarget.referenciaPago && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <p className="text-xs text-gray-500 mb-0.5">Número de operación / Referencia</p>
+                <p className="text-sm font-semibold text-gray-800 font-mono">{viewTarget.referenciaPago}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
@@ -820,22 +919,6 @@ const GastosExternosTab = ({
 
   return (
     <div className="space-y-4">
-      {/* Info recurrentes */}
-      {recurrentes.length > 0 && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-start gap-3">
-          <RotateCcw size={18} className="text-indigo-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-indigo-800">
-              {recurrentes.length} gasto{recurrentes.length > 1 ? 's' : ''} recurrente{recurrentes.length > 1 ? 's' : ''} activo{recurrentes.length > 1 ? 's' : ''}
-            </p>
-            <p className="text-sm text-indigo-700">
-              Costo mensual estimado: <strong>{formatCurrency(costoMensualTab)}</strong>.
-              Estos gastos se cobran automáticamente en cada periodo.
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="flex justify-end">
         <Button onClick={handleOpenCreate}>
           <Plus size={15} className="mr-1.5" />
@@ -861,8 +944,6 @@ const GastosExternosTab = ({
         onSave={handleSave}
         isLoading={isCreating || isUpdating}
         categorias={categorias}
-        onCrearCategoria={onCrearCategoria}
-        isCreatingCategoria={isCreatingCategoria}
       />
 
       <PagoModal
@@ -899,12 +980,268 @@ const GastosExternosTab = ({
 };
 
 /* ─────────────────────────────────────────── */
+/*  Tab 3: Categorías de Gastos                */
+/* ─────────────────────────────────────────── */
+
+const CATEGORIAS_PREDEFINIDAS = [
+  'Alquiler',
+  'Servicios',
+  'Sueldos',
+  'Marketing',
+  'Mantenimiento',
+  'Tecnología',
+];
+
+const CategoriaForm = ({ initialData, onSubmit, onCancel, isLoading, existingCategorias = [] }) => {
+  const isEdit = !!initialData?.id;
+  const resolveDisplay = (nombre) =>
+    nombre && CATEGORIAS_PREDEFINIDAS.some((p) => p.toLowerCase() === nombre.toLowerCase())
+      ? nombre
+      : nombre ? '__otro__' : '';
+
+  const existingNames = existingCategorias.map((c) => c.nombre?.toLowerCase());
+  const availablePredefinidas = CATEGORIAS_PREDEFINIDAS.filter(
+    (p) => !existingNames.includes(p.toLowerCase()) || initialData?.nombre?.toLowerCase() === p.toLowerCase()
+  );
+
+  const [selected, setSelected] = useState(() => resolveDisplay(initialData?.nombre));
+  const [customNombre, setCustomNombre] = useState(
+    () => resolveDisplay(initialData?.nombre) === '__otro__' ? (initialData?.nombre || '') : ''
+  );
+
+  const nombreFinal = selected === '__otro__' ? customNombre.trim() : selected;
+  const isValid = !!nombreFinal;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!isValid) return;
+    onSubmit({ nombre: nombreFinal });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Categoría <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={selected}
+          onChange={(e) => setSelected(e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          autoFocus
+        >
+          <option value="">Seleccionar categoría...</option>
+          {availablePredefinidas.map((nombre) => (
+            <option key={nombre} value={nombre}>{nombre}</option>
+          ))}
+          <option value="__otro__">Otro (personalizado)</option>
+        </select>
+      </div>
+
+      {selected === '__otro__' && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Nombre de la nueva categoría <span className="text-red-500">*</span>
+          </label>
+          <Input
+            value={customNombre}
+            onChange={(e) => setCustomNombre(e.target.value)}
+            placeholder="Ej: Limpieza, Transporte, Seguros..."
+            autoFocus
+          />
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isLoading || !isValid}>
+          {isLoading ? (
+            <><Loader2 size={14} className="animate-spin mr-2" />Guardando...</>
+          ) : isEdit ? (
+            <><Pencil size={14} className="mr-2" />Actualizar</>
+          ) : (
+            <><Plus size={14} className="mr-2" />Crear Categoría</>
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+const CategoriasGastosTab = ({
+  negocioId,
+  categoriasGasto,
+  isLoadingCategorias,
+  crearCategoria,
+  actualizarCategoria,
+  eliminarCategoria,
+  isCreatingCategoria,
+  isUpdatingCategoria,
+  isDeletingCategoria,
+}) => {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 400);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [selected, setSelected] = useState(null);
+
+  const filtered = useMemo(() => {
+    if (!debouncedSearch) return categoriasGasto;
+    const q = debouncedSearch.toLowerCase();
+    return categoriasGasto.filter(
+      (c) =>
+        c.nombre?.toLowerCase().includes(q) ||
+        c.codigo?.toLowerCase().includes(q),
+    );
+  }, [categoriasGasto, debouncedSearch]);
+
+  const paginatedData = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
+
+  const openCreate = () => { setEditing(null); setIsFormOpen(true); };
+  const openEdit = (item) => { setEditing(item); setIsFormOpen(true); };
+  const openDelete = (item) => { setSelected(item); setIsDeleteOpen(true); };
+
+  const handleSubmit = async (formData) => {
+    const payload = {
+      negocio: { id: negocioId },
+      nombre: formData.nombre.trim(),
+    };
+    if (editing) {
+      await actualizarCategoria({ ...payload, id: editing.id, codigo: editing.codigo });
+    } else {
+      await crearCategoria(payload);
+    }
+    setIsFormOpen(false);
+    setEditing(null);
+  };
+
+  const handleDelete = async () => {
+    if (!selected) return;
+    await eliminarCategoria(selected.id);
+    setIsDeleteOpen(false);
+    setSelected(null);
+  };
+
+  const columns = [
+    {
+      key: 'index',
+      title: '#',
+      width: '50px',
+      render: (_, __, i) => <span className="text-gray-400 text-xs">{(page - 1) * pageSize + i + 1}</span>,
+    },
+    {
+      key: 'nombre',
+      title: 'Nombre',
+      render: (_, row) => (
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate">{row.nombre}</p>
+          <p className="text-xs text-gray-500 font-mono">{row.codigo}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      title: 'Acciones',
+      width: '100px',
+      align: 'center',
+      render: (_, row) => (
+        <div className="flex justify-center gap-1">
+          <button
+            onClick={() => openEdit(row)}
+            className="p-1.5 rounded-md text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            title="Editar"
+          >
+            <Pencil size={15} />
+          </button>
+          <button
+            onClick={() => openDelete(row)}
+            className="p-1.5 rounded-md text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+            title="Eliminar"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <Card>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <div className="relative w-full sm:w-80">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre o código..."
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <Button onClick={openCreate}>
+          <Plus size={16} className="mr-2" />
+          Nueva Categoría
+        </Button>
+      </div>
+
+      <Table
+        columns={columns}
+        data={paginatedData}
+        loading={isLoadingCategorias}
+        emptyMessage="No se encontraron categorías de gastos"
+        pagination={{
+          current: page,
+          pageSize,
+          total: filtered.length,
+          onChange: (p, s) => { setPage(p); setPageSize(s); },
+        }}
+      />
+
+      <Modal
+        isOpen={isFormOpen}
+        onClose={() => { setIsFormOpen(false); setEditing(null); }}
+        title={editing ? 'Editar Categoría' : 'Nueva Categoría de Gasto'}
+        size="md"
+      >
+        <CategoriaForm
+          initialData={editing}
+          onSubmit={handleSubmit}
+          onCancel={() => { setIsFormOpen(false); setEditing(null); }}
+          isLoading={isCreatingCategoria || isUpdatingCategoria}
+          existingCategorias={categoriasGasto}
+        />
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        onClose={() => { setIsDeleteOpen(false); setSelected(null); }}
+        onConfirm={handleDelete}
+        title="Eliminar Categoría"
+        message={`¿Está seguro de eliminar la categoría "${selected?.nombre}"? Los gastos asociados no se eliminarán.`}
+        confirmText="Eliminar"
+        isLoading={isDeletingCategoria}
+        variant="danger"
+      />
+    </Card>
+  );
+};
+
+/* ─────────────────────────────────────────── */
 /*  Page Principal                             */
 /* ─────────────────────────────────────────── */
 
 const TABS = [
   { id: 'historial', label: 'Historial de Pagos', icon: History },
   { id: 'programados', label: 'Gastos Programados', icon: CalendarClock },
+  { id: 'categorias', label: 'Categorías de Gastos', icon: Hash },
 ];
 
 export const GastosPage = () => {
@@ -935,7 +1272,12 @@ export const GastosPage = () => {
     isDeleting,
     isPagandoGasto,
     crearCategoria,
+    actualizarCategoria,
+    eliminarCategoria,
+    isLoadingCategorias,
     isCreatingCategoria,
+    isUpdatingCategoria,
+    isDeletingCategoria,
     subirComprobante,
     eliminarComprobante,
     isSubiendoComprobante,
@@ -1019,11 +1361,6 @@ export const GastosPage = () => {
             <p className="text-xs text-gray-500">Gastos recurrentes</p>
             <p className="text-lg font-bold text-gray-900">
               {gastosRecurrentes}
-              {costoMensualEstimado > 0 && (
-                <span className="text-sm font-normal text-gray-500 ml-2">
-                  (~{formatCurrency(costoMensualEstimado)}/mes)
-                </span>
-              )}
             </p>
           </div>
         </div>
@@ -1092,6 +1429,20 @@ export const GastosPage = () => {
           categorias={categoriasGasto}
           onCrearCategoria={crearCategoria}
           isCreatingCategoria={isCreatingCategoria}
+        />
+      )}
+
+      {activeTab === 'categorias' && (
+        <CategoriasGastosTab
+          negocioId={negocioId}
+          categoriasGasto={categoriasGasto}
+          isLoadingCategorias={isLoadingCategorias}
+          crearCategoria={crearCategoria}
+          actualizarCategoria={actualizarCategoria}
+          eliminarCategoria={eliminarCategoria}
+          isCreatingCategoria={isCreatingCategoria}
+          isUpdatingCategoria={isUpdatingCategoria}
+          isDeletingCategoria={isDeletingCategoria}
         />
       )}
     </div>
