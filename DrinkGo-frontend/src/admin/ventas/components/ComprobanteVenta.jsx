@@ -177,13 +177,6 @@ export const ComprobanteVenta = ({
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
           <h2 className="text-sm font-bold text-gray-900">Comprobante de Venta</h2>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              <Printer size={14} />
-              Imprimir
-            </button>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X size={18} />
             </button>

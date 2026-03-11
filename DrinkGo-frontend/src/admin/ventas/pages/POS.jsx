@@ -52,6 +52,14 @@ export const POS = () => {
   const mesaContext = useCartStore((s) => s.mesaContext);
   const clearMesaContext = useCartStore((s) => s.clearMesaContext);
 
+  /* ─── Sincronizar carrito con el negocio actual ─── */
+  const syncNegocio = useCartStore((s) => s.syncNegocio);
+  useEffect(() => {
+    if (negocio?.id) {
+      syncNegocio(negocio.id);
+    }
+  }, [negocio?.id, syncNegocio]);
+
   /* ─── Sincronizar config IGV del negocio al carrito ─── */
   useEffect(() => {
     if (negocio) {
@@ -80,17 +88,7 @@ export const POS = () => {
       if (showPagoModal) { setShowPagoModal(false); return; }
       if (showMovimientoModal) { setShowMovimientoModal(false); return; }
     }
-    // F1 → abrir modal de pago (si hay ítems)
-    if (e.key === 'F1' && items.length > 0 && !faltaConfiguracion && !isCreating) {
-      e.preventDefault();
-      setShowPagoModal(true);
-    }
-    // F2 → enfocar buscador de productos
-    if (e.key === 'F2') {
-      e.preventDefault();
-      document.querySelector('[data-pos-search]')?.focus();
-    }
-  }, [receiptData, showPagoModal, showMovimientoModal, items.length, faltaConfiguracion, isCreating]);
+  }, [receiptData, showPagoModal, showMovimientoModal]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -140,42 +138,40 @@ export const POS = () => {
         /* Sumatoria de precios regulares de los componentes */
         const regularSum = comps.reduce((s, c) => s + c.precioVenta * c.cantidad, 0);
 
-        /* Distribuir precio del combo proporcionalmente entre componentes */
-        let cumPrice = 0;
-        let cumDisc = 0;
+        /* Descuento del combo = diferencia entre precios catálogo y precio combo */
+        const comboDiscountTotal = +(regularSum - comboPrice).toFixed(2) * comboQty;
+
+        /* Distribuir descuento proporcionalmente — último absorbe residual */
+        let cumComboDisc = 0;
+        let cumLineDisc = 0;
         comps.forEach((comp, idx) => {
           const isLast = idx === comps.length - 1;
           const proportion = regularSum > 0
             ? (comp.precioVenta * comp.cantidad) / regularSum
             : 1 / comps.length;
 
-          /*
-           * Precio proporcional total para esta línea (precio × qty componente).
-           * El último componente absorbe el centavo residual para que la suma
-           * sea siempre exactamente igual al precio total del combo.
-           */
-          const compLineTotal = isLast
-            ? +(comboPrice * comboQty - cumPrice).toFixed(2)
-            : +(comboPrice * proportion * comboQty).toFixed(2);
-          if (!isLast) cumPrice += compLineTotal;
+          const realQty = comp.cantidad * comboQty;
 
-          /*
-           * Enviamos precioUnitario = compLineTotal y cantidad = 1
-           * para que el backend calcule subtotal = precioUnitario × 1 = compLineTotal
-           * sin riesgos de redondeo por división.
-           */
-          const compDisc = isLast
-            ? +(lineDiscount * comboQty - cumDisc).toFixed(2)
+          /* Descuento combo proporcional */
+          const compComboDisc = isLast
+            ? +(comboDiscountTotal - cumComboDisc).toFixed(2)
+            : +(comboDiscountTotal * proportion).toFixed(2);
+          if (!isLast) cumComboDisc += compComboDisc;
+
+          /* Descuento manual de línea proporcional */
+          const compLineDisc = isLast
+            ? +(lineDiscount * comboQty - cumLineDisc).toFixed(2)
             : +(lineDiscount * proportion * comboQty).toFixed(2);
-          if (!isLast) cumDisc += compDisc;
+          if (!isLast) cumLineDisc += compLineDisc;
 
           ventaItems.push({
             productoId: comp.productoId,
             comboId,
+            nombreCombo: i.producto.nombre,
             nombreProducto: comp.nombre,
-            precioUnitario: compLineTotal,
-            cantidad: 1,
-            descuento: compDisc,
+            precioUnitario: comp.precioVenta,
+            cantidad: realQty,
+            descuento: +(compComboDisc + compLineDisc).toFixed(2),
           });
         });
       } else {
@@ -465,7 +461,6 @@ export const POS = () => {
               >
                 <Banknote size={20} className="mr-2" />
                 Cobrar {formatCurrency(total)}
-                <kbd className="ml-2 text-xs opacity-70 bg-white/20 px-1.5 py-0.5 rounded">F1</kbd>
               </Button>
               {faltaConfiguracion && items.length > 0 && (
                 <p className="text-xs text-amber-600 mt-2 text-center flex items-center justify-center gap-1">

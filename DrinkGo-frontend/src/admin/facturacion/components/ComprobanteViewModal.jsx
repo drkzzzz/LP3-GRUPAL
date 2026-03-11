@@ -6,8 +6,8 @@
  * Obtiene los datos de la venta (ítems, pagos) vía backend
  * y muestra un comprobante visual con opción de imprimir/descargar.
  */
-import { useRef, useEffect, useState } from 'react';
-import { Printer, X, Download, Loader2 } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Printer, X, Loader2 } from 'lucide-react';
 import { ventasService } from '@/admin/ventas/services/ventasService';
 import { facturacionService } from '@/admin/facturacion/services/facturacionService';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
@@ -149,10 +149,10 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
     ventaData?.docClienteNumero ||
     '-';
 
-  /* Fecha */
-  const fecha = doc.fechaEmision || doc.creadoEn;
+  /* Fecha — usar fechaVenta de la venta para consistencia con el comprobante POS */
+  const fecha = ventaData?.fechaVenta || doc.fechaEmision || doc.creadoEn;
   const fechaStr = formatDate(fecha);
-  const horaStr = formatTime(ventaData?.fechaVenta || doc.creadoEn);
+  const horaStr = formatTime(fecha);
 
   /* Pagos con nombre de método */
   const pagosResumen = pagos.map((p) => {
@@ -217,6 +217,40 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
     return item.producto?.nombre || item.nombreProducto || `Producto #${item.productoId || item.producto?.id || '?'}`;
   };
 
+  /**
+   * Agrupa ítems por comboId para mostrar combos como en el comprobante POS.
+   * Items sin comboId se muestran como productos individuales.
+   */
+  const buildDisplayItems = (rawItems) => {
+    const display = [];
+    const comboMap = new Map();
+
+    for (const item of rawItems) {
+      const cId = item.comboId;
+      if (cId) {
+        if (!comboMap.has(cId)) {
+          comboMap.set(cId, { comboId: cId, nombre: item.nombreCombo || 'Combo', components: [], totalPrice: 0 });
+          display.push({ _type: 'combo', comboId: cId });
+        }
+        const group = comboMap.get(cId);
+        group.components.push(item);
+        group.totalPrice += Number(item.subtotal || (item.precioUnitario * item.cantidad - (item.descuento || 0)) || 0);
+      } else {
+        display.push({ _type: 'product', item });
+      }
+    }
+
+    return display.map((entry) => {
+      if (entry._type === 'combo') {
+        const group = comboMap.get(entry.comboId);
+        return { _type: 'combo', ...group };
+      }
+      return entry;
+    });
+  };
+
+  const displayItems = !esNota ? buildDisplayItems(items) : [];
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
@@ -229,14 +263,6 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
             {esNota ? (esNotaCredito ? 'Nota de Crédito' : 'Nota de Débito') : 'Comprobante de Venta'}
           </h2>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrint}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              <Download size={14} />
-              Descargar
-            </button>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X size={18} />
             </button>
@@ -437,7 +463,7 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                     </div>
 
                     {/* ─── Tabla de ítems ─── */}
-                    {items.length > 0 ? (
+                    {displayItems.length > 0 ? (
                       <table style={{ width: '100%', borderCollapse: 'collapse', margin: '12px 0' }}>
                         <thead>
                           <tr>
@@ -456,22 +482,61 @@ export const ComprobanteViewModal = ({ doc, onClose }) => {
                           </tr>
                         </thead>
                         <tbody>
-                          {items.map((item, idx) => (
-                            <tr key={idx}>
-                              <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
-                                {Number(item.cantidad)}
-                              </td>
-                              <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
-                                {getItemName(item)}
-                              </td>
-                              <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
-                                {formatCurrency(item.precioUnitario)}
-                              </td>
-                              <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
-                                {formatCurrency(item.subtotal || item.precioUnitario * item.cantidad)}
-                              </td>
-                            </tr>
-                          ))}
+                          {displayItems.map((entry, idx) => {
+                            if (entry._type === 'combo') {
+                              const comboTotal = entry.totalPrice;
+                              return (
+                                <React.Fragment key={`combo-${idx}`}>
+                                  {/* Fila del combo */}
+                                  <tr>
+                                    <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: 'none', color: '#444', fontWeight: 600 }}>1</td>
+                                    <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: 'none', color: '#6b21a8', fontWeight: 600 }}>
+                                      📦 {entry.nombre}
+                                    </td>
+                                    <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: 'none', color: '#444', textAlign: 'right', fontWeight: 600 }}>
+                                      {formatCurrency(comboTotal)}
+                                    </td>
+                                    <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: 'none', color: '#444', textAlign: 'right', fontWeight: 600 }}>
+                                      {formatCurrency(comboTotal)}
+                                    </td>
+                                  </tr>
+                                  {/* Componentes del combo */}
+                                  {entry.components.map((comp, cIdx) => (
+                                    <tr key={`combo-${idx}-c-${cIdx}`}>
+                                      <td style={{ padding: '2px 10px 2px 20px', fontSize: 10, borderBottom: cIdx === entry.components.length - 1 ? '1px solid #eee' : 'none', color: '#888' }}>
+                                        {Number(comp.cantidad)}
+                                      </td>
+                                      <td style={{ padding: '2px 10px', fontSize: 10, borderBottom: cIdx === entry.components.length - 1 ? '1px solid #eee' : 'none', color: '#888' }}>
+                                        └ {getItemName(comp)}
+                                      </td>
+                                      <td style={{ padding: '2px 10px', fontSize: 10, borderBottom: cIdx === entry.components.length - 1 ? '1px solid #eee' : 'none', color: '#888', textAlign: 'right' }}>
+                                        {formatCurrency(comp.precioUnitario)}
+                                      </td>
+                                      <td style={{ padding: '2px 10px', fontSize: 10, borderBottom: cIdx === entry.components.length - 1 ? '1px solid #eee' : 'none', color: '#888', textAlign: 'right' }}>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </React.Fragment>
+                              );
+                            }
+                            const item = entry.item;
+                            return (
+                              <tr key={idx}>
+                                <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
+                                  {Number(item.cantidad)}
+                                </td>
+                                <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444' }}>
+                                  {getItemName(item)}
+                                </td>
+                                <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
+                                  {formatCurrency(item.precioUnitario)}
+                                </td>
+                                <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #eee', color: '#444', textAlign: 'right' }}>
+                                  {formatCurrency(item.subtotal || item.precioUnitario * item.cantidad)}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     ) : (

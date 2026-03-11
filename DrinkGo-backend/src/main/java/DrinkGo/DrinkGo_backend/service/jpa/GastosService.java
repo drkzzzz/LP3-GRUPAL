@@ -289,7 +289,7 @@ public class GastosService implements IGastosService {
     /**
      * Sube un comprobante (imagen/PDF) para un gasto pagado.
      */
-    public Gastos subirComprobante(Long id, MultipartFile archivo) {
+    public Gastos subirComprobante(Long id, MultipartFile archivo, String metodoPago, String referenciaPago) {
         Gastos gasto = repoGastos.findById(id)
                 .orElseThrow(() -> new RuntimeException("Gasto no encontrado: " + id));
         try {
@@ -299,6 +299,12 @@ public class GastosService implements IGastosService {
             }
             String ruta = fileStorageService.guardar(archivo, "comprobantes");
             gasto.setUrlComprobante(ruta);
+            if (metodoPago != null && !metodoPago.isBlank()) {
+                try { gasto.setMetodoPago(Gastos.MetodoPago.valueOf(metodoPago)); } catch (IllegalArgumentException ignored) {}
+            }
+            if (referenciaPago != null && !referenciaPago.isBlank()) {
+                gasto.setReferenciaPago(referenciaPago);
+            }
             return repoGastos.save(gasto);
         } catch (java.io.IOException e) {
             throw new RuntimeException("Error al guardar el comprobante: " + e.getMessage());

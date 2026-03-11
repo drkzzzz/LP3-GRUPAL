@@ -24,11 +24,13 @@ import {
   CheckCircle,
   AlertTriangle,
   ArrowLeft,
+  ChevronRight,
   Search,
   Calendar,
   User,
   Monitor,
   Undo2,
+  Eye,
 } from 'lucide-react';
 import { Card } from '@/admin/components/ui/Card';
 import { Button } from '@/admin/components/ui/Button';
@@ -233,20 +235,17 @@ export const MovimientosCajaPage = () => {
   const isViewingActiveCaja = hasSesion && effectiveCajaId === activeCajaId;
 
   /* --- Sesiones historicas de la caja seleccionada --- */
-  const { sesiones: sesionesCaja, isLoading: loadingSesiones } = useSesionesByCaja(
-    !isViewingActiveCaja ? effectiveCajaId : null
-  );
+  const { sesiones: sesionesCaja, isLoading: loadingSesiones } = useSesionesByCaja(effectiveCajaId);
 
-  // Filtrar sesiones: excluir la activa, y si es cajero solo mostrar sus propias sesiones
+  // Filtrar sesiones: excluir la sesión activa actual, y si es cajero solo mostrar sus propias sesiones
   const sesionesHistoricas = useMemo(() => {
-    if (isViewingActiveCaja) return [];
-    let filtered = sesionesCaja.filter((s) => s.estadoSesion !== 'abierta' || s.id !== sesion?.id);
+    let filtered = sesionesCaja.filter((s) => s.id !== sesion?.id);
     // Si alcance es caja_asignada, solo mostrar las sesiones del propio usuario
     if (esSoloCaja && user?.id) {
       filtered = filtered.filter((s) => s.usuario?.id === user.id);
     }
     return filtered;
-  }, [sesionesCaja, isViewingActiveCaja, sesion?.id, esSoloCaja, user?.id]);
+  }, [sesionesCaja, sesion?.id, esSoloCaja, user?.id]);
 
   /* --- Sesion historica seleccionada (vista completa) --- */
   const [selectedSesionId, setSelectedSesionId] = useState(null);
@@ -257,6 +256,8 @@ export const MovimientosCajaPage = () => {
 
   /* --- UI --- */
   const [showRegistrarModal, setShowRegistrarModal] = useState(false);
+  const [showSesionesAnteriores, setShowSesionesAnteriores] = useState(false);
+  const [descripcionModal, setDescripcionModal] = useState(null);
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [devolverTarget, setDevolverTarget] = useState(null);
   const [devolverMonto, setDevolverMonto] = useState('');
@@ -368,17 +369,30 @@ export const MovimientosCajaPage = () => {
       render: (_, row) => {
         if (row.categoriaGasto?.nombre) return row.categoriaGasto.nombre;
         if (row.tipoMovimiento === 'ingreso_venta') return 'Venta POS';
+        if (row.descripcion?.startsWith('Devoluci\u00f3n:') || row.descripcion?.startsWith('Devolucion:')) return 'Devoluci\u00f3n';
+        if (row.tipoMovimiento?.startsWith('ingreso')) return 'Ingreso';
+        if (row.tipoMovimiento === 'egreso_manual' || row.tipoMovimiento === 'egreso_gasto' || row.tipoMovimiento === 'egreso_otro') return 'Egreso';
+        if (row.tipoMovimiento === 'apertura') return 'Apertura';
+        if (row.tipoMovimiento === 'cierre') return 'Cierre';
         return '\u2014';
       },
     },
     {
       key: 'descripcion',
       title: 'Descripcion',
-      render: (_, row) => (
-        <span className="text-sm text-gray-700 truncate max-w-[200px] block" title={row.descripcion}>
-          {row.descripcion || '\u2014'}
-        </span>
-      ),
+      render: (_, row) => {
+        const desc = row.descripcion?.replace(/^Devoluci\u00f3n:\s*/i, '').replace(/^Devolucion:\s*/i, '') || null;
+        return desc ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); setDescripcionModal(row); }}
+            className="text-sm text-gray-700 truncate max-w-[220px] block text-left hover:text-green-700 hover:underline transition-colors cursor-pointer"
+          >
+            {desc}
+          </button>
+        ) : (
+          <span className="text-sm text-gray-400">&mdash;</span>
+        );
+      },
     },
     {
       key: 'monto',
@@ -389,37 +403,30 @@ export const MovimientosCajaPage = () => {
         const neg = c.sign === '-';
         const pos = c.sign === '+';
         return (
-          <div className="flex items-center justify-end gap-2">
-            <span className={`font-semibold ${neg ? 'text-red-600' : pos ? 'text-green-600' : 'text-gray-700'}`}>
-              {c.sign}{formatCurrency(row.monto)}
-            </span>
-            {row.estadoEgreso === 'parcial' && (
-              <Badge variant="warning" className="text-[10px]">Parcial</Badge>
-            )}
-            {row.estadoEgreso === 'devuelto' && (
-              <Badge variant="info" className="text-[10px]">Devuelto</Badge>
-            )}
-          </div>
+          <span className={`font-semibold whitespace-nowrap ${neg ? 'text-red-600' : pos ? 'text-green-600' : 'text-gray-700'}`}>
+            {c.sign}{formatCurrency(row.monto)}
+          </span>
         );
       },
     },
     ...(isViewingActiveCaja ? [{
       key: 'acciones',
       title: '',
-      width: '80px',
+      width: '90px',
       align: 'center',
       render: (_, row) => {
         const esEgreso = row.tipoMovimiento?.startsWith('egreso');
-        if (!esEgreso || row.estadoEgreso === 'devuelto') return null;
-        // No mostrar devolver en egresos por anulación de venta
+        if (!esEgreso) return null;
+        if (row.estadoEgreso === 'devuelto') {
+          return <Badge variant="info" className="text-[10px] whitespace-nowrap">Devuelto</Badge>;
+        }
+        if (row.estadoEgreso === 'parcial') {
+          return <Badge variant="warning" className="text-[10px] whitespace-nowrap">Parcial</Badge>;
+        }
         if (row.venta) return null;
         return (
           <button
-            onClick={() => {
-              setDevolverTarget(row);
-              setDevolverMonto('');
-              setDevolverMotivo('');
-            }}
+            onClick={() => { setDevolverTarget(row); setDevolverMonto(''); setDevolverMotivo(''); }}
             className="inline-flex items-center gap-1 px-2 py-1 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-md transition-colors"
             title="Devolver egreso"
           >
@@ -513,6 +520,7 @@ export const MovimientosCajaPage = () => {
             onChange={(e) => {
               setSelectedCajaId(Number(e.target.value));
               setSelectedSesionId(null);
+              setShowSesionesAnteriores(false);
               setFiltroTipo('todos');
               setFiltroEstadoHist('todos');
               setFiltroBusquedaHist('');
@@ -529,6 +537,16 @@ export const MovimientosCajaPage = () => {
               </option>
             ))}
           </select>
+          {isViewingActiveCaja && sesionesHistoricas.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setShowSesionesAnteriores((v) => !v); setSelectedSesionId(null); }}
+            >
+              <Clock size={16} className="mr-1" />
+              {showSesionesAnteriores ? 'Ocultar sesiones' : 'Ver sesiones anteriores'}
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -537,6 +555,7 @@ export const MovimientosCajaPage = () => {
       {/* ================================================= */}
       {isViewingActiveCaja && (
         <>
+          {!showSesionesAnteriores && (<>
           {/* Info turno */}
           <div className="flex items-center gap-2 text-sm text-gray-500 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
             <Clock size={16} className="text-green-600" />
@@ -602,13 +621,186 @@ export const MovimientosCajaPage = () => {
                 </select>
                 <span className="text-sm text-gray-400">{movimientosFiltrados.length} de {movimientos.length}</span>
               </div>
-              <Button size="sm" onClick={() => setShowRegistrarModal(true)}>
-                <Plus size={16} className="mr-1" />
-                Registrar Movimiento
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => setShowRegistrarModal(true)}>
+                  <Plus size={16} className="mr-1" />
+                  Registrar Movimiento
+                </Button>
+              </div>
             </div>
             <Table columns={columns} data={movimientosFiltrados} loading={loadingMov} pagination={{ current: 1, pageSize: 50, total: movimientosFiltrados.length }} />
           </Card>
+          </>)}
+
+          {/* --- Sesiones anteriores de esta misma caja --- */}
+          {showSesionesAnteriores && (
+            <>
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-gray-700 flex items-center gap-2">
+                  <Clock size={16} className="text-gray-400" />
+                  Sesiones anteriores — {selectedCajaName}
+                </h3>
+                {selectedSesion && (
+                  <button
+                    onClick={() => setSelectedSesionId(null)}
+                    className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    <ArrowLeft size={16} />
+                    Volver al listado de sesiones
+                  </button>
+                )}
+              </div>
+              {selectedSesion ? (
+                <>
+                  <SesionFullView sesionData={selectedSesion} columns={columns} />
+                </>
+              ) : (
+                <>
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                      <p className="text-xs text-gray-500">Total sesiones</p>
+                      <p className="text-xl font-bold text-gray-900">{sesionesHistoricasFiltradas.length}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Clock size={12} className="text-blue-500" />
+                        <p className="text-xs text-gray-500">Abiertas</p>
+                      </div>
+                      <p className="text-xl font-bold text-blue-600">
+                        {sesionesHistoricasFiltradas.filter((s) => s.estadoSesion === 'abierta').length}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <CheckCircle size={12} className="text-green-500" />
+                        <p className="text-xs text-gray-500">Cerradas OK</p>
+                      </div>
+                      <p className="text-xl font-bold text-green-600">
+                        {sesionesHistoricasFiltradas.filter((s) => s.estadoSesion === 'cerrada').length}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <AlertTriangle size={12} className="text-amber-500" />
+                        <p className="text-xs text-gray-500">Con diferencia</p>
+                      </div>
+                      <p className="text-xl font-bold text-amber-600">
+                        {sesionesHistoricasFiltradas.filter((s) => s.estadoSesion === 'con_diferencia').length}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Filtros */}
+                  <Card className="!p-4">
+                    <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+                      <div className="flex-1 min-w-[150px]">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          <User size={12} className="inline mr-1" />Buscar usuario
+                        </label>
+                        <div className="relative">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="text"
+                            value={filtroBusquedaHist}
+                            onChange={(e) => setFiltroBusquedaHist(e.target.value)}
+                            placeholder="Nombre..."
+                            className="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-[130px]">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          <Calendar size={12} className="inline mr-1" />Desde
+                        </label>
+                        <input
+                          type="date"
+                          value={filtroFechaDesdeHist}
+                          onChange={(e) => setFiltroFechaDesdeHist(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-[130px]">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          <Calendar size={12} className="inline mr-1" />Hasta
+                        </label>
+                        <input
+                          type="date"
+                          value={filtroFechaHastaHist}
+                          onChange={(e) => setFiltroFechaHastaHist(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-[130px]">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+                        <select
+                          value={filtroEstadoHist}
+                          onChange={(e) => setFiltroEstadoHist(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        >
+                          <option value="todos">Todos</option>
+                          <option value="abierta">Abierta</option>
+                          <option value="cerrada">Cerrada</option>
+                          <option value="con_diferencia">Con diferencia</option>
+                        </select>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {loadingSesiones ? (
+                    <div className="flex items-center justify-center h-32">
+                      <div className="w-6 h-6 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : sesionesHistoricasFiltradas.length === 0 ? (
+                    <Card className="!py-10 text-center">
+                      <AlertCircle size={28} className="text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">No hay sesiones anteriores para esta caja.</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {sesionesHistoricasFiltradas.map((ses) => {
+                        const ec = ESTADO_SESION[ses.estadoSesion] || ESTADO_SESION.cerrada;
+                        const usr = ses.usuario
+                          ? `${ses.usuario.nombres || ''} ${ses.usuario.apellidos || ''}`.trim()
+                          : '—';
+                        return (
+                          <Card
+                            key={ses.id}
+                            className="!p-0 overflow-hidden cursor-pointer hover:border-green-300 hover:shadow-md transition-all"
+                            onClick={() => setSelectedSesionId(ses.id)}
+                          >
+                            <div className="flex items-center justify-between px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <Clock size={16} className="text-gray-400" />
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {formatDateTime(ses.fechaApertura)}
+                                    {ses.fechaCierre && (
+                                      <span className="text-gray-400"> &rarr; {formatDateTime(ses.fechaCierre)}</span>
+                                    )}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    Usuario: {usr} &middot; Apertura: {formatCurrency(ses.montoApertura ?? 0)}
+                                    {ses.fechaCierre && (
+                                      <span> &middot; Cierre: {formatCurrency(ses.montoCierre ?? 0)}</span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <Badge variant={ec.variant}>{ec.label}</Badge>
+                                <ChevronRight size={16} className="text-gray-400" />
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </>
       )}
 
@@ -909,6 +1101,36 @@ export const MovimientosCajaPage = () => {
               >
                 {isDevolviendo ? 'Devolviendo...' : 'Confirmar Devolución'}
               </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal Descripcion */}
+      <Modal
+        isOpen={!!descripcionModal}
+        onClose={() => setDescripcionModal(null)}
+        title="Detalle del movimiento"
+        size="sm"
+      >
+        {descripcionModal && (
+          <div className="space-y-3">
+            <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+              <p><span className="text-gray-500">Tipo:</span> {TIPO_CONFIG[descripcionModal.tipoMovimiento]?.label || descripcionModal.tipoMovimiento}</p>
+              <p><span className="text-gray-500">Monto:</span> <strong>{formatCurrency(descripcionModal.monto)}</strong></p>
+              {descripcionModal.categoriaGasto?.nombre && (
+                <p><span className="text-gray-500">Categoría:</span> {descripcionModal.categoriaGasto.nombre}</p>
+              )}
+              <p><span className="text-gray-500">Fecha:</span> {formatDateTime(descripcionModal.fecha)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Descripción</p>
+              <p className="text-sm text-gray-800 whitespace-pre-wrap bg-white border border-gray-200 rounded-lg p-3">
+                {descripcionModal.descripcion}
+              </p>
+            </div>
+            <div className="flex justify-end pt-1">
+              <Button variant="outline" size="sm" onClick={() => setDescripcionModal(null)}>Cerrar</Button>
             </div>
           </div>
         )}

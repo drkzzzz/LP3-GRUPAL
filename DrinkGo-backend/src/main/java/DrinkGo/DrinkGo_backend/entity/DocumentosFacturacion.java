@@ -13,7 +13,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "documentos_facturacion")
+@Table(name = "documentos_facturacion", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_docfac_negocio_numdoc", columnNames = {"negocio_id", "numero_documento"})
+})
 @SQLDelete(sql = "UPDATE documentos_facturacion SET esta_activo = 0, eliminado_en = NOW() WHERE id = ?")
 @SQLRestriction("esta_activo = 1")
 @JsonPropertyOrder({ "id", "negocioId", "serieFacturacionId", "tipoDocumento", "numeroDocumento", "clienteId",
@@ -39,7 +41,7 @@ public class DocumentosFacturacion {
     @Column(name = "tipo_documento", nullable = false)
     private TipoDocumento tipoDocumento;
 
-    @Column(name = "numero_documento", nullable = false, unique = true)
+    @Column(name = "numero_documento", nullable = false)
     private String numeroDocumento;
 
     @ManyToOne(fetch = FetchType.LAZY)

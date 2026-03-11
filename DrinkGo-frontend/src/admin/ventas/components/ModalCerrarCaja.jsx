@@ -43,7 +43,26 @@ export const ModalCerrarCaja = ({
   if (!sesion) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Cerrar Caja – Arqueo" size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Cerrar Caja – Arqueo"
+      size="lg"
+      footer={
+        <>
+          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+            Cancelar
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleConfirm}
+            disabled={montoContado === '' || isLoading || (hayDiferencia && !observaciones.trim())}
+          >
+            {isLoading ? 'Cerrando...' : 'Cerrar Caja'}
+          </Button>
+        </>
+      }
+    >
       <div className="space-y-5">
         {/* Info de sesión */}
         <div className="bg-gray-50 rounded-lg p-4">
@@ -172,20 +191,6 @@ export const ModalCerrarCaja = ({
             )}
           </div>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 mt-4">
-        <Button variant="outline" onClick={handleClose} disabled={isLoading}>
-          Cancelar
-        </Button>
-        <Button
-          variant="danger"
-          onClick={handleConfirm}
-          disabled={montoContado === '' || isLoading || (hayDiferencia && !observaciones.trim())}
-        >
-          {isLoading ? 'Cerrando...' : 'Cerrar Caja'}
-        </Button>
       </div>
     </Modal>
   );

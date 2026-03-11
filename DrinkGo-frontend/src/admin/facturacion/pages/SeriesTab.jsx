@@ -129,7 +129,11 @@ export const SeriesTab = () => {
       {/* ─── Header ─── */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Series de Facturación</h1>
-        <p className="text-gray-600 mt-1">Administre las series de documentos electrónicos de su negocio</p>
+        <p className="text-gray-600 mt-1">
+          {tienePse
+            ? 'Administre las series de documentos electrónicos de su negocio'
+            : 'Administre las series de documentos de su negocio'}
+        </p>
       </div>
 
       {/* ─── Guía de prefijos (solo con PSE) ─── */}

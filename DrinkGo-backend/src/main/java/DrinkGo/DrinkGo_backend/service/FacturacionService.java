@@ -52,6 +52,7 @@ public class FacturacionService {
     @Autowired private PagosVentaRepository pagosVentaRepo;
     @Autowired private MovimientosCajaRepository movimientosRepo;
     @Autowired private UsuariosRepository usuariosRepo;
+    @Autowired private UsuariosRolesRepository usuariosRolesRepo;
 
     @Autowired private PseProviderFactory pseProviderFactory;
     @Autowired private HistorialPseRepository historialPseRepo;
@@ -64,8 +65,10 @@ public class FacturacionService {
     /**
      * Emite un comprobante de facturación electrónica a partir de una venta.
      * <p>
-     * Se ejecuta en una transacción NUEVA (REQUIRES_NEW) para que un fallo
-     * aquí no revierte la venta en PosService.
+     * Se ejecuta en la misma transacción del caller para poder ver la venta
+     * recién creada (aún no committed). La unicidad del numero_documento
+     * es por negocio (uk_docfac_negocio_numdoc), así que no hay colisión
+     * entre negocios.
      * <p>
      * Flujo:
      * 1. Determina tipo de documento (boleta/factura)
@@ -73,11 +76,10 @@ public class FacturacionService {
      * 3. Genera número de documento con correlativo
      * 4. Resuelve cliente (o crea "consumidor final" para boletas sin cliente)
      * 5. Crea DocumentoFacturacion con estado pendiente_envio
-     * 6. Simula envío a SUNAT vía PSE
-     * 7. Actualiza estado según respuesta SUNAT
+     * 6. Actualiza estado según modo de emisión (LOCAL o PSE)
      *
-     * @param venta   La venta ya persistida
-     * @param usuario El usuario que realiza la operación
+     * @param venta   La venta ya persistida (en la misma transacción)
+     * @param usuario El usuario que realiza la operación (puede ser null)
      * @return El documento creado, o null si no hay serie configurada
      */
     public DocumentosFacturacion emitirComprobanteDesdeVenta(Ventas venta, Usuarios usuario) {
@@ -89,10 +91,16 @@ public class FacturacionService {
             tipoDoc = SeriesFacturacion.TipoDocumento.boleta;
         }
 
-        // 2. Buscar serie predeterminada
+        // 2. Buscar serie predeterminada (con fallback a cualquier serie activa)
         Optional<SeriesFacturacion> serieOpt = seriesRepo
                 .findFirstByNegocioIdAndTipoDocumentoAndEsPredeterminada(
                         venta.getNegocio().getId(), tipoDoc, true);
+
+        if (serieOpt.isEmpty()) {
+            // Fallback: buscar cualquier serie activa del mismo tipo
+            serieOpt = seriesRepo.findFirstByNegocioIdAndTipoDocumento(
+                    venta.getNegocio().getId(), tipoDoc);
+        }
 
         if (serieOpt.isEmpty()) {
             // No hay serie configurada — no emitir comprobante
@@ -1086,6 +1094,89 @@ public class FacturacionService {
     @Transactional(readOnly = true)
     public List<DocumentosFacturacion> getDocumentosByVentaId(Long ventaId) {
         return documentosRepo.findByVentaId(ventaId);
+    }
+
+    /**
+     * Anula la venta asociada a un comprobante (modo LOCAL / sin PSE),
+     * restaura stock y crea egreso de caja si corresponde.
+     * Valida permisos: admin puede anular cualquier venta; cajero solo si
+     * la caja de la venta sigue abierta y es su propia sesión.
+     *
+     * @param ventaId   ID de la venta a anular
+     * @param motivo    Motivo de anulación ingresado por el usuario
+     * @param usuarioId ID del usuario que solicita la anulación
+     */
+    @Transactional
+    public void anularVentaLocal(Long ventaId, String motivo, Long usuarioId) {
+        Ventas venta = ventasRepo.findById(ventaId).orElse(null);
+        if (venta == null || venta.getEstado() == Ventas.Estado.anulada) return;
+
+        // ── Validación de permisos ──
+        boolean esAdmin = tieneAlcanceCompleto(usuarioId, "m.ventas");
+        if (!esAdmin) {
+            if (venta.getSesionCaja() == null) {
+                throw new IllegalStateException("No tienes permiso para anular esta venta");
+            }
+            if (venta.getSesionCaja().getEstadoSesion() != SesionesCaja.EstadoSesion.abierta) {
+                throw new IllegalStateException(
+                        "Solo puedes anular ventas mientras tu caja tenga sesión activa. Contacta a un administrador.");
+            }
+            Long sesionUserId = venta.getSesionCaja().getUsuario().getId();
+            if (!sesionUserId.equals(usuarioId)) {
+                throw new IllegalStateException(
+                        "Solo puedes anular ventas registradas en tu propia sesión de caja.");
+            }
+        }
+
+        venta.setEstado(Ventas.Estado.anulada);
+        venta.setCanceladoEn(LocalDateTime.now());
+        venta.setRazonCancelacion(motivo != null && !motivo.isBlank() ? motivo : "Anulación de comprobante");
+        ventasRepo.save(venta);
+
+        // Restaurar stock
+        restaurarStockVentaCompleta(venta, null);
+
+        // Egreso de caja (solo efectivo, si la sesión sigue abierta)
+        if (venta.getSesionCaja() != null
+                && venta.getSesionCaja().getEstadoSesion() == SesionesCaja.EstadoSesion.abierta) {
+            BigDecimal montoEfectivo = BigDecimal.ZERO;
+            List<PagosVenta> pagos = pagosVentaRepo.findByVentaId(venta.getId());
+            for (PagosVenta pago : pagos) {
+                MetodosPago mp = pago.getMetodoPago();
+                if (mp != null && mp.getTipo() == MetodosPago.TipoMetodoPago.efectivo) {
+                    montoEfectivo = montoEfectivo.add(
+                            pago.getMonto() != null ? pago.getMonto() : BigDecimal.ZERO);
+                }
+            }
+            if (montoEfectivo.compareTo(BigDecimal.ZERO) > 0) {
+                MovimientosCaja mov = new MovimientosCaja();
+                mov.setSesionCaja(venta.getSesionCaja());
+                mov.setTipoMovimiento(MovimientosCaja.TipoMovimiento.egreso_anulacion);
+                mov.setMonto(montoEfectivo);
+                mov.setDescripcion("Anulación de comprobante - Venta " + venta.getNumeroVenta());
+                mov.setVenta(venta);
+                mov.setFechaMovimiento(LocalDateTime.now());
+                movimientosRepo.save(mov);
+            }
+        }
+    }
+
+    /**
+     * Verifica si un usuario tiene alcance 'completo' sobre un módulo.
+     */
+    private boolean tieneAlcanceCompleto(Long usuarioId, String codigoModulo) {
+        if (usuarioId == null) return false;
+        List<Object[]> permisos = usuariosRolesRepo.findPermisosConAlcanceByUsuarioId(usuarioId);
+        for (Object[] row : permisos) {
+            String codigo = (String) row[0];
+            String alcance = row[1] != null ? row[1].toString() : "completo";
+            if ("completo".equalsIgnoreCase(alcance)) {
+                if (codigoModulo.equals(codigo) || codigoModulo.startsWith(codigo + ".")) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

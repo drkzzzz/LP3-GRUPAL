@@ -112,9 +112,10 @@ export const facturacionService = {
    * @example
    * await facturacionService.cambiarEstadoComprobante(100, 'ANULADO', 'Error en datos');
    */
-  cambiarEstadoComprobante: async (id, estado, motivoAnulacion) => {
+  cambiarEstadoComprobante: async (id, estado, motivoAnulacion, usuarioId) => {
     const payload = { estado };
     if (motivoAnulacion) payload.motivoAnulacion = motivoAnulacion;
+    if (usuarioId) payload.usuarioId = String(usuarioId);
     const { data } = await adminApi.patch(`/admin/facturacion/comprobantes/${id}/estado`, payload);
     return data;
   },

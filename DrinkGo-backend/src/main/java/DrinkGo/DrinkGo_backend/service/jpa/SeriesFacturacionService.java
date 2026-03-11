@@ -18,6 +18,17 @@ public class SeriesFacturacionService implements ISeriesFacturacionService {
     }
 
     public void guardar(SeriesFacturacion seriesFacturacion) {
+        // Auto-set predeterminada si no existe otra para ese negocio + tipo
+        if (seriesFacturacion.getNegocio() != null && seriesFacturacion.getTipoDocumento() != null) {
+            boolean existePredeterminada = repoSeriesFacturacion
+                    .existsByNegocioIdAndTipoDocumentoAndEsPredeterminada(
+                            seriesFacturacion.getNegocio().getId(),
+                            seriesFacturacion.getTipoDocumento(),
+                            true);
+            if (!existePredeterminada) {
+                seriesFacturacion.setEsPredeterminada(true);
+            }
+        }
         repoSeriesFacturacion.save(seriesFacturacion);
     }
 

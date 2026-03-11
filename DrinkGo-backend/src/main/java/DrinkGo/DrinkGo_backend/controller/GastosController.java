@@ -82,7 +82,9 @@ public class GastosController {
     @PostMapping(value = "/gastos/{id}/comprobante", consumes = "multipart/form-data")
     public ResponseEntity<?> subirComprobante(
             @PathVariable("id") Long id,
-            @RequestPart("archivo") MultipartFile archivo) {
+            @RequestPart("archivo") MultipartFile archivo,
+            @RequestParam(value = "metodoPago", required = false) String metodoPago,
+            @RequestParam(value = "referenciaPago", required = false) String referenciaPago) {
         try {
             // Validar tamaño (máx 5 MB)
             if (archivo.getSize() > 5 * 1024 * 1024) {
@@ -99,7 +101,7 @@ public class GastosController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(java.util.Map.of("error", "Tipo de archivo no permitido. Use JPG, PNG, WebP o PDF"));
             }
-            Gastos gasto = service.subirComprobante(id, archivo);
+            Gastos gasto = service.subirComprobante(id, archivo, metodoPago, referenciaPago);
             return ResponseEntity.ok(java.util.Map.of(
                     "message", "Comprobante subido correctamente",
                     "urlComprobante", gasto.getUrlComprobante() != null ? gasto.getUrlComprobante() : ""));

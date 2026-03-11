@@ -87,7 +87,7 @@ export const MovimientoCajaModal = ({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!monto || parseFloat(monto) <= 0 || !descripcion.trim() || isLoading || egresoExcedido}
+            disabled={!monto || parseFloat(monto) <= 0 || !descripcion.trim() || isLoading}
           >
             {isLoading ? 'Registrando...' : 'Registrar'}
           </Button>

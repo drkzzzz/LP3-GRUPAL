@@ -87,9 +87,11 @@ export const gastosService = {
    * const archivo = new File(['...'], 'comprobante.pdf');
    * await gastosService.subirComprobante({ id: 1, archivo });
    */
-  subirComprobante: async ({ id, archivo }) => {
+  subirComprobante: async ({ id, archivo, metodoPago, referenciaPago }) => {
     const formData = new FormData();
     formData.append('archivo', archivo);
+    if (metodoPago) formData.append('metodoPago', metodoPago);
+    if (referenciaPago) formData.append('referenciaPago', referenciaPago);
     const { data } = await adminApi.postForm(`/gastos/${id}/comprobante`, formData);
     return data;
   },

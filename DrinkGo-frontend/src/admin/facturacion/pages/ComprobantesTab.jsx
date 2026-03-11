@@ -195,6 +195,7 @@ export const ComprobantesTab = () => {
         id: anularTarget.id,
         estado: 'anulado',
         motivoAnulacion: razonAnulacion.trim() || 'Anulación manual',
+        usuarioId: user?.id,
       });
     } catch {
       // Error manejado por mutation
@@ -540,19 +541,7 @@ export const ComprobantesTab = () => {
                                   </span>
                                 );
                               }
-                              if (noEnviadoAun) {
-                                /* No enviado a SUNAT → se puede anular directamente */
-                                return (
-                                  <button
-                                    title="Anular comprobante"
-                                    onClick={() => setAnularTarget(doc)}
-                                    className="text-red-500 hover:text-red-700"
-                                  >
-                                    <X size={16} />
-                                  </button>
-                                );
-                              }
-                              /* Ya enviado a SUNAT → NC/ND o Reemitir */
+                              /* NC motivo 02: mostrar Reemitir sin importar si fue enviada a SUNAT */
                               if (doc.tipoDocumento === 'nota_credito' && doc.codigoMotivoNota === '02') {
                                 return (
                                   <button
@@ -570,6 +559,19 @@ export const ComprobantesTab = () => {
                                   </button>
                                 );
                               }
+                              if (noEnviadoAun) {
+                                /* No enviado a SUNAT → se puede anular directamente */
+                                return (
+                                  <button
+                                    title="Anular comprobante"
+                                    onClick={() => setAnularTarget(doc)}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <X size={16} />
+                                  </button>
+                                );
+                              }
+                              /* Ya enviado a SUNAT → NC/ND */
                               if (puedeEmitirNcNd(doc)) {
                                 return (
                                   <button
@@ -1191,7 +1193,7 @@ export const ComprobantesTab = () => {
                 onClick={async () => {
                   const result = await consultaRuc.buscar(reemitirRuc);
                   if (result) {
-                    setReemitirRazonSocial(result.razonSocial || result.nombre || '');
+                    setReemitirRazonSocial(result.razon_social || result.nombre_comercial || '');
                     setReemitirDireccion(result.direccion || '');
                   }
                 }}

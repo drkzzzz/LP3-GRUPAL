@@ -4,15 +4,56 @@
  * Estado del carrito POS usando Zustand.
  * Soporta productos individuales y combos.
  * Persiste items y descuentos en sessionStorage para sobrevivir recargas accidentales.
+ * El storage se aísla por negocio: cada negocio guarda/lee su propia clave.
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { invalidarCacheProductos, buscarProductos } from '../services/productosAdapter';
+import { useAdminAuthStore } from '@/stores/adminAuthStore';
+
+/** Estado inicial limpio del carrito (para reseteos). */
+const EMPTY_CART = {
+  items: [],
+  descuentoGlobal: 0,
+  razonDescuento: '',
+  stockDesactualizado: false,
+  _lastCapped: null,
+  suspendedCart: null,
+  mesaContext: null,
+};
+
+/**
+ * Devuelve el negocioId actual del auth store.
+ */
+const getNegocioId = () => useAdminAuthStore.getState().negocio?.id ?? null;
+
+/**
+ * Storage wrapper que usa una key dinámica basada en el negocioId actual.
+ * Cada negocio tiene su propio carrito aislado en sessionStorage.
+ */
+const negocioScopedStorage = {
+  getItem: (_name) => {
+    const nid = getNegocioId();
+    const key = nid ? `pos-cart-n${nid}` : 'pos-cart';
+    return sessionStorage.getItem(key);
+  },
+  setItem: (_name, value) => {
+    const nid = getNegocioId();
+    const key = nid ? `pos-cart-n${nid}` : 'pos-cart';
+    sessionStorage.setItem(key, value);
+  },
+  removeItem: (_name) => {
+    const nid = getNegocioId();
+    const key = nid ? `pos-cart-n${nid}` : 'pos-cart';
+    sessionStorage.removeItem(key);
+  },
+};
 
 export const useCartStore = create(
   persist(
     (set, get) => ({
   /* ═══ ESTADO ═══ */
+  _negocioId: null,        // negocio al que pertenece el carrito actual
   items: [],               // [{ producto, cantidad, descuento }]
   descuentoGlobal: 0,      // monto fijo de descuento global
   razonDescuento: '',
@@ -81,6 +122,22 @@ export const useCartStore = create(
 
   clearCart: () => {
     set({ items: [], descuentoGlobal: 0, razonDescuento: '', stockDesactualizado: false });
+  },
+
+  /**
+   * Sincroniza el carrito con el negocio actual.
+   * Si el negocioId cambió, limpia el estado en memoria y rehidrata
+   * desde el storage del nuevo negocio (que usa su propia clave).
+   */
+  syncNegocio: (negocioId) => {
+    const currentNid = get()._negocioId;
+    if (currentNid === negocioId) return; // mismo negocio, no hacer nada
+
+    // Limpiar el estado en memoria (para que no quede data del negocio anterior)
+    set({ ...EMPTY_CART, _negocioId: negocioId });
+
+    // Rehidratar desde el sessionStorage del nuevo negocio
+    useCartStore.persist.rehydrate();
   },
 
   /* ═══ CONTEXTO DE MESA ═══ */
@@ -258,8 +315,9 @@ export const useCartStore = create(
 }),
     {
       name: 'pos-cart',
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => negocioScopedStorage),
       partialize: (state) => ({
+        _negocioId: state._negocioId,
         items: state.items,
         descuentoGlobal: state.descuentoGlobal,
         razonDescuento: state.razonDescuento,
@@ -273,7 +331,8 @@ export const useCartStore = create(
           !Array.isArray(persisted.items) ||
           persisted.items.some((i) => !i?.producto?.id || typeof i.cantidad !== 'number')
         ) {
-          return current; // datos corruptos, usar estado limpio
+          // datos ausentes o corruptos → mantener estado limpio (no arrastrar data vieja)
+          return { ...current, items: [], descuentoGlobal: 0, razonDescuento: '', suspendedCart: null };
         }
         return { ...current, ...persisted };
       },
