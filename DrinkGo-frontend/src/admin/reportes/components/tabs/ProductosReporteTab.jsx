@@ -22,7 +22,7 @@ import { Button } from '@/admin/components/ui/Button';
 import { useReporteDetalleVentas } from '../../hooks/useReportes';
 import { formatCurrency } from '@/shared/utils/formatters';
 import { useDebounce } from '@/shared/hooks/useDebounce';
-import { exportToCSV } from '../../utils/exportUtils';
+import { exportToCSV, exportToPDF } from '../../utils/exportUtils';
 
 export const ProductosReporteTab = () => {
   const { data: detalles = [], isLoading } = useReporteDetalleVentas();
@@ -94,16 +94,17 @@ export const ProductosReporteTab = () => {
   const paginated = productosRanking.slice((page - 1) * pageSize, page * pageSize);
 
   /* Exportar */
-  const handleExport = () => {
-    const rows = productosRanking.map((p, i) => ({
+  const buildRows = () =>
+    productosRanking.map((p, i) => ({
       'Posición': i + 1,
       'Producto': p.nombre,
       'Unidades Vendidas': p.cantidadVendida,
       'Monto Total': p.montoTotal,
       'Apariciones en Ventas': p.vecesEnVentas,
     }));
-    exportToCSV(rows, 'reporte_productos_mas_vendidos');
-  };
+
+  const handleExport = () => exportToCSV(buildRows(), 'reporte_productos_mas_vendidos');
+  const handleExportPDF = () => exportToPDF('Productos Más Vendidos', buildRows());
 
   /* Columnas */
   const columns = [
@@ -217,7 +218,11 @@ export const ProductosReporteTab = () => {
           </div>
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download size={16} />
-            Exportar CSV
+            CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportPDF}>
+            <Download size={16} />
+            PDF
           </Button>
         </div>
 

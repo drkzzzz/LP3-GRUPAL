@@ -6,9 +6,7 @@
 import { useState, useMemo } from 'react';
 import {
   Search,
-  Plus,
   Pencil,
-  Trash2,
   MapPin,
   CheckCircle,
   Truck,
@@ -34,9 +32,7 @@ export const SedesTab = ({ context }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 400);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [selected, setSelected] = useState(null);
 
   /* ─── Data ─── */
   const {
@@ -44,10 +40,8 @@ export const SedesTab = ({ context }) => {
     isLoading,
     createSede,
     updateSede,
-    deleteSede,
     isCreating,
     isUpdating,
-    isDeleting,
   } = useSedesConfig(negocioId);
 
   /* ─── Filtrado ─── */
@@ -87,11 +81,6 @@ export const SedesTab = ({ context }) => {
     setIsFormOpen(true);
   };
 
-  const openDelete = (item) => {
-    setSelected(item);
-    setIsDeleteOpen(true);
-  };
-
   const handleSubmit = async (formData) => {
     const payload = {
       negocio: { id: negocioId },
@@ -115,13 +104,6 @@ export const SedesTab = ({ context }) => {
     }
     setIsFormOpen(false);
     setEditing(null);
-  };
-
-  const handleDelete = async () => {
-    if (!selected) return;
-    await deleteSede(selected.id);
-    setIsDeleteOpen(false);
-    setSelected(null);
   };
 
   /* ─── Columnas ─── */
@@ -213,13 +195,6 @@ export const SedesTab = ({ context }) => {
           >
             <Pencil size={15} />
           </button>
-          <button
-            title="Eliminar"
-            onClick={() => openDelete(row)}
-            className="p-1.5 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
-          >
-            <Trash2 size={15} />
-          </button>
         </div>
       ),
     },
@@ -289,30 +264,6 @@ export const SedesTab = ({ context }) => {
           onCancel={() => { setIsFormOpen(false); setEditing(null); }}
           isLoading={isSaving}
         />
-      </Modal>
-
-      {/* Modal: Confirmar eliminación */}
-      <Modal
-        isOpen={isDeleteOpen}
-        onClose={() => { setIsDeleteOpen(false); setSelected(null); }}
-        title="Eliminar Sede"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            ¿Estás seguro de eliminar la sede{' '}
-            <strong className="text-gray-900">{selected?.nombre}</strong>?
-            Esta acción no se puede deshacer.
-          </p>
-          <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => { setIsDeleteOpen(false); setSelected(null); }}>
-              Cancelar
-            </Button>
-            <Button variant="danger" onClick={handleDelete} loading={isDeleting}>
-              Eliminar
-            </Button>
-          </div>
-        </div>
       </Modal>
     </div>
   );
