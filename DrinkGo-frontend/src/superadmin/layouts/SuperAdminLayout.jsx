@@ -5,7 +5,6 @@ import {
   Store,
   CreditCard,
   Receipt,
-  Settings,
   Shield,
   LogOut,
   Menu,
@@ -43,11 +42,6 @@ const NAV_ITEMS = [
     to: '/superadmin/reportes',
     icon: BarChart3,
     label: 'Reportes',
-  },
-  {
-    to: '/superadmin/configuracion',
-    icon: Settings,
-    label: 'Configuración',
   },
   {
     to: '/superadmin/auditoria',

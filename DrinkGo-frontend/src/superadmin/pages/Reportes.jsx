@@ -4,7 +4,7 @@
  * Métricas: MRR, crecimiento de negocios, distribución por plan,
  * estado de facturas, y resumen de suscripciones.
  */
-import { useCallback } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import {
   TrendingUp,
   Building2,
@@ -15,6 +15,9 @@ import {
   BarChart3,
   Download,
   AlertCircle,
+  ChevronDown,
+  FileSpreadsheet,
+  Printer,
 } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { Card } from '../components/ui/Card';
@@ -52,6 +55,77 @@ const downloadCSV = (content, filename) => {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+};
+
+/* ---------- Excel export helper (HTML table → .xls) ---------- */
+const buildExcelHTML = (sections, reportTitle) => {
+  const rows = sections.flatMap(({ title, headers, data }) => [
+    `<tr><td colspan="${headers.length}" style="font-weight:bold;font-size:14px;padding:8px 4px;">${title}</td></tr>`,
+    `<tr>${headers.map((h) => `<th style="background:#16a34a;color:#fff;padding:6px 10px;font-size:11px;">${h}</th>`).join('')}</tr>`,
+    ...data.map(
+      (row) => `<tr>${row.map((cell) => `<td style="padding:5px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;">${cell ?? ''}</td>`).join('')}</tr>`,
+    ),
+    '<tr><td>&nbsp;</td></tr>',
+  ]);
+
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>${reportTitle}</x:Name></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>
+<body><table>${rows.join('')}</table></body></html>`;
+};
+
+const downloadExcel = (content, filename) => {
+  const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+/* ---------- PDF export helper (print window) ---------- */
+const buildPDFHTML = (sections, reportTitle) => {
+  const sectionBlocks = sections.map(({ title, headers, data }) => {
+    const headerHtml = headers.map((h) => `<th>${h}</th>`).join('');
+    const bodyHtml = data
+      .map((row) => `<tr>${row.map((cell) => `<td>${cell ?? ''}</td>`).join('')}</tr>`)
+      .join('');
+    return `<h2>${title}</h2><table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
+  });
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>${reportTitle}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 11px; color: #111; padding: 24px; }
+    h1 { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+    h2 { font-size: 13px; font-weight: bold; margin: 18px 0 6px; color: #374151; }
+    .subtitle { font-size: 10px; color: #6b7280; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 12px; }
+    thead tr { background-color: #16a34a; color: white; }
+    th { padding: 7px 10px; text-align: left; font-size: 10px; }
+    td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-size: 11px; }
+    tr:nth-child(even) td { background-color: #f9fafb; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <h1>${reportTitle}</h1>
+  <p class="subtitle">Generado el ${new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+  ${sectionBlocks.join('')}
+</body>
+</html>`;
+};
+
+const openPrintPDF = (html) => {
+  const printWindow = window.open('', '_blank', 'width=900,height=650');
+  if (!printWindow) return;
+  printWindow.document.write(html);
+  printWindow.document.close();
+  setTimeout(() => printWindow.print(), 400);
 };
 
 /* ---------- Mini stat card para reportes ---------- */
@@ -102,6 +176,54 @@ const EmptyState = ({ message }) => (
   <div className="py-8 text-center text-sm text-gray-400">{message}</div>
 );
 
+/* ---------- Export dropdown ---------- */
+const ExportDropdown = ({ disabled, onCSV, onExcel, onPDF }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const items = [
+    { label: 'Exportar CSV', icon: Download, action: onCSV },
+    { label: 'Exportar Excel', icon: FileSpreadsheet, action: onExcel },
+    { label: 'Exportar PDF', icon: Printer, action: onPDF },
+  ];
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
+        className="flex items-center gap-2 text-sm text-gray-700 font-medium border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Download size={16} />
+        Exportar
+        <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+          {items.map(({ label, icon: Icon, action }) => (
+            <button
+              key={label}
+              onClick={() => { action(); setOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Icon size={15} className="text-gray-400" />
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const Reportes = () => {
   const {
     isLoading,
@@ -127,13 +249,13 @@ export const Reportes = () => {
   const facturasVencidas = Math.max(0, totalFacturas - facturasPendientes - facturasPagadas);
   const mrrEstimado = ingresosMensuales;
 
-  /* ---------- Export handler ---------- */
-  const handleExport = useCallback(() => {
+  /* ---------- Build report sections (shared between exports) ---------- */
+  const buildSections = useCallback(() => {
     const now = new Date();
     const fecha = now.toLocaleDateString('es-PE');
     const hora = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 
-    const csv = buildCSV([
+    return [
       {
         title: `Reporte DrinkGo — ${fecha} ${hora}`,
         headers: ['Métrica', 'Valor'],
@@ -192,13 +314,31 @@ export const Reportes = () => {
           p.estaActivo !== false ? 'Sí' : 'No',
         ]),
       },
-    ]);
-
-    const filename = `drinkgo-reporte-${now.toISOString().slice(0, 10)}.csv`;
-    downloadCSV(csv, filename);
+    ];
   }, [allNegocios, allFacturas, allPlanes, mrrEstimado, totalNegocios, negociosActivos,
       negociosPendientes, negociosSuspendidos, negociosCancelados, suscripcionesActivas,
       totalFacturas, facturasPagadas, facturasPendientes, facturasVencidas]);
+
+  /* ---------- Export handlers ---------- */
+  const handleExportCSV = useCallback(() => {
+    const sections = buildSections();
+    const csv = buildCSV(sections);
+    const filename = `drinkgo-reporte-${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadCSV(csv, filename);
+  }, [buildSections]);
+
+  const handleExportExcel = useCallback(() => {
+    const sections = buildSections();
+    const html = buildExcelHTML(sections, 'Reporte DrinkGo');
+    const filename = `drinkgo-reporte-${new Date().toISOString().slice(0, 10)}.xls`;
+    downloadExcel(html, filename);
+  }, [buildSections]);
+
+  const handleExportPDF = useCallback(() => {
+    const sections = buildSections();
+    const html = buildPDFHTML(sections, 'Reporte de Plataforma DrinkGo');
+    openPrintPDF(html);
+  }, [buildSections]);
 
   if (isError) {
     return (
@@ -248,15 +388,12 @@ export const Reportes = () => {
             Monitoreo y analítica de la plataforma DrinkGo — RF-RPL-001
           </p>
         </div>
-        <button
-          onClick={handleExport}
+        <ExportDropdown
           disabled={isLoading || totalNegocios + totalFacturas === 0}
-          className="flex items-center gap-2 text-sm text-gray-700 font-medium border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          title="Descargar reporte en CSV (compatible con Excel)"
-        >
-          <Download size={16} />
-          Exportar CSV
-        </button>
+          onCSV={handleExportCSV}
+          onExcel={handleExportExcel}
+          onPDF={handleExportPDF}
+        />
       </div>
 
       {/* KPI Row */}
@@ -453,7 +590,7 @@ export const Reportes = () => {
           <p className="text-sm font-medium text-blue-900">Datos en tiempo real</p>
           <p className="text-xs text-blue-700 mt-0.5">
             Los reportes se calculan en tiempo real a partir de los datos de la plataforma.
-            Para exportar en Excel/PDF, utiliza el botón "Exportar" (disponible próximamente).
+            Utiliza el botón "Exportar" para descargar en CSV, Excel o PDF.
           </p>
         </div>
       </div>

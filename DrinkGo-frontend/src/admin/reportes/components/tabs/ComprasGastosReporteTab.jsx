@@ -22,7 +22,7 @@ import { Button } from '@/admin/components/ui/Button';
 import { useReporteCompras, useReporteGastos } from '../../hooks/useReportes';
 import { formatCurrency, formatDate } from '@/shared/utils/formatters';
 import { useDebounce } from '@/shared/hooks/useDebounce';
-import { exportToCSV } from '../../utils/exportUtils';
+import { exportToCSV, exportToPDF } from '../../utils/exportUtils';
 
 const ESTADO_OC_MAP = {
   pendiente: { label: 'Pendiente', variant: 'warning' },
@@ -131,25 +131,55 @@ export const ComprasGastosReporteTab = () => {
   const paginated = currentData.slice((page - 1) * pageSize, page * pageSize);
 
   /* Exportar */
+  const buildComprasRows = () =>
+    filteredCompras.map((c) => ({
+      'N° Orden': c.numeroOrden || '',
+      'Proveedor': c.proveedorNombre || c.proveedor?.razonSocial || '',
+      'Fecha': formatDate(c.fechaOrden || c.creadoEn),
+      'Total': formatCurrency(c.total || c.montoTotal || 0),
+      'Estado': ESTADO_OC_MAP[c.estado]?.label || c.estado || '',
+    }));
+
+  const buildGastosRows = () =>
+    filteredGastos.map((g) => ({
+      'Descripción': g.descripcion || '',
+      'Categoría': g.categoriaNombre || g.categoriaGasto?.nombre || '',
+      'Fecha': formatDate(g.fechaGasto || g.creadoEn),
+      'Monto': formatCurrency(g.monto || 0),
+      'Estado': ESTADO_GASTO_MAP[g.estado]?.label || g.estado || '',
+    }));
+
   const handleExport = () => {
     if (activeSubTab === 'compras') {
-      const rows = filteredCompras.map((c) => ({
-        'N° Orden': c.numeroOrden || '',
-        'Proveedor': c.proveedorNombre || c.proveedor?.razonSocial || '',
-        'Fecha': formatDate(c.fechaOrden || c.creadoEn),
-        'Total': c.total || c.montoTotal || 0,
-        'Estado': ESTADO_OC_MAP[c.estado]?.label || c.estado || '',
-      }));
-      exportToCSV(rows, 'reporte_compras');
+      exportToCSV(
+        filteredCompras.map((c) => ({
+          'N° Orden': c.numeroOrden || '',
+          'Proveedor': c.proveedorNombre || c.proveedor?.razonSocial || '',
+          'Fecha': formatDate(c.fechaOrden || c.creadoEn),
+          'Total': c.total || c.montoTotal || 0,
+          'Estado': ESTADO_OC_MAP[c.estado]?.label || c.estado || '',
+        })),
+        'reporte_compras',
+      );
     } else {
-      const rows = filteredGastos.map((g) => ({
-        'Descripción': g.descripcion || '',
-        'Categoría': g.categoriaNombre || g.categoriaGasto?.nombre || '',
-        'Fecha': formatDate(g.fechaGasto || g.creadoEn),
-        'Monto': g.monto || 0,
-        'Estado': ESTADO_GASTO_MAP[g.estado]?.label || g.estado || '',
-      }));
-      exportToCSV(rows, 'reporte_gastos');
+      exportToCSV(
+        filteredGastos.map((g) => ({
+          'Descripción': g.descripcion || '',
+          'Categoría': g.categoriaNombre || g.categoriaGasto?.nombre || '',
+          'Fecha': formatDate(g.fechaGasto || g.creadoEn),
+          'Monto': g.monto || 0,
+          'Estado': ESTADO_GASTO_MAP[g.estado]?.label || g.estado || '',
+        })),
+        'reporte_gastos',
+      );
+    }
+  };
+
+  const handleExportPDF = () => {
+    if (activeSubTab === 'compras') {
+      exportToPDF('Reporte de Compras', buildComprasRows());
+    } else {
+      exportToPDF('Reporte de Gastos', buildGastosRows());
     }
   };
 
@@ -303,7 +333,11 @@ export const ComprasGastosReporteTab = () => {
           </div>
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download size={16} />
-            Exportar CSV
+            CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportPDF}>
+            <Download size={16} />
+            PDF
           </Button>
         </div>
 

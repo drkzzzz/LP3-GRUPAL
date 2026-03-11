@@ -22,7 +22,7 @@ import { Button } from '@/admin/components/ui/Button';
 import { useReporteStock, useReporteLotes } from '../../hooks/useReportes';
 import { formatCurrency } from '@/shared/utils/formatters';
 import { useDebounce } from '@/shared/hooks/useDebounce';
-import { exportToCSV } from '../../utils/exportUtils';
+import { exportToCSV, exportToPDF } from '../../utils/exportUtils';
 
 export const InventarioReporteTab = () => {
   const { data: stock = [], isLoading: loadingStock } = useReporteStock();
@@ -109,8 +109,20 @@ export const InventarioReporteTab = () => {
   const paginated = inventarioReport.slice((page - 1) * pageSize, page * pageSize);
 
   /* Exportar */
-  const handleExport = () => {
-    const rows = inventarioReport.map((i) => ({
+  const buildRows = () =>
+    inventarioReport.map((i) => ({
+      'Producto': i.nombre,
+      'Almacén': i.almacen,
+      'Stock Actual': i.cantidadActual,
+      'Stock Mínimo': i.stockMinimo,
+      'Costo Promedio': formatCurrency(i.costoPromedio),
+      'Precio Venta': formatCurrency(i.precioVenta),
+      'Margen (%)': i.margenPorcentaje.toFixed(1) + '%',
+      'Valor Inventario': formatCurrency(i.valorInventario),
+    }));
+
+  const handleExport = () => exportToCSV(
+    inventarioReport.map((i) => ({
       'Producto': i.nombre,
       'Almacén': i.almacen,
       'Stock Actual': i.cantidadActual,
@@ -119,9 +131,10 @@ export const InventarioReporteTab = () => {
       'Precio Venta': i.precioVenta,
       'Margen (%)': i.margenPorcentaje.toFixed(1),
       'Valor Inventario': i.valorInventario,
-    }));
-    exportToCSV(rows, 'reporte_inventario');
-  };
+    })),
+    'reporte_inventario',
+  );
+  const handleExportPDF = () => exportToPDF('Reporte de Inventario', buildRows());
 
   /* Columnas */
   const columns = [
@@ -186,7 +199,11 @@ export const InventarioReporteTab = () => {
           </div>
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download size={16} />
-            Exportar CSV
+            CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportPDF}>
+            <Download size={16} />
+            PDF
           </Button>
         </div>
 
