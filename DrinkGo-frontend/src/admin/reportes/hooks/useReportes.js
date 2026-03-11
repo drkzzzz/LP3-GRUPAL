@@ -34,27 +34,36 @@ export const useReporteDetalleVentas = () => {
 
 /* ─── Stock inventario ─── */
 export const useReporteStock = () => {
+  const negocioId = useAdminAuthStore((s) => s.negocio?.id);
+
   return useQuery({
-    queryKey: ['reportes', 'stock'],
-    queryFn: () => reportesService.getStockInventario(),
+    queryKey: ['reportes', 'stock', negocioId],
+    queryFn: () => reportesService.getStockInventario(negocioId),
+    enabled: !!negocioId,
     staleTime: 0,
   });
 };
 
 /* ─── Lotes inventario ─── */
 export const useReporteLotes = () => {
+  const negocioId = useAdminAuthStore((s) => s.negocio?.id);
+
   return useQuery({
-    queryKey: ['reportes', 'lotes'],
-    queryFn: () => reportesService.getLotesInventario(),
+    queryKey: ['reportes', 'lotes', negocioId],
+    queryFn: () => reportesService.getLotesInventario(negocioId),
+    enabled: !!negocioId,
     staleTime: 0,
   });
 };
 
 /* ─── Órdenes de compra ─── */
 export const useReporteCompras = () => {
+  const negocioId = useAdminAuthStore((s) => s.negocio?.id);
+
   return useQuery({
-    queryKey: ['reportes', 'compras'],
-    queryFn: () => reportesService.getOrdenesCompra(),
+    queryKey: ['reportes', 'compras', negocioId],
+    queryFn: () => reportesService.getOrdenesCompra(negocioId),
+    enabled: !!negocioId,
     staleTime: 0,
   });
 };
@@ -85,9 +94,12 @@ export const useReporteComprobantes = () => {
 
 /* ─── Movimientos de inventario ─── */
 export const useReporteMovimientos = () => {
+  const negocioId = useAdminAuthStore((s) => s.negocio?.id);
+
   return useQuery({
-    queryKey: ['reportes', 'movimientos'],
-    queryFn: () => reportesService.getMovimientosInventario(),
+    queryKey: ['reportes', 'movimientos', negocioId],
+    queryFn: () => reportesService.getMovimientosInventario(negocioId),
+    enabled: !!negocioId,
     staleTime: 0,
   });
 };

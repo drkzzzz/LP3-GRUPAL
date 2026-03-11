@@ -93,6 +93,18 @@ public class OrdenesCompraController {
         }
     }
 
+    @Autowired
+    private DrinkGo.DrinkGo_backend.repository.OrdenesCompraRepository ordenesRepo;
+
+    @GetMapping("/ordenes-compra/negocio/{negocioId}")
+    public ResponseEntity<?> buscarPorNegocio(@PathVariable Long negocioId) {
+        try {
+            return ResponseEntity.ok(ordenesRepo.findByNegocioId(negocioId));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/ordenes-compra/{id}")
     public ResponseEntity<?> buscarId(@PathVariable("id") Long id) {
         try {
@@ -124,7 +136,7 @@ public class OrdenesCompraController {
      *
      * POST /restful/ordenes-compra/{id}/recibir
      * Body: { "usuarioId": 1, "items": [{ "detalleId": 1, "cantidadRecibida": 10,
-     *          "numeroLote": "LOTE-001", "fechaVencimiento": "2027-01-01" }] }
+     * "numeroLote": "LOTE-001", "fechaVencimiento": "2027-01-01" }] }
      */
     @PostMapping("/ordenes-compra/{id}/recibir")
     public ResponseEntity<?> recibirOrden(

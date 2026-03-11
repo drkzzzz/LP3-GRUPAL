@@ -12,44 +12,50 @@ import DrinkGo.DrinkGo_backend.entity.Productos;
 
 public interface LotesInventarioRepository extends JpaRepository<LotesInventario, Long> {
 
-    /** Lotes con stock disponible, ordenados FIFO (más antiguo primero) */
-    @Query("SELECT l FROM LotesInventario l WHERE l.producto.id = :productoId "
-            + "AND l.almacen.id = :almacenId AND l.cantidadActual > 0 "
-            + "ORDER BY l.fechaIngreso ASC, l.id ASC")
-    List<LotesInventario> findLotesConStockFIFO(
-            @Param("productoId") Long productoId,
-            @Param("almacenId") Long almacenId);
+        List<LotesInventario> findByNegocioId(Long negocioId);
 
-    @Query(value = "SELECT * FROM lotes_inventario WHERE producto_id = :productoId "
-            + "AND almacen_id = :almacenId AND cantidad_actual > 0 "
-            + "ORDER BY fecha_ingreso ASC, id ASC FOR UPDATE", nativeQuery = true)
-    List<LotesInventario> findLotesConStockFIFOForUpdate(
-            @Param("productoId") Long productoId,
-            @Param("almacenId") Long almacenId);
+        /** Lotes con stock disponible, ordenados FIFO (más antiguo primero) */
+        @Query("SELECT l FROM LotesInventario l WHERE l.producto.id = :productoId "
+                        + "AND l.almacen.id = :almacenId AND l.cantidadActual > 0 "
+                        + "ORDER BY l.fechaIngreso ASC, l.id ASC")
+        List<LotesInventario> findLotesConStockFIFO(
+                        @Param("productoId") Long productoId,
+                        @Param("almacenId") Long almacenId);
 
-    /**
-     * Obtiene lotes con stock disponible ordenados por FIFO (fecha de ingreso más antigua primero)
-     * Usado para salidas de inventario aplicando First In, First Out
-     */
-    @Query("SELECT l FROM LotesInventario l WHERE l.producto = :producto AND l.almacen = :almacen " +
-           "AND l.cantidadActual > 0 AND l.estaActivo = true " +
-           "ORDER BY l.fechaIngreso ASC, l.id ASC")
-    List<LotesInventario> findLotesDisponiblesFIFO(@Param("producto") Productos producto, @Param("almacen") Almacenes almacen);
+        @Query(value = "SELECT * FROM lotes_inventario WHERE producto_id = :productoId "
+                        + "AND almacen_id = :almacenId AND cantidad_actual > 0 "
+                        + "ORDER BY fecha_ingreso ASC, id ASC FOR UPDATE", nativeQuery = true)
+        List<LotesInventario> findLotesConStockFIFOForUpdate(
+                        @Param("productoId") Long productoId,
+                        @Param("almacenId") Long almacenId);
 
-    /**
-     * Obtiene lotes próximos a vencer
-     */
-    @Query("SELECT l FROM LotesInventario l WHERE l.almacen = :almacen " +
-           "AND l.fechaVencimiento BETWEEN CURRENT_DATE AND :fechaLimite " +
-           "AND l.cantidadActual > 0 AND l.estaActivo = true " +
-           "ORDER BY l.fechaVencimiento ASC")
-    List<LotesInventario> findLotesProximosAVencer(@Param("almacen") Almacenes almacen, @Param("fechaLimite") java.time.LocalDate fechaLimite);
+        /**
+         * Obtiene lotes con stock disponible ordenados por FIFO (fecha de ingreso más
+         * antigua primero)
+         * Usado para salidas de inventario aplicando First In, First Out
+         */
+        @Query("SELECT l FROM LotesInventario l WHERE l.producto = :producto AND l.almacen = :almacen " +
+                        "AND l.cantidadActual > 0 AND l.estaActivo = true " +
+                        "ORDER BY l.fechaIngreso ASC, l.id ASC")
+        List<LotesInventario> findLotesDisponiblesFIFO(@Param("producto") Productos producto,
+                        @Param("almacen") Almacenes almacen);
 
-    /**
-     * Busca lotes de un producto en un almacén específico
-     */
-    @Query("SELECT l FROM LotesInventario l WHERE l.producto = :producto AND l.almacen = :almacen AND l.estaActivo = true")
-    List<LotesInventario> findByProductoAndAlmacen(@Param("producto") Productos producto, @Param("almacen") Almacenes almacen);
+        /**
+         * Obtiene lotes próximos a vencer
+         */
+        @Query("SELECT l FROM LotesInventario l WHERE l.almacen = :almacen " +
+                        "AND l.fechaVencimiento BETWEEN CURRENT_DATE AND :fechaLimite " +
+                        "AND l.cantidadActual > 0 AND l.estaActivo = true " +
+                        "ORDER BY l.fechaVencimiento ASC")
+        List<LotesInventario> findLotesProximosAVencer(@Param("almacen") Almacenes almacen,
+                        @Param("fechaLimite") java.time.LocalDate fechaLimite);
 
-    boolean existsByProductoIdAndCantidadActualGreaterThan(Long productoId, java.math.BigDecimal cantidadActual);
+        /**
+         * Busca lotes de un producto en un almacén específico
+         */
+        @Query("SELECT l FROM LotesInventario l WHERE l.producto = :producto AND l.almacen = :almacen AND l.estaActivo = true")
+        List<LotesInventario> findByProductoAndAlmacen(@Param("producto") Productos producto,
+                        @Param("almacen") Almacenes almacen);
+
+        boolean existsByProductoIdAndCantidadActualGreaterThan(Long productoId, java.math.BigDecimal cantidadActual);
 }
