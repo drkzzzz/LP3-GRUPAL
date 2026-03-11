@@ -7,7 +7,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "ordenes_compra")
+@Table(name = "ordenes_compra", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"numero_orden", "negocio_id"})
+})
 @JsonPropertyOrder({ "id", "negocio", "numeroOrden", "proveedor", "sede", "almacen", "estado", "subtotal",
         "impuestos", "total", "notas", "fechaOrden", "usuario", "creadoPor", "creadoEn", "actualizadoEn" })
 public class OrdenesCompra {
@@ -20,7 +22,7 @@ public class OrdenesCompra {
     @JoinColumn(name = "negocio_id", nullable = false)
     private Negocios negocio;
 
-    @Column(name = "numero_orden", nullable = false, unique = true)
+    @Column(name = "numero_orden", nullable = false)
     private String numeroOrden;
 
     @ManyToOne(fetch = FetchType.LAZY)
