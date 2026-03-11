@@ -35,8 +35,8 @@ export const reportesService = {
    * @example
    * const stock = await reportesService.getStockInventario();
    */
-  getStockInventario: async () => {
-    const { data } = await adminApi.get('/stock-inventario');
+  getStockInventario: async (negocioId) => {
+    const { data } = await adminApi.get(`/stock-inventario/negocio/${negocioId}`);
     return toArray(data);
   },
 
@@ -47,8 +47,8 @@ export const reportesService = {
    * @example
    * const lotes = await reportesService.getLotesInventario();
    */
-  getLotesInventario: async () => {
-    const { data } = await adminApi.get('/lotes-inventario');
+  getLotesInventario: async (negocioId) => {
+    const { data } = await adminApi.get(`/lotes-inventario/negocio/${negocioId}`);
     return toArray(data);
   },
 
@@ -59,8 +59,8 @@ export const reportesService = {
    * @example
    * const movimientos = await reportesService.getMovimientosInventario();
    */
-  getMovimientosInventario: async () => {
-    const { data } = await adminApi.get('/movimientos-inventario');
+  getMovimientosInventario: async (negocioId) => {
+    const { data } = await adminApi.get(`/movimientos-inventario/negocio/${negocioId}`);
     return toArray(data);
   },
 
@@ -71,8 +71,8 @@ export const reportesService = {
    * @example
    * const ordenes = await reportesService.getOrdenesCompra();
    */
-  getOrdenesCompra: async () => {
-    const { data } = await adminApi.get('/ordenes-compra');
+  getOrdenesCompra: async (negocioId) => {
+    const { data } = await adminApi.get(`/ordenes-compra/negocio/${negocioId}`);
     return toArray(data);
   },
 

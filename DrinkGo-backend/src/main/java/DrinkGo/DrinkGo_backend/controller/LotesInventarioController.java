@@ -25,16 +25,24 @@ import org.springframework.web.bind.annotation.PutMapping;
 @RestController
 @RequestMapping("/restful")
 public class LotesInventarioController {
-    
+
     @Autowired
     private ILotesInventarioService service;
 
     @Autowired
     private InventarioTransaccionalService inventarioService;
 
+    @Autowired
+    private DrinkGo.DrinkGo_backend.repository.LotesInventarioRepository lotesRepo;
+
     @GetMapping("/lotes-inventario")
     public List<LotesInventario> buscarTodos() {
         return service.buscarTodos();
+    }
+
+    @GetMapping("/lotes-inventario/negocio/{negocioId}")
+    public List<LotesInventario> buscarPorNegocio(@PathVariable Long negocioId) {
+        return lotesRepo.findByNegocioId(negocioId);
     }
 
     /**
@@ -66,7 +74,7 @@ public class LotesInventarioController {
 
             java.math.BigDecimal cantidad = java.math.BigDecimal.valueOf(cantidadDouble != null ? cantidadDouble : 0);
             java.math.BigDecimal costoUnitario = java.math.BigDecimal.valueOf(costoDouble != null ? costoDouble : 0);
-            
+
             java.time.LocalDate fechaVencimiento = null;
             if (fechaVencimientoStr != null && !fechaVencimientoStr.isEmpty()) {
                 fechaVencimiento = java.time.LocalDate.parse(fechaVencimientoStr);
@@ -74,17 +82,16 @@ public class LotesInventarioController {
 
             // Usar servicio transaccional que sincroniza automáticamente
             LotesInventario lote = inventarioService.registrarEntrada(
-                negocioId,
-                productoId,
-                almacenId,
-                numeroLote,
-                cantidad,
-                costoUnitario,
-                fechaVencimiento,
-                usuarioId,
-                "Entrada de inventario",
-                null
-            );
+                    negocioId,
+                    productoId,
+                    almacenId,
+                    numeroLote,
+                    cantidad,
+                    costoUnitario,
+                    fechaVencimiento,
+                    usuarioId,
+                    "Entrada de inventario",
+                    null);
 
             return ResponseEntity.ok(lote);
 
@@ -92,7 +99,7 @@ public class LotesInventarioController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Error al registrar entrada: " + e.getMessage()));
+                    .body(Map.of("error", "Error al registrar entrada: " + e.getMessage()));
         }
     }
 
@@ -116,7 +123,8 @@ public class LotesInventarioController {
     // Métodos auxiliares para extraer datos del Map
     private Long getLong(Map<String, Object> map, String key) {
         Object value = map.get(key);
-        if (value == null) return null;
+        if (value == null)
+            return null;
         if (value instanceof Map) {
             return getLong((Map<String, Object>) value, "id");
         }
@@ -128,7 +136,8 @@ public class LotesInventarioController {
 
     private Double getDouble(Map<String, Object> map, String key) {
         Object value = map.get(key);
-        if (value == null) return null;
+        if (value == null)
+            return null;
         if (value instanceof Number) {
             return ((Number) value).doubleValue();
         }
@@ -142,4 +151,3 @@ public class LotesInventarioController {
         return null;
     }
 }
-
