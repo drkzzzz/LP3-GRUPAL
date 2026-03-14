@@ -94,7 +94,7 @@ La colaboración es la clave de este proyecto. Todo el trabajo se realiza siguie
 * **Flujo de Ramas:** Usamos un modelo Git Flow simplificado (`master`, `feature`).
 * **Pull Requests:** Todo cambio debe ser integrado a `master` a través de un Pull Request revisado y aprobado por al menos un miembro del equipo.
 
-## 👥 Autor y el unico
+## 👥 Autores
 
 | Nombre | Rol |
 
