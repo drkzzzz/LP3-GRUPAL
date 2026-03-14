@@ -99,3 +99,7 @@ La colaboración es la clave de este proyecto. Todo el trabajo se realiza siguie
 | Nombre | Rol |
 
 | Carlos Sisniegas | Desarrollador |
+| Santiago Ponce | Desarrollador |
+| Anggelo Lucciano | Desarrollador |
+| Willy Llerena | Ayudante de desarrollador |
+
