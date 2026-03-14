@@ -102,7 +102,7 @@ La colaboración es la clave de este proyecto. Todo el trabajo se realiza siguie
 
 | Santiago Ponce | Desarrollador |
 
-| Anggelo Lucciano | Desarrollador |
+| Anggelo Urbina | Desarrollador |
 
-| Willy Llerena | Ayudante de desarrollador |
+| Willy Garcia | Ayudante de desarrollador |
 
