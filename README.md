@@ -52,7 +52,7 @@ cd drinkgo
 ```
 
 ### 3. Configuración del Backend
-1. **Crea la Base de Datos:** Abre tu gestor de MySQL (ej. MySQL Workbench o DBeaver) y crea una base de datos vacía llamada `drinkgo_database`.
+1. **Crea la Base de Datos:** Abre tu gestor de MySQL (ej. MySQL Workbench o DBeaver) y crea una base de datos vacía llamada `drinkgo_db`.
 2. **Setup de Datos:** Si es tu primera vez, puedes ejecutar los scripts que se encuentran en `DrinkGo-backend/src/main/resources/bd/` (y luego en `/seeds/`) para armar las tablas e insertar data de prueba.
 3. **Configura las Variables de Entorno:** Revisa el archivo `application.properties` en `DrinkGo-backend/src/main/resources/` para asegurarte de que tus credenciales de MySQL locales coincidan:
    ```properties
