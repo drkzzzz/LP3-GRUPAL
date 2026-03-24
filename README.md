@@ -104,5 +104,5 @@ La colaboración es la clave de este proyecto. Todo el trabajo se realiza siguie
 
 | Anggelo Urbina | Desarrollador |
 
-| Willy Garcia | Ayudante de desarrollador |
+| Willy Garcia | Desarrollador |
 
