@@ -92,7 +92,7 @@ Debes tener dos terminales abiertas, una para el backend y otra para el frontend
 La colaboración es la clave de este proyecto. Todo el trabajo se realiza siguiendo un flujo de trabajo estricto para mantener la calidad y el orden.
 
 * **Flujo de Ramas:** Usamos un modelo Git Flow simplificado (`master`, `feature`).
-* **Pull Requests:** Todo cambio debe ser integrado a `master` a través de un Pull Request revisado y aprobado por al menos un miembro del equipo.
+* **Pull Requests:** Todo cambio debe ser integrado a `master` a través de un Pull Request revisado y aprobado por el lider de grupo Carlos Sisniegas.
 
 ## 👥 Autores
 
