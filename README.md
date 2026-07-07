@@ -100,9 +100,9 @@ La colaboración es la clave de este proyecto. Todo el trabajo se realiza siguie
 
 | Carlos Sisniegas | Project Manager & Senior Full Stack Developer | Liderazgo Técnico, Planificación y Ejecución |
 
-| Santiago Ponce | Desarrollador |
+| Santiago Ponce | Ayudante asistente junior |
 
-| Anggelo Urbina | Desarrollador |
+| Anggelo Urbina | Desarrollador junior |
 
-| Willy Garcia | Desarrollador |
+| Willy Garcia | Asistentente del asistente junior |
 
